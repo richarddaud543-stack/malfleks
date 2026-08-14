@@ -71,6 +71,10 @@ test.describe("branch locator", () => {
     await page.goto("/locator");
 
     await brandChip(page, "Toyota").click();
+
+    // Same reason as the search specs: `count()` never retries, so wait for
+    // the filter to have actually landed in the URL before reading it.
+    await expect(page).toHaveURL(/brand=toyota/);
     const toyotaOnly = await branchCards(page).count();
     expect(toyotaOnly).toBeGreaterThan(0);
 

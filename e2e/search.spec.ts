@@ -22,6 +22,9 @@ test.describe("search", () => {
   }) => {
     await page.goto("/search");
 
+    // `count()` does not retry, and the results are client-rendered, so this
+    // read has to wait for the list to exist first or it races the hydration.
+    await expect(results(page).first()).toBeVisible();
     const total = await results(page).count();
     expect(total).toBeGreaterThan(10);
 

@@ -57,13 +57,15 @@ ever pays down.
 
 | # | Item | Risk | Status |
 |---|---|---|---|
-| 1 | No CI — every check runs by hand, locally, at the Lead's discretion | High. Nothing prevents a regression reaching `master` | Next assignment |
-| 2 | No git remote, no deployment | High. All work exists on one disk, unreviewed by anyone but us | Open |
+| 1 | No CI — every check runs by hand, locally, at the Lead's discretion | High. Nothing prevents a regression reaching `master` | **Done** (2026-08-14). `.github/workflows/ci.yml` runs types/lint/unit and E2E. Inert until #2 is closed |
+| 2 | No git remote, no deployment | High. All work exists on one disk, unreviewed by anyone but us. Now also blocks #1 from ever running | Open — the next thing worth doing |
 | 3 | `/agents` builds dynamic (ƒ) though it reads only static seed data | Low. Wasted server render; likely an accidental dynamic API call | Open, unassigned |
-| 4 | UI merged without ever being viewed in a browser | Medium. Passing E2E is not the same as looking at the page | Open — Lead to fix at integration |
+| 4 | UI merged without ever being viewed in a browser | Medium. Passing E2E is not the same as looking at the page | **Closed for the 2026-08-14 integrations** — `/locator` and the whole order flow were driven in a real browser before merge. Standing practice now, not a debt |
 | 5 | Product imagery is a custom SVG icon set, not photography | Low. Deliberate; revisit before launch | Accepted |
 | 6 | `SearchExplorer` is a client component calling `searchProducts()` with the default argument, so the entire catalogue ships in the browser bundle | Medium, and grows with the catalogue. Fine at 38 products, untenable at 38,000 | Open. Found by ENG-4 · Forge in Lead-authored code. `searchProducts` already takes `listings` as a second parameter, so the seam for a server/client split exists |
 | 7 | `HeroScene.tsx` is a client component importing `brands` directly | Low. Same class of problem as #6; needs a prop drill | Open, found by Forge |
+| 8 | The database and `src/data` are two sources of the same truth, kept in step only by `seedDatabase` and the repository tests | Medium. Atlas added `Branch.coords` while Forge's schema was in flight and the mirror silently diverged — caught only because those tests compare record for record | Open. Accepted while the UI still reads the static arrays; must be resolved, not papered over, when the site starts reading from the DB |
+| 9 | `@react-three/fiber` constructs a `THREE.Clock`, deprecated in three r183, so every 3D page logs a deprecation warning | Low. Cosmetic, and not ours to fix: our own `useFrame` callbacks already take `delta` and never touch `state.clock` | Open, upstream. `@react-three/fiber@9.7.0` is the current release and still does this; revisit on the next R3F release rather than patching a dependency |
 
 ## Role research
 
@@ -111,6 +113,32 @@ Sources: [DORA metrics history](https://dora.dev/insights/dora-metrics-history/)
 [Trunk-based development, DORA](https://dora.dev/capabilities/trunk-based-development/) ·
 [Trunk-based development, Atlassian](https://www.atlassian.com/continuous-delivery/continuous-integration/trunk-based-development) ·
 [Engineering management best practices, Jellyfish](https://jellyfish.co/library/software-engineering-management-best-practices/)
+
+#### Integration round, 2026-08-14
+
+All three parallel branches landed on `master` the same day, one at a time as
+finding 3 requires — locator, then the order flow, then persistence. What the
+integrations actually cost, recorded because the next round will cost the same
+unless something changes:
+
+- **Every branch needed Lead work to be shippable.** `/locator` was reachable
+  only by typing the URL (no nav entry, no sitemap row) and five of its eight
+  E2E specs failed on an accessible name assembled from sibling spans. The
+  order form's error assertion collided with Next's route announcer. Forge's
+  schema predated `Branch.coords` and its repository tests failed on merge.
+  None of this showed up in the branches themselves — it is all seam damage,
+  which is the argument for smaller batches, not for more review.
+- **CI runs E2E against a production build**, not `next dev`. Dev compiles each
+  route on first request; under parallel workers that read as four failures
+  locally that all passed when re-run serially. A test suite that fails for
+  reasons unrelated to the code is worse than no suite, because it teaches the
+  team to re-run rather than to read.
+- **Two `count()` calls raced client-side rendering** (search, locator). Fixed
+  by waiting on something that settles first. `count()` does not retry — every
+  other Playwright assertion does, which makes it the one call that needs a
+  guard in front of it.
+- **The workflow cannot run yet.** There is no remote (debt #2), so `ci.yml` is
+  a file on a disk. Closing #2 is now the highest-value thing left.
 
 ### ENG-1 · Atlas — Frontend & 3D
 
