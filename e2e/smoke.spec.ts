@@ -38,6 +38,32 @@ test.describe("smoke", () => {
     await expect(page.getByRole("searchbox")).toBeVisible();
   });
 
+  test("the skip link moves keyboard focus into main, not just the scroll", async ({
+    page,
+  }) => {
+    await page.goto("/brands");
+
+    // First Tab from the top of the document reaches the skip link.
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+
+    await page.keyboard.press("Enter");
+
+    // Without tabIndex={-1} on <main> the browser scrolls but leaves focus on
+    // <body>, so the next Tab lands back in the nav the user just skipped.
+    await expect(page.locator("main#main-content")).toBeFocused();
+  });
+
+  test("page titles are not doubled by the layout's title template", async ({
+    page,
+  }) => {
+    await page.goto("/brands");
+    await expect(page).toHaveTitle("All brands — Soko");
+
+    await page.goto("/agents");
+    await expect(page).toHaveTitle("Delivery agents — Soko");
+  });
+
   test("all 6 brands render on the brands page", async ({ page }) => {
     await page.goto("/brands");
 

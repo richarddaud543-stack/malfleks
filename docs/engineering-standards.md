@@ -142,7 +142,109 @@ unless something changes:
 
 ### ENG-1 · Atlas — Frontend & 3D
 
-_Pending Phase 0._
+_Pending Phase 0 for build work. The motion/3D landscape below was researched by the
+Lead on 2026-08-14 at the user's request and stands as the shared Phase 0 baseline —
+Atlas should build on it rather than re-derive it, and extend it where a specific
+assignment needs more._
+
+#### The animation stack, as it actually stands in August 2026
+
+What we ship today: `motion` 13, `lenis` 1.3.26, `three` 0.185, `@react-three/fiber` 9.7,
+`drei` 10.7, `@react-three/postprocessing` 3.0.
+
+**GSAP** is now free for everything, including the formerly Club-only plugins
+(SplitText, MorphSVG, DrawSVG, ScrollTrigger, ScrollSmoother), since April 2025 under
+Webflow's ownership. The licence question that used to keep it out of commercial work is
+gone. In React it must be used through `@gsap/react`'s `useGSAP()` — a drop-in for
+`useEffect` wrapping `gsap.context()`, which handles StrictMode's double-invoke and
+cleanup. Always pass `{ scope: ref }`, and wrap anything created in an event handler in
+`contextSafe()` or it escapes the context and leaks.
+
+**Motion** (`motion/react`) covers our current needs and stays the default for component
+motion. Scroll-triggered work is `whileInView`/`useInView` on a pooled
+IntersectionObserver; scroll-linked work is `useScroll` + `useTransform`, which runs on
+the browser's native `ScrollTimeline` where available — off the main thread. We already
+use `useReducedMotion()` in three places.
+
+**React Spring** v10 is the spring-physics alternative, notable mainly for
+`@react-spring/three`, which animates R3F objects directly. Worth reaching for if scene
+motion ever needs to be physical and interruptible; not worth carrying alongside Motion
+without that reason.
+
+**Three.js**: `WebGPURenderer` has been production-viable since r171 with automatic
+WebGL 2 fallback, and Safari 26 completed browser support; TSL compiles one node-graph
+material to WGSL or GLSL. **The blocker for us is post-processing** — WebGPURenderer does
+not run the legacy `EffectComposer`, which is what `@react-three/postprocessing` (our
+Bloom, on both scenes) is built on. A WebGPU move means rebuilding the bloom on the TSL
+node stack. Not a drop-in; not urgent.
+
+**Anime.js v4** (rewritten, ESM, tree-shakeable — `animate()`, `createTimeline()`,
+`createScope()`, `onScroll()`, `splitText()`, WAAPI bridge) and **Trig.js** (tiny,
+IntersectionObserver sets a `--trig` CSS variable so the animation lives in CSS) are both
+good libraries that duplicate what Motion already gives us here. Adding either needs a
+concrete reason, not novelty.
+
+**Lenis** is ours already. Options that matter: `lerp` (0.1), `duration` (1.2), `easing`,
+`smoothWheel` (true), `syncTouch` (false), `autoRaf` (false), `anchors` (**false**),
+`prevent`. If GSAP ScrollTrigger is ever introduced, the canonical wiring is
+`lenis.on('scroll', ScrollTrigger.update)`, `gsap.ticker.add((t) => lenis.raf(t * 1000))`,
+`gsap.ticker.lagSmoothing(0)` — ScrollTrigger and a smooth-scroll library that do not
+share a ticker fight each other.
+
+Sources: [GSAP + React](https://gsap.com/resources/React/) ·
+[Webflow makes GSAP free](https://webflow.com/blog/gsap-becomes-free) ·
+[Motion scroll animations](https://motion.dev/docs/react-scroll-animations) ·
+[react-spring](https://github.com/pmndrs/react-spring) ·
+[Anime.js v4 docs](https://animejs.com/documentation/) ·
+[Trig.js](https://dev.to/idevgames/trigjs-tutorial-how-to-animate-on-scroll-aos-made-easy-50l) ·
+[Lenis](https://github.com/darkroomengineering/lenis) ·
+[Three.js WebGPU migration](https://www.utsubo.com/blog/webgpu-threejs-migration-guide)
+
+#### What separates premium sites from expensive-looking ones
+
+Reviewed against Awwwards winners, studio write-ups and Codrops' 2026 build tutorials.
+The finding is consistent and it is not about effect count:
+
+1. **Art direction with a point of view** — every type, colour and grid decision serving
+   one idea, carried from hero to footer.
+2. **Choreography** — transitions that mean something, scroll sequences that pace a
+   story, micro-interactions that reward attention.
+3. **Technical restraint** — heavy effects only where they matter, so the rest of the
+   build stays fast enough for those moments to land.
+
+Structurally: **scene logic, not page logic**. Award sites are sequenced like films —
+pacing, reveals, quiet moments — rather than organised as a tab hierarchy. The recurring
+technical architecture is Lenis → ScrollTrigger on a shared ticker → one master timeline
+split into overlapping phases (reveal / expand / content / settle) → WebGL planes
+matched to the DOM elements they replace → **images preloaded before the timeline
+starts**, because scroll animation over unloaded images reads as broken, not premium.
+
+Two things worth taking seriously. First, the honest counter-case: immersive formats are
+wrong for audiences hunting specific information and for teams without capacity to
+maintain them — they age fast and then damage the brand. Soko is a marketplace, so the
+3D belongs in the hero and the product showcase, not in the search results or the order
+form, which is where it currently sits. Second, **almost none of these reference builds
+address keyboard navigation, screen readers or `prefers-reduced-motion`.** We already do.
+That is a differentiator to keep, not overhead to trim.
+
+Sources: [Immersive website examples, Metabole](https://metabole.studio/en/blog/immersive-website-examples) ·
+[Sticky Grid Scroll, Codrops](https://tympanus.net/codrops/2026/03/02/sticky-grid-scroll-building-a-scroll-driven-animated-grid/) ·
+[Scroll-driven 3D image tube with R3F, Codrops](https://tympanus.net/codrops/2026/02/17/reactive-depth-building-a-scroll-driven-3d-image-tube-with-react-three-fiber/) ·
+[Award-winning websites, judged](https://www.hontran.dev/blog/best-award-winning-websites-2026)
+
+#### Two defects this research turned up, fixed the same day
+
+Reading the Lenis docs prompted a check of how in-page anchors behave under smooth
+scroll. `anchors` defaults to `false`, so the **skip-to-content link scrolled the page
+but left focus on `<body>`** — the next Tab went straight back to the nav the user had
+just skipped, which makes the link worse than useless. `<main>` now carries
+`tabIndex={-1}`. While verifying it in the browser, the tab read `All brands — Soko —
+Soko`: two pages hardcoded the suffix that the root layout's `%s — Soko` template
+already appends. Both now have E2E regression tests in `e2e/smoke.spec.ts`.
+
+The lesson worth keeping: both bugs were invisible to the test suite and to every
+screenshot, and both were found by opening the page and using it the way a keyboard user
+would.
 
 ### ENG-2 · Mercury — Data & business logic
 

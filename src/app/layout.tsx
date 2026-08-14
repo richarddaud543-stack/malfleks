@@ -56,7 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <GrainOverlay />
         <SmoothScrollProvider>
           <Navbar />
-          <main id="main-content" className="flex-1">
+          {/* tabIndex={-1} is what makes the skip link actually skip: without a
+              focusable target the browser scrolls but leaves focus on <body>,
+              so the next Tab returns to the nav the user just skipped. */}
+          <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
             {children}
           </main>
           <Footer />

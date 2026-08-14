@@ -3,7 +3,9 @@ import ScrollReveal from "@/components/motion/ScrollReveal";
 import { getAllBrands } from "@/data";
 
 export const metadata = {
-  title: "All brands — Soko",
+  // The root layout's `%s — Soko` template appends the brand name; spelling it
+  // out here too rendered "All brands — Soko — Soko".
+  title: "All brands",
 };
 
 export default function BrandsPage() {

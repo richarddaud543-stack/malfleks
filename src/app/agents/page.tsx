@@ -4,7 +4,7 @@ import AgentCard from "@/components/delivery/AgentCard";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
 export const metadata = {
-  title: "Delivery agents — Soko",
+  title: "Delivery agents",
 };
 
 const cities = Array.from(new Set(deliveryAgents.map((a) => a.city))).sort();
