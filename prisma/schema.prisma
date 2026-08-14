@@ -74,6 +74,13 @@ model Branch {
   // for the UI's trust badges, so it is a first-class column, never inferred.
   verified Boolean
 
+  // Approximate city-centre position for the locator map. Nullable and stored
+  // as two columns rather than a point type: SQLite has no geometry, and the
+  // precision here (a city, not a shopfront) does not warrant one. Both are set
+  // together or neither is — see `mapBranch`.
+  latitude  Float?
+  longitude Float?
+
   sortOrder Int
 
   products Product[]

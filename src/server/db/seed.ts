@@ -56,6 +56,8 @@ export async function seedDatabase(prisma: PrismaClient): Promise<SeedCounts> {
           hours: branch.hours,
           deliveryOffered: branch.deliveryOffered,
           verified: branch.verified,
+          latitude: branch.coords?.lat ?? null,
+          longitude: branch.coords?.lng ?? null,
           sortOrder: index,
         };
         await tx.branch.upsert({

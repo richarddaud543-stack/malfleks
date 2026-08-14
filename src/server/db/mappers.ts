@@ -64,6 +64,10 @@ export function mapBrand(row: BrandRow): Brand {
 }
 
 export function mapBranch(row: BranchRow): Branch {
+  // A half-set coordinate would put a marker in the ocean, so a row with only
+  // one of the two is treated as having none at all.
+  const hasCoords = row.latitude !== null && row.longitude !== null;
+
   return {
     id: row.id,
     brandId: row.brandId,
@@ -76,6 +80,11 @@ export function mapBranch(row: BranchRow): Branch {
     hours: row.hours,
     deliveryOffered: row.deliveryOffered,
     verified: row.verified,
+    // Spread rather than `coords: undefined`, so a branch without coordinates
+    // has no key at all and still deep-equals its static counterpart.
+    ...(hasCoords
+      ? { coords: { lat: row.latitude as number, lng: row.longitude as number } }
+      : {}),
   };
 }
 
