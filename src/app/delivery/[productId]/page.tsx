@@ -6,11 +6,11 @@ import {
   getProductById,
   getBrandById,
   getBranchById,
-  getAgentsForCity,
 } from "@/data";
-import AgentCard from "@/components/delivery/AgentCard";
+import OrderRequestForm from "@/components/order/OrderRequestForm";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { formatTZS } from "@/lib/format";
+import { orderBlockReason, resolveDeliveryRoute } from "@/lib/order";
 
 export function generateStaticParams() {
   return products.map((p) => ({ productId: p.id }));
@@ -50,10 +50,11 @@ export default async function DeliveryPage({
     notFound();
   }
 
-  const agents = branch.deliveryOffered ? [] : getAgentsForCity(branch.city);
+  const route = resolveDeliveryRoute(branch);
+  const blockReason = orderBlockReason(product, route);
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-16">
+    <div className="mx-auto max-w-5xl px-5 py-16">
       <Link
         href={`/products/${product.id}`}
         className="text-sm text-muted hover:text-foreground"
@@ -70,7 +71,7 @@ export default async function DeliveryPage({
         </p>
       </ScrollReveal>
 
-      {branch.deliveryOffered ? (
+      {route.kind === "brand" ? (
         <ScrollReveal delay={0.1}>
           <div
             data-testid="brand-delivery-panel"
@@ -88,9 +89,6 @@ export default async function DeliveryPage({
               {" " + brand.name} will handle pickup and drop-off — no
               third-party courier needed.
             </p>
-            <button className="mt-6 rounded-full bg-accent px-8 py-3 text-sm font-medium text-background shadow-[0_0_0_0_rgba(124,158,255,0)] transition-shadow hover:shadow-[0_0_32px_4px_rgba(124,158,255,0.45)]">
-              Confirm brand delivery
-            </button>
           </div>
         </ScrollReveal>
       ) : (
@@ -111,18 +109,38 @@ export default async function DeliveryPage({
               your order.
             </p>
           </div>
-
-          <div className="mt-6 space-y-4">
-            {agents.length > 0 ? (
-              agents.map((agent) => <AgentCard key={agent.id} agent={agent} />)
-            ) : (
-              <p className="text-muted">
-                No delivery agents are currently listed for {branch.city}.
-                Visit the branch directly to arrange collection.
-              </p>
-            )}
-          </div>
         </ScrollReveal>
+      )}
+
+      {/* Out of stock, or nobody serves this city: say so rather than taking a
+          request the branch could not act on. */}
+      {blockReason ? (
+        <div
+          data-testid="order-blocked"
+          className="glass-card mt-8 rounded-2xl p-8"
+        >
+          <h2 className="font-display text-xl font-medium">
+            This can&apos;t be ordered right now
+          </h2>
+          <p className="mt-3 text-sm text-muted">{blockReason}</p>
+          <p className="mt-3 text-sm text-muted">
+            {branch.name} is at {branch.addressLine}, open {branch.hours}
+            {branch.phone ? ` · ${branch.phone}` : ""}.
+          </p>
+          <Link
+            href="/search"
+            className="mt-6 inline-block rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-white/30 hover:text-foreground"
+          >
+            Find something similar
+          </Link>
+        </div>
+      ) : (
+        <OrderRequestForm
+          product={product}
+          brand={brand}
+          branch={branch}
+          route={route}
+        />
       )}
     </div>
   );
