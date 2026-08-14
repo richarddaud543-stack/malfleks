@@ -62,6 +62,8 @@ ever pays down.
 | 3 | `/agents` builds dynamic (ƒ) though it reads only static seed data | Low. Wasted server render; likely an accidental dynamic API call | Open, unassigned |
 | 4 | UI merged without ever being viewed in a browser | Medium. Passing E2E is not the same as looking at the page | Open — Lead to fix at integration |
 | 5 | Product imagery is a custom SVG icon set, not photography | Low. Deliberate; revisit before launch | Accepted |
+| 6 | `SearchExplorer` is a client component calling `searchProducts()` with the default argument, so the entire catalogue ships in the browser bundle | Medium, and grows with the catalogue. Fine at 38 products, untenable at 38,000 | Open. Found by ENG-4 · Forge in Lead-authored code. `searchProducts` already takes `listings` as a second parameter, so the seam for a server/client split exists |
+| 7 | `HeroScene.tsx` is a client component importing `brands` directly | Low. Same class of problem as #6; needs a prop drill | Open, found by Forge |
 
 ## Role research
 
