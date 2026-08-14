@@ -1,0 +1,166 @@
+// Soko marketplace schema.
+//
+// This models the same four entities the site currently serves from the static
+// arrays in `src/data/`. It deliberately mirrors those TypeScript interfaces
+// field-for-field so the repository layer in `src/server/` can return the exact
+// same shapes and the eventual cutover is an import-path change.
+//
+// SQLite is the dev provider so the project runs with no external service.
+// Everything here is chosen to be Postgres-compatible: no scalar lists, no
+// enums, no `Json` columns. See `docs/backend.md` for the Postgres switch.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7 no longer accepts `url` here. The connection string lives in
+// `prisma.config.ts` for Migrate, and reaches the client through a driver
+// adapter (`src/server/db/client.ts`). Swapping providers therefore touches
+// three known places, not the whole schema.
+datasource db {
+  provider = "sqlite"
+}
+
+model Brand {
+  id   String @id
+  slug String @unique
+
+  name String
+
+  // `BrandCategory` ("automotive" | "electronics" | "telecom") is a TS union.
+  // SQLite has no enum type, so it is stored as text and narrowed back to the
+  // union in the repository mapper. On Postgres this can become a real enum.
+  category String
+
+  logo        String
+  accentColor String
+  description String
+  website     String?
+
+  // Position in the source array. The static accessors return records in
+  // declaration order, which is neither id- nor name-sorted; persisting the
+  // index is the only way for the DB-backed functions to return an identical
+  // ordering. Editors get an explicit ordering lever for free.
+  sortOrder Int
+
+  branches Branch[]
+  products Product[]
+
+  @@index([category])
+}
+
+model Branch {
+  id String @id
+
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  name        String
+  city        String
+  region      String
+  addressLine String
+
+  // The TS type pins this to the literal "Tanzania"; the default keeps that
+  // true for hand-inserted rows without blocking a future second market.
+  country String @default("Tanzania")
+
+  phone String?
+  hours String
+
+  // Drives the core routing rule: brand fleet if true, otherwise a local agent.
+  deliveryOffered Boolean
+
+  // Separates researched-real facts from illustrative placeholders. Load-bearing
+  // for the UI's trust badges, so it is a first-class column, never inferred.
+  verified Boolean
+
+  sortOrder Int
+
+  products Product[]
+
+  @@index([brandId])
+  @@index([city])
+}
+
+model Product {
+  id   String @id
+  slug String @unique
+
+  branchId String
+  branch   Branch @relation(fields: [branchId], references: [id], onDelete: Cascade)
+
+  // brandId is denormalised from the branch, exactly as the static data has it.
+  // Every product page and search facet filters by brand without needing the
+  // branch, and the seed asserts the two agree.
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  name     String
+  category String
+
+  // Whole Tanzanian shillings. Int, never Float or Decimal: TZS has no minor
+  // unit in practice and float money is a rounding bug waiting to happen.
+  priceTZS Int
+
+  image       String
+  description String
+  inStock     Boolean
+
+  sortOrder Int
+
+  specs ProductSpec[]
+
+  @@index([branchId])
+  @@index([brandId])
+  @@index([category])
+}
+
+// `Product.specs` is a `Record<string, string>` in TypeScript. Prisma has no
+// portable map type — `Json` is not supported on SQLite and a scalar list is
+// Postgres-only — so the map is stored as rows. This survives a provider swap
+// unchanged and makes specs queryable ("all 4x4 pickups") instead of opaque.
+model ProductSpec {
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  key   String
+  value String
+
+  // Spec order is meaningful on the product page (Engine before Seats), and
+  // rows have no inherent order, so the declaration index is stored.
+  position Int
+
+  @@id([productId, key])
+  @@index([productId, position])
+}
+
+model DeliveryAgent {
+  id String @id
+
+  name String
+  city String
+
+  phone       String
+  etaEstimate String
+  verified    Boolean
+
+  sortOrder Int
+
+  regionsServed AgentRegion[]
+
+  @@index([city])
+}
+
+// `DeliveryAgent.regionsServed` is a `string[]`. Prisma scalar lists only exist
+// on Postgres/CockroachDB, so this is a join table — portable, and it gives the
+// "does this agent serve city X" lookup a real index instead of a table scan.
+model AgentRegion {
+  agentId String
+  agent   DeliveryAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  region   String
+  position Int
+
+  @@id([agentId, region])
+  @@index([region])
+}

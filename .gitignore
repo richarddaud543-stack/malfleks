@@ -36,6 +36,17 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+
+# database (local SQLite file + its WAL/journal sidecars; never commit a binary DB)
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Prisma Client is generated into node_modules/@prisma/client by `prisma generate`,
+# which /node_modules above already covers. Keep any custom generator `output`
+# path ignored here too if one is ever configured.
 
 # vercel
 .vercel
