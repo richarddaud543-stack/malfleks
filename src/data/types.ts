@@ -23,6 +23,12 @@ export interface Branch {
   hours: string;
   deliveryOffered: boolean;
   verified: boolean;
+  /**
+   * Approximate city-centre position, used to place the branch on the locator
+   * map. These are city coordinates, not surveyed shopfront positions, so they
+   * say nothing about whether the rest of the record is `verified`.
+   */
+  coords?: { lat: number; lng: number };
 }
 
 export interface Product {

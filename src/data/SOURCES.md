@@ -28,3 +28,22 @@ Sample product images are NOT photographs — they're custom flat-icon illustrat
 - `verified: false` — illustrative placeholder (plausible city/address, not independently confirmed) used to fill out the catalog for prototype purposes.
 
 Confirm and replace all `verified: false` entries with real addresses/contacts before this goes live.
+
+## Branch coordinates (`Branch.coords`)
+
+Every branch carries a `coords` pair used only to place it on the `/locator` map. These are **approximate city-centre coordinates, not surveyed shopfront positions** — all branches in a city share one coordinate, defined once as `cityCoords` at the top of `src/data/branches.ts`:
+
+| City | Approx. lat, lng |
+|---|---|
+| Dar es Salaam | -6.7924, 39.2083 |
+| Arusha | -3.3869, 36.6830 |
+| Mwanza | -2.5164, 32.9175 |
+| Dodoma | -6.1630, 35.7516 |
+
+They are commonly published city centroids, rounded to four decimal places, and they deliberately **do not** change any record's `verified` flag: knowing which city a branch is in is not the same as having confirmed its address. A branch with `verified: false` stays `false` even though it now has a coordinate.
+
+**Before going live**: geocode each branch's real street address so the map points at the actual shopfront rather than the middle of town.
+
+## Locator map outline
+
+The Tanzania outline on `/locator` is hand-authored in `src/components/locator/geo.ts` as a short list of lat/lng vertices, smoothed into a rounded shape at render time. It is a stylised sketch, not cartographic data, and is not derived from any licensed dataset. No map service, tile provider or API key is involved, so the page works fully offline.
