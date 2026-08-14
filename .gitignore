@@ -21,6 +21,9 @@
 /.next/
 /out/
 
+# agent worktrees (Claude Code creates these inside the repo)
+/.claude/
+
 # production
 /build
 

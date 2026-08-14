@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Agent worktrees live inside the repo and carry their own build output;
+    // without this, `npm run lint` reports tens of thousands of problems from
+    // other engineers' `.next` chunks instead of this checkout's source.
+    ".claude/**",
+    "**/.next/**",
   ]),
 ]);
 

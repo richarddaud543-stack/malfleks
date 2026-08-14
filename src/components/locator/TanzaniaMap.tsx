@@ -87,6 +87,12 @@ export default function TanzaniaMap({
           <button
             key={city.name}
             type="button"
+            // Named explicitly rather than left to accumulate from the child
+            // spans: browsers join those with whitespace, which put a stray
+            // space before the comma ("Dodoma , 4 branches").
+            aria-label={`${city.name}, ${city.branchCount} ${
+              city.branchCount === 1 ? "branch" : "branches"
+            }`}
             aria-pressed={isSelected}
             disabled={isEmpty}
             onClick={() => onSelect(isSelected ? null : city.name)}
@@ -110,15 +116,12 @@ export default function TanzaniaMap({
               {city.branchCount}
             </span>
             <span
+              aria-hidden="true"
               className={`rounded-full bg-background/70 px-1.5 text-[11px] whitespace-nowrap backdrop-blur-sm transition-colors ${
                 isSelected ? "text-accent" : isEmpty ? "text-muted/40" : "text-muted"
               }`}
             >
               {city.name}
-            </span>
-            <span className="sr-only">
-              , {city.branchCount}{" "}
-              {city.branchCount === 1 ? "branch" : "branches"}
             </span>
           </button>
         );
