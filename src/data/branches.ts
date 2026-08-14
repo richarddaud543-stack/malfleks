@@ -1,5 +1,18 @@
 import type { Branch } from "./types";
 
+/**
+ * Approximate city-centre coordinates, shared by every branch in that city.
+ * The locator map needs a position per branch, but we only know the city each
+ * branch sits in — pinning them all to the city centre keeps the map honest
+ * about the precision we actually have.
+ */
+const cityCoords = {
+  "Dar es Salaam": { lat: -6.7924, lng: 39.2083 },
+  Arusha: { lat: -3.3869, lng: 36.683 },
+  Mwanza: { lat: -2.5164, lng: 32.9175 },
+  Dodoma: { lat: -6.163, lng: 35.7516 },
+} as const;
+
 export const branches: Branch[] = [
   // Toyota
   {
@@ -14,6 +27,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:00–18:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "toyota-arusha",
@@ -26,6 +40,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Arusha,
   },
   {
     id: "toyota-mwanza",
@@ -38,6 +53,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Mwanza,
   },
 
   // Ford (CMC Automobiles Ltd)
@@ -53,6 +69,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:00–18:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "ford-arusha",
@@ -65,6 +82,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords.Arusha,
   },
   {
     id: "ford-dodoma",
@@ -77,6 +95,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords.Dodoma,
   },
 
   // BMW
@@ -92,6 +111,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:00–18:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "bmw-arusha",
@@ -104,6 +124,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Arusha,
   },
   {
     id: "bmw-mwanza",
@@ -116,6 +137,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–17:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Mwanza,
   },
 
   // Oraimo
@@ -130,6 +152,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 09:00–19:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "oraimo-arusha",
@@ -142,6 +165,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 09:00–18:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Arusha,
   },
   {
     id: "oraimo-mwanza",
@@ -154,6 +178,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 09:00–18:30",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Mwanza,
   },
 
   // Apple (authorized resellers)
@@ -168,6 +193,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sun 10:00–22:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "apple-elite-dar",
@@ -180,6 +206,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 09:00–18:00",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "apple-arusha",
@@ -192,6 +219,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 09:00–18:00",
     deliveryOffered: false,
     verified: false,
+    coords: cityCoords.Arusha,
   },
 
   // Halotel
@@ -207,6 +235,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sun 08:30–19:00",
     deliveryOffered: true,
     verified: true,
+    coords: cityCoords["Dar es Salaam"],
   },
   {
     id: "halotel-arusha",
@@ -219,6 +248,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–18:30",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords.Arusha,
   },
   {
     id: "halotel-mwanza",
@@ -231,6 +261,7 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–18:30",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords.Mwanza,
   },
   {
     id: "halotel-dodoma",
@@ -243,5 +274,6 @@ export const branches: Branch[] = [
     hours: "Mon–Sat 08:30–18:30",
     deliveryOffered: false,
     verified: true,
+    coords: cityCoords.Dodoma,
   },
 ];

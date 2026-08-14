@@ -1,0 +1,63 @@
+import Image from "next/image";
+import Link from "next/link";
+import DeliveryBadge from "@/components/delivery/DeliveryBadge";
+import type { LocatorBranch } from "./locator";
+
+/**
+ * A branch seen from outside its brand. `BranchCard` can assume you already
+ * know whose showroom you are looking at; here the results span six brands at
+ * once, so the logo and accent colour have to carry that identity.
+ */
+export default function LocatorBranchCard({ entry }: { entry: LocatorBranch }) {
+  const { branch, brand } = entry;
+
+  return (
+    <Link
+      href={`/brands/${brand.slug}/branches/${branch.id}`}
+      data-testid="locator-branch"
+      className="tint-glow glass-card flex gap-4 rounded-2xl p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-white/25"
+      style={{ ["--tint" as string]: `${brand.accentColor}70` }}
+    >
+      <span
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white"
+        style={{ boxShadow: `0 0 0 1px ${brand.accentColor}55` }}
+      >
+        {/* Decorative: the brand name is spelled out immediately alongside. */}
+        <Image
+          src={brand.logo}
+          alt=""
+          width={32}
+          height={32}
+          className="h-8 w-8 object-contain"
+        />
+      </span>
+
+      {/* Column on a phone so the badge sits under the address rather than
+          squeezing the branch name down to two characters. */}
+      <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="flex items-center gap-1.5 text-xs text-muted">
+            <span
+              aria-hidden="true"
+              className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
+              style={{ background: brand.accentColor }}
+            />
+            {brand.name}
+          </p>
+          <h3 className="font-display mt-0.5 font-medium">{branch.name}</h3>
+          <p className="mt-1 text-sm text-muted">{branch.addressLine}</p>
+          <p className="mt-0.5 text-xs text-muted">{branch.hours}</p>
+          {!branch.verified && (
+            <p className="mt-2 text-[11px] text-muted/70">
+              * Illustrative location for this prototype
+            </p>
+          )}
+        </div>
+
+        <div className="shrink-0">
+          <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
+        </div>
+      </div>
+    </Link>
+  );
+}
