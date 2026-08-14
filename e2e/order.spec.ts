@@ -72,7 +72,11 @@ test.describe("order request flow", () => {
     await page.getByRole("button", { name: "Confirm brand delivery" }).click();
 
     await expect(page).toHaveURL(/\/delivery\/toyota-corolla$/);
-    await expect(page.getByRole("alert")).toContainText("details need fixing");
+    // Scoped to the form: Next's route announcer is also role="alert", and an
+    // unscoped match is a strict-mode violation.
+    await expect(
+      page.getByTestId("order-request-form").getByRole("alert")
+    ).toContainText("details need fixing");
     await expect(page.getByLabel("Phone number")).toHaveAttribute(
       "aria-invalid",
       "true"
