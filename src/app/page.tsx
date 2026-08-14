@@ -49,6 +49,9 @@ export default function Home() {
                 <MagneticButton href="/brands" variant="primary">
                   Explore brands
                 </MagneticButton>
+                <MagneticButton href="/search" variant="secondary">
+                  Search products
+                </MagneticButton>
                 <MagneticButton href="/agents" variant="secondary">
                   Delivery agents
                 </MagneticButton>

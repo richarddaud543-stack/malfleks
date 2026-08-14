@@ -18,16 +18,24 @@ test.describe("smoke", () => {
     expect(errors).toEqual([]);
   });
 
-  test("nav links reach the brands and agents pages", async ({ page }) => {
+  test("nav links reach the search, brands and agents pages", async ({ page }) => {
     await page.goto("/");
 
-    await page.getByRole("link", { name: "Brands" }).click();
+    // Scoped to the header: "Explore brands" and the footer's "All brands" also
+    // point at /brands, and an unscoped name match would hit all three.
+    const nav = page.locator("header");
+
+    await nav.getByRole("link", { name: "Brands", exact: true }).click();
     await expect(page).toHaveURL(/\/brands$/);
     await expect(page.getByRole("heading", { name: "All brands" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Delivery Agents" }).click();
+    await nav.getByRole("link", { name: "Delivery Agents" }).click();
     await expect(page).toHaveURL(/\/agents$/);
     await expect(page.getByRole("heading", { name: "Delivery agents" })).toBeVisible();
+
+    await nav.getByRole("link", { name: "Search" }).click();
+    await expect(page).toHaveURL(/\/search$/);
+    await expect(page.getByRole("searchbox")).toBeVisible();
   });
 
   test("all 6 brands render on the brands page", async ({ page }) => {
