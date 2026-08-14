@@ -1,0 +1,67 @@
+import type { Metadata } from "next";
+import { Geist, Geist_Mono, Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
+import "./globals.css";
+import Navbar from "@/components/layout/Navbar";
+import Footer from "@/components/layout/Footer";
+import SmoothScrollProvider from "@/components/motion/SmoothScrollProvider";
+import GrainOverlay from "@/components/motion/GrainOverlay";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
+const displayFont = Bricolage_Grotesque({
+  variable: "--font-bricolage",
+  subsets: ["latin"],
+});
+
+const accentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
+  weight: "400",
+  style: ["normal", "italic"],
+});
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Soko — Brands, branches and delivery in one place",
+    template: "%s — Soko",
+  },
+  description:
+    "Browse authorized brand branches across Tanzania and get every order delivered, by the brand or a local courier.",
+};
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
+  return (
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} ${accentSerif.variable} h-full antialiased`}
+    >
+      <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1000] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-background"
+        >
+          Skip to content
+        </a>
+        <GrainOverlay />
+        <SmoothScrollProvider>
+          <Navbar />
+          <main id="main-content" className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </SmoothScrollProvider>
+      </body>
+    </html>
+  );
+}

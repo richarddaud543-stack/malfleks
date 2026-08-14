@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+:root {
+  --background: #06070a;
+  --surface: #0e1016;
+  --surface-2: #161923;
+  --foreground: #f2f3f5;
+  --muted: #9ca0ad;
+  --border: #23262f;
+  --accent: #7c9eff;
+  --accent-2: #c65bff;
+  --accent-3: #ff8a5c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-bricolage);
+  --font-accent-serif: var(--font-instrument-serif);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 2px;
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  scrollbar-width: none;
+}
+
+.text-gradient {
+  background: linear-gradient(
+    100deg,
+    var(--foreground) 30%,
+    var(--accent) 65%,
+    var(--accent-2) 100%
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.glass-card {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--surface) 88%, white 3%) 0%,
+    var(--surface) 100%
+  );
+  border: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+}
+
+.glow-ring {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.tint-glow {
+  transition: box-shadow 300ms ease, border-color 300ms ease;
+}
+.tint-glow:hover {
+  box-shadow: 0 20px 60px -20px var(--tint, var(--accent));
+}
+
+.bg-grid {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, black 40%, transparent 100%);
+}
+
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(3%, -4%) scale(1.06); }
+  66% { transform: translate(-3%, 3%) scale(0.96); }
+}
+
+.blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(80px);
+  animation: blob-drift 18s ease-in-out infinite;
+  pointer-events: none;
+}
