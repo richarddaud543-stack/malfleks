@@ -68,7 +68,12 @@ export default async function ProductPage({
       </Link>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        <ScrollReveal>
+        {/* Sticky on desktop so the 3D scene holds while the specs scroll past
+            it, rather than scrolling away the moment the customer starts
+            reading — the same pattern the order summary already uses. Grid
+            children stretch by default, so `self-start` is what gives sticky
+            room to move in. */}
+        <ScrollReveal className="lg:sticky lg:top-24 lg:self-start">
           <div className="h-[360px] w-full sm:h-[440px]">
             <ProductShowcaseLoader
               accentColor={brand.accentColor}
