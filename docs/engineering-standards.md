@@ -30,13 +30,21 @@ Soko Ltd — Engineering
     ├── ENG-2 · Mercury   — Data & business logic (src/data, src/lib, routing rules)
     ├── ENG-3 · Sentinel  — QA (Vitest, Playwright, accessibility, regressions)
     ├── ENG-4 · Forge     — Platform/backend (DB, auth, API)
-    ├── ENG-5 · Beacon    — SEO, metadata, design system, content, IA
-    └── ENG-6 · Prism     — Visual & graphic design (type, colour, composition)
+    ├── ENG-5 · Beacon    — SEO, metadata, content, IA
+    ├── ENG-6 · Prism     — Visual & graphic design (type, colour, composition)
+    ├── ENG-7 · Vault     — Cloud platform & security (Firebase, auth, rules)
+    └── ENG-8 · Ledger    — Commerce & payments (mobile money, fees, trust)
 ```
 
 Prism is a 2026-08-14 addition. Beacon owned "design system" alongside SEO, content
 and information architecture, which is two jobs; the visual half now has its own seat.
 Beacon keeps structure — IA, wireframes, metadata, content — and Prism owns the look.
+
+Vault and Ledger were added 2026-08-15, each because the project acquired a real
+problem nobody owned. Firebase landed with no Security Rules and no App Check, and
+"whoever touches it next" is not an owner. Soko is a marketplace that takes no money
+yet, in a market whose payment rails are mobile money rather than cards — that is a
+speciality, not a ticket.
 
 Long-form role research lives in `docs/research/`, one file per discipline, linked from
 each role's section below. It is kept out of this file so several engineers can research
@@ -285,7 +293,40 @@ would.
 
 ### ENG-2 · Mercury — Data & business logic
 
-_Pending Phase 0._
+**Phase 0 recorded 2026-08-15 → [`docs/research/data-and-domain.md`](research/data-and-domain.md).**
+
+Whole-shilling `priceTZS` is **correct, not a shortcut**: ISO 4217 gives TZS two decimals,
+but no cent coins circulate (smallest coin 50/=), so integer shillings are the accurate
+model. Nothing to fix.
+
+The real find: **`Branch.city` is a free string with no integrity backstop.** Delivery
+routing matches it exactly against agent cities and `regionsServed`, and every city
+resolved only because one courier happens to list all four. A typo or a new city would
+silently make those branches unorderable. Now enforced by a test in `src/data/index.test.ts`
+that fails naming any branch left without a courier — Lead-added, since the invariant is
+cheaper to assert than to remember.
+
+Also flagged: customer address validation accepts any six characters, so `"asdfgh"`
+passes, in a market where addressing is genuinely hard. Registered as #18.
+
+### ENG-3 · Sentinel — QA
+
+**Phase 0 recorded 2026-08-15 → [`docs/research/qa-and-accessibility.md`](research/qa-and-accessibility.md).**
+
+Sentinel expected E2E to be the weak layer and found the opposite: the core
+brand-fleet-vs-courier rule is tested at three altitudes — unit, component and E2E —
+which is the textbook shape.
+
+The gap that mattered: **the doubled-`<title>` bug was guarded only on the two routes
+where it happened to be found**, leaving eight others free to ship it again. Now a
+table-driven check covers all ten titled routes (Lead-added). All pass, so nothing else
+was hiding.
+
+Still open: **no automated accessibility tooling at all** (#17), and `collectConsoleErrors`
+exists but runs only on `/`, so a hydration or Firebase error on any other route ships
+silently (#19). Sentinel also argues mutation testing (#11) deserves a higher priority
+than it currently carries, on the grounds that it is the structural answer to
+AI-generated test tautology.
 
 ### ENG-3 · Sentinel — QA
 

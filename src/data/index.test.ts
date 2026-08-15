@@ -7,6 +7,7 @@ import {
   getProductsByBranchId,
   getProductById,
   getAgentsForCity,
+  branches,
 } from "./index";
 
 describe("getBrandBySlug / getBrandById", () => {
@@ -65,5 +66,28 @@ describe("getAgentsForCity — the core delivery-routing lookup", () => {
 
   it("returns an empty array for a city no agent serves", () => {
     expect(getAgentsForCity("Nowhereville")).toEqual([]);
+  });
+});
+
+describe("delivery coverage is total", () => {
+  // `Branch.city` is a free string matched exactly against agent cities and
+  // `regionsServed`. Today every city resolves, but only because one courier
+  // happens to list all four — nothing enforced it. A typo in a city name, or a
+  // new city added without a courier, silently leaves those branches
+  // unorderable: `orderBlockReason` refuses the order and the customer is told
+  // nobody serves their area. That should fail here, loudly, not there.
+  const needsAnAgent = branches.filter((branch) => !branch.deliveryOffered);
+
+  it("covers every branch that relies on a third-party courier", () => {
+    expect(needsAnAgent.length).toBeGreaterThan(0);
+
+    const uncovered = needsAnAgent.filter(
+      (branch) => getAgentsForCity(branch.city).length === 0
+    );
+
+    expect(
+      uncovered.map((b) => `${b.id} (${b.city})`),
+      "these branches offer no brand delivery and have no courier serving their city"
+    ).toEqual([]);
   });
 });

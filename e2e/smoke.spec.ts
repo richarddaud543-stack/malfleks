@@ -54,15 +54,30 @@ test.describe("smoke", () => {
     await expect(page.locator("main#main-content")).toBeFocused();
   });
 
-  test("page titles are not doubled by the layout's title template", async ({
-    page,
-  }) => {
-    await page.goto("/brands");
-    await expect(page).toHaveTitle("All brands — Soko");
+  // Every route that sets its own title, not just the two where the doubling
+  // bug was found. The root layout appends "— Soko" via its `%s` template, so a
+  // page that also spells the suffix out renders "… — Soko — Soko". Guarding
+  // only the routes that already broke leaves the same bug free to ship on the
+  // other eight.
+  const titledRoutes: Array<[route: string, title: string]> = [
+    ["/brands", "All brands — Soko"],
+    ["/agents", "Delivery agents — Soko"],
+    ["/search", "Search — Soko"],
+    ["/locator", "Branch locator — Soko"],
+    ["/order/confirmation", "Order request received — Soko"],
+    ["/products/toyota-corolla", "Toyota Corolla — Toyota — Soko"],
+    ["/brands/toyota", "Toyota — Soko"],
+    ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Nyerere Road — Soko"],
+    ["/delivery/toyota-corolla", "Delivery for Toyota Corolla — Soko"],
+    ["/products/not-a-real-product", "Product not found — Soko"],
+  ];
 
-    await page.goto("/agents");
-    await expect(page).toHaveTitle("Delivery agents — Soko");
-  });
+  for (const [route, title] of titledRoutes) {
+    test(`${route} sets its title exactly once`, async ({ page }) => {
+      await page.goto(route);
+      await expect(page).toHaveTitle(title);
+    });
+  }
 
   test("all 6 brands render on the brands page", async ({ page }) => {
     await page.goto("/brands");
