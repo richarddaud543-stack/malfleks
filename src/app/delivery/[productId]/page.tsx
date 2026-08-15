@@ -10,7 +10,11 @@ import {
 import OrderRequestForm from "@/components/order/OrderRequestForm";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { formatTZS } from "@/lib/format";
-import { orderBlockReason, resolveDeliveryRoute } from "@/lib/order";
+import {
+  deliveryRouteLabel,
+  orderBlockReason,
+  resolveDeliveryRoute,
+} from "@/lib/order";
 
 export function generateStaticParams() {
   return products.map((p) => ({ productId: p.id }));
@@ -63,7 +67,10 @@ export default async function DeliveryPage({
       </Link>
 
       <ScrollReveal>
-        <h1 className="mt-4 font-display text-4xl font-medium tracking-tight">
+        <p className="mt-4 font-accent-serif italic text-accent">
+          {deliveryRouteLabel(route.kind)}
+        </p>
+        <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Delivery for your order
         </h1>
         <p className="mt-2 text-muted">

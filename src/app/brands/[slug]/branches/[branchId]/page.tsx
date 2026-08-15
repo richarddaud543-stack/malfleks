@@ -69,7 +69,10 @@ export default async function BranchPage({
         </Link>
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-medium tracking-tight sm:text-4xl">
+            <p className="font-accent-serif italic text-accent">
+              {branch.city}
+            </p>
+            <h1 className="mt-1 font-display text-3xl font-medium tracking-tight sm:text-4xl">
               {branch.name}
             </h1>
             <p className="mt-2 text-muted">{branch.addressLine}</p>

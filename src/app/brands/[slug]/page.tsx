@@ -1,9 +1,25 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { brands, getBrandBySlug, getBranchesByBrandId } from "@/data";
+import {
+  brands,
+  getBrandBySlug,
+  getBranchesByBrandId,
+  type BrandCategory,
+} from "@/data";
 import BranchCard from "@/components/branch/BranchCard";
 import ScrollReveal from "@/components/motion/ScrollReveal";
+
+/**
+ * `brand.category` is stored lowercase for matching/filtering (see
+ * `src/lib/search.ts`) — this is presentation-only casing for the eyebrow,
+ * not a second source of truth.
+ */
+const CATEGORY_LABELS: Record<BrandCategory, string> = {
+  automotive: "Automotive",
+  electronics: "Electronics",
+  telecom: "Telecom",
+};
 
 export function generateStaticParams() {
   return brands.map((b) => ({ slug: b.slug }));
@@ -61,12 +77,12 @@ export default async function BrandPage({
             />
           </div>
           <div>
-            <h1 className="font-display text-4xl font-medium tracking-tight">
+            <p className="font-accent-serif italic text-accent">
+              {CATEGORY_LABELS[brand.category]}
+            </p>
+            <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
               {brand.name}
             </h1>
-            <p className="mt-1 text-xs uppercase tracking-wide text-muted">
-              {brand.category}
-            </p>
           </div>
         </div>
         <p className="mt-6 max-w-2xl text-muted">{brand.description}</p>
