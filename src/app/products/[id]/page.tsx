@@ -1,6 +1,12 @@
+/// <reference types="react/canary" />
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ViewTransition } from "react";
+// See src/components/search/ListingCard.tsx for why this is a triple-slash
+// reference rather than `import {} from "react/canary"` — that form 500s
+// under `next dev`/Turbopack (it tries to resolve a module that only exists
+// under the "types" export condition).
 import {
   products,
   getProductById,
@@ -74,12 +80,26 @@ export default async function ProductPage({
             children stretch by default, so `self-start` is what gives sticky
             room to move in. */}
         <ScrollReveal className="lg:sticky lg:top-24 lg:self-start">
-          <div className="h-[360px] w-full sm:h-[440px]">
-            <ProductShowcaseLoader
-              accentColor={brand.accentColor}
-              icon={product.image}
-            />
-          </div>
+          {/* Same name as the icon tile on ListingCard/ProductCard, scoped to
+              the same "product-view" transition type those Links tag — see
+              ListingCard.tsx for why this isn't the plain zero-config morph.
+              `update="none"` matters here too: without it, an in-place update
+              to this same node (e.g. a future edit that re-renders this page
+              without a full navigation) would pick up the browser's default
+              move/resize animation instead of skipping it. */}
+          <ViewTransition
+            name={`product-${product.id}`}
+            enter={{ "product-view": "auto", default: "none" }}
+            exit={{ "product-view": "auto", default: "none" }}
+            update="none"
+          >
+            <div className="h-[360px] w-full sm:h-[440px]">
+              <ProductShowcaseLoader
+                accentColor={brand.accentColor}
+                icon={product.image}
+              />
+            </div>
+          </ViewTransition>
         </ScrollReveal>
 
         <ScrollReveal delay={0.1}>

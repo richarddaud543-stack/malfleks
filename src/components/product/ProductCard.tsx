@@ -1,7 +1,10 @@
+/// <reference types="react/canary" />
 "use client";
 
+// See ListingCard.tsx for why this is a triple-slash reference rather than
+// `import {} from "react/canary"` — that form 500s under `next dev`/Turbopack.
 import Link from "next/link";
-import { useRef } from "react";
+import { useRef, ViewTransition } from "react";
 import { motion, useMotionValue, useTransform } from "motion/react";
 import type { Product } from "@/data";
 import ProductIcon from "./ProductIcon";
@@ -45,7 +48,11 @@ export default function ProductCard({
   }
 
   return (
-    <Link href={`/products/${product.id}`} className="perspective-1000 block">
+    <Link
+      href={`/products/${product.id}`}
+      transitionTypes={["product-view"]}
+      className="perspective-1000 block"
+    >
       <motion.div
         ref={ref}
         onMouseMove={handleMouseMove}
@@ -54,16 +61,29 @@ export default function ProductCard({
         style={{ rotateX, rotateY }}
         className="glass-card preserve-3d rounded-2xl p-5 transition-[box-shadow,border-color] duration-300"
       >
-        <div
-          className="flex h-32 items-center justify-center rounded-xl"
-          style={{ background: `${accentColor}18` }}
+        {/* Scoped to the "product-view" transition type — see ListingCard.tsx
+            for why the plain zero-config morph isn't used here. This grid has
+            no filter UI today, so there's no proven same-page collision the
+            way /search has, but matching the same scoping keeps both card
+            components (and their shared destination) behaving identically
+            rather than one being coincidentally safe. */}
+        <ViewTransition
+          name={`product-${product.id}`}
+          enter={{ "product-view": "auto", default: "none" }}
+          exit={{ "product-view": "auto", default: "none" }}
+          update="none"
         >
-          <ProductIcon
-            icon={product.image}
-            className="h-16 w-16"
-            style={{ color: iconAccent(accentColor) }}
-          />
-        </div>
+          <div
+            className="flex h-32 items-center justify-center rounded-xl"
+            style={{ background: `${accentColor}18` }}
+          >
+            <ProductIcon
+              icon={product.image}
+              className="h-16 w-16"
+              style={{ color: iconAccent(accentColor) }}
+            />
+          </div>
+        </ViewTransition>
         <div className="mt-4 flex items-start justify-between gap-2">
           <div>
             <h3 className="font-display text-sm font-medium">{product.name}</h3>

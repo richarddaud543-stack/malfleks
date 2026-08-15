@@ -108,3 +108,18 @@ body {
   animation: blob-drift 18s ease-in-out infinite;
   pointer-events: none;
 }
+
+/* Cross-route view transitions (product card -> product page showcase) run
+   through the browser's own ::view-transition-* pseudo-elements, outside
+   React/Motion's render cycle — the `useReducedMotion()` gate the rest of the
+   app uses never sees them. Zeroing every duration is the mechanism the
+   View Transitions guide documents for this: the browser still swaps the
+   old/new state, just as a plain cut instead of an animated morph. */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  ::view-transition-group(*) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+  }
+}
