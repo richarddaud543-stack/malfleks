@@ -1,8 +1,8 @@
 import Link from "next/link";
-import HeroSceneLoader from "@/components/three/HeroSceneLoader";
+import Hero from "@/components/home/Hero";
+import AmbientBlob from "@/components/home/AmbientBlob";
 import BrandGrid from "@/components/brand/BrandGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import MagneticButton from "@/components/motion/MagneticButton";
 import { getAllBrands } from "@/data";
 
 export default function Home() {
@@ -10,60 +10,7 @@ export default function Home() {
 
   return (
     <div>
-      <section className="relative overflow-hidden">
-        <div className="blob h-[420px] w-[420px] bg-accent/25 -left-32 -top-32" />
-        <div className="blob h-[380px] w-[380px] bg-accent-2/20 -right-24 top-10" style={{ animationDelay: "-6s" }} />
-        <div className="blob h-[320px] w-[320px] bg-accent-3/15 left-1/3 bottom-0" style={{ animationDelay: "-11s" }} />
-        <div className="bg-grid absolute inset-0 h-[600px]" />
-
-        <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-5 pb-10 pt-16 lg:grid-cols-[1.1fr_1fr] lg:pb-0 lg:pt-24">
-          <div>
-            <ScrollReveal>
-              <span className="inline-flex items-center gap-2 rounded-full border border-border px-3 py-1 text-xs text-muted">
-                <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-                Now live across Tanzania
-              </span>
-            </ScrollReveal>
-            <ScrollReveal delay={0.1}>
-              <h1 className="mt-6 font-display text-5xl font-medium leading-[0.95] tracking-tight sm:text-6xl lg:text-7xl">
-                Every brand
-                <br />
-                branch.{" "}
-                <span className="font-accent-serif italic text-gradient">
-                  One
-                </span>
-                <br />
-                delivery promise.
-              </h1>
-            </ScrollReveal>
-            <ScrollReveal delay={0.2}>
-              <p className="mt-6 max-w-md text-base text-muted">
-                Browse authorized branches from Toyota, Ford, BMW, Oraimo,
-                Apple and Halotel. If the branch delivers, we route your
-                order straight to them — if not, we connect you to a
-                trusted local courier automatically.
-              </p>
-            </ScrollReveal>
-            <ScrollReveal delay={0.3}>
-              <div className="mt-9 flex flex-wrap gap-4">
-                <MagneticButton href="/brands" variant="primary">
-                  Explore brands
-                </MagneticButton>
-                <MagneticButton href="/search" variant="secondary">
-                  Search products
-                </MagneticButton>
-                <MagneticButton href="/agents" variant="secondary">
-                  Delivery agents
-                </MagneticButton>
-              </div>
-            </ScrollReveal>
-          </div>
-
-          <div className="h-[420px] w-full sm:h-[520px] lg:-mr-10 lg:h-[600px]">
-            <HeroSceneLoader />
-          </div>
-        </div>
-      </section>
+      <Hero />
 
       <section className="mx-auto max-w-6xl px-5 py-20">
         <ScrollReveal>
@@ -85,7 +32,7 @@ export default function Home() {
       </section>
 
       <section className="relative mx-auto max-w-6xl px-5 py-20">
-        <div className="blob h-[300px] w-[300px] bg-accent-2/10 right-0 top-1/2" />
+        <AmbientBlob className="h-[300px] w-[300px] bg-accent-2/10 right-0 top-1/2" />
         <ScrollReveal>
           <p className="font-accent-serif italic text-accent">How it works</p>
           <h2 className="mt-1 font-display text-3xl font-medium tracking-tight sm:text-4xl">

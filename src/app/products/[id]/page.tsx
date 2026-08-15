@@ -13,10 +13,9 @@ import {
   getBrandById,
   getBranchById,
 } from "@/data";
-import ProductShowcaseLoader from "@/components/three/ProductShowcaseLoader";
+import ProductShowcase from "@/components/product/ProductShowcase";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import MagneticButton from "@/components/motion/MagneticButton";
 import { formatTZS } from "@/lib/format";
 
 export function generateStaticParams() {
@@ -74,11 +73,11 @@ export default async function ProductPage({
       </Link>
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2">
-        {/* Sticky on desktop so the 3D scene holds while the specs scroll past
-            it, rather than scrolling away the moment the customer starts
-            reading — the same pattern the order summary already uses. Grid
-            children stretch by default, so `self-start` is what gives sticky
-            room to move in. */}
+        {/* Sticky on desktop so the product panel holds while the specs
+            scroll past it, rather than scrolling away the moment the
+            customer starts reading — the same pattern the order summary
+            already uses. Grid children stretch by default, so `self-start`
+            is what gives sticky room to move in. */}
         <ScrollReveal className="lg:sticky lg:top-24 lg:self-start">
           {/* Same name as the icon tile on ListingCard/ProductCard, scoped to
               the same "product-view" transition type those Links tag — see
@@ -94,7 +93,7 @@ export default async function ProductPage({
             update="none"
           >
             <div className="h-[360px] w-full sm:h-[440px]">
-              <ProductShowcaseLoader
+              <ProductShowcase
                 accentColor={brand.accentColor}
                 icon={product.image}
               />
@@ -138,9 +137,12 @@ export default async function ProductPage({
           )}
 
           <div className="mt-10">
-            <MagneticButton href={`/delivery/${product.id}`} variant="primary">
+            <Link
+              href={`/delivery/${product.id}`}
+              className="btn-pill btn-lime px-7 py-3.5 text-base"
+            >
               Order & choose delivery
-            </MagneticButton>
+            </Link>
           </div>
 
           <p className="mt-3 text-xs text-muted">
