@@ -5,6 +5,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import SmoothScrollProvider from "@/components/motion/SmoothScrollProvider";
 import GrainOverlay from "@/components/motion/GrainOverlay";
+import FirebaseAnalytics from "@/components/firebase/FirebaseAnalytics";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <GrainOverlay />
+        <FirebaseAnalytics />
         <SmoothScrollProvider>
           <Navbar />
           {/* tabIndex={-1} is what makes the skip link actually skip: without a
