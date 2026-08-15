@@ -6,6 +6,7 @@ import { motion, useMotionValue, useTransform } from "motion/react";
 import type { Product } from "@/data";
 import ProductIcon from "./ProductIcon";
 import { formatTZS } from "@/lib/format";
+import { iconAccent } from "@/lib/accent";
 
 export default function ProductCard({
   product,
@@ -60,7 +61,7 @@ export default function ProductCard({
           <ProductIcon
             icon={product.image}
             className="h-16 w-16"
-            style={{ color: accentColor }}
+            style={{ color: iconAccent(accentColor) }}
           />
         </div>
         <div className="mt-4 flex items-start justify-between gap-2">

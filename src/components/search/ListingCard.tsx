@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import ProductIcon from "@/components/product/ProductIcon";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import { formatTZS } from "@/lib/format";
+import { iconAccent } from "@/lib/accent";
 import type { Listing } from "@/lib/search";
 
 /**
@@ -34,7 +35,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           <ProductIcon
             icon={product.image}
             className="h-12 w-12"
-            style={{ color: brand.accentColor }}
+            style={{ color: iconAccent(brand.accentColor) }}
           />
         </div>
 

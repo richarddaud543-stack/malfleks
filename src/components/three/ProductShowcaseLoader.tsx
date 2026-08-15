@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic";
 import { useReducedMotion } from "motion/react";
 import ProductIcon from "../product/ProductIcon";
+import { iconAccent } from "@/lib/accent";
 
 const ProductShowcaseScene = dynamic(() => import("./ProductShowcaseScene"), {
   ssr: false,
@@ -27,7 +28,11 @@ export default function ProductShowcaseLoader({
           className="flex h-28 w-28 items-center justify-center rounded-full"
           style={{ background: `${accentColor}22` }}
         >
-          <ProductIcon icon={icon} className="h-16 w-16" style={{ color: accentColor }} />
+          <ProductIcon
+            icon={icon}
+            className="h-16 w-16"
+            style={{ color: iconAccent(accentColor) }}
+          />
         </div>
       </div>
     );

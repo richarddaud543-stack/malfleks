@@ -30,8 +30,17 @@ Soko Ltd — Engineering
     ├── ENG-2 · Mercury   — Data & business logic (src/data, src/lib, routing rules)
     ├── ENG-3 · Sentinel  — QA (Vitest, Playwright, accessibility, regressions)
     ├── ENG-4 · Forge     — Platform/backend (DB, auth, API)
-    └── ENG-5 · Beacon    — SEO, metadata, design system, content
+    ├── ENG-5 · Beacon    — SEO, metadata, design system, content, IA
+    └── ENG-6 · Prism     — Visual & graphic design (type, colour, composition)
 ```
+
+Prism is a 2026-08-14 addition. Beacon owned "design system" alongside SEO, content
+and information architecture, which is two jobs; the visual half now has its own seat.
+Beacon keeps structure — IA, wireframes, metadata, content — and Prism owns the look.
+
+Long-form role research lives in `docs/research/`, one file per discipline, linked from
+each role's section below. It is kept out of this file so several engineers can research
+in parallel without four of them editing the same document.
 
 ## Standing engineering baseline
 
@@ -66,6 +75,10 @@ ever pays down.
 | 7 | `HeroScene.tsx` is a client component importing `brands` directly | Low. Same class of problem as #6; needs a prop drill | Open, found by Forge |
 | 8 | The database and `src/data` are two sources of the same truth, kept in step only by `seedDatabase` and the repository tests | Medium. Atlas added `Branch.coords` while Forge's schema was in flight and the mirror silently diverged — caught only because those tests compare record for record | Open. Accepted while the UI still reads the static arrays; must be resolved, not papered over, when the site starts reading from the DB |
 | 9 | `@react-three/fiber` constructs a `THREE.Clock`, deprecated in three r183, so every 3D page logs a deprecation warning | Low. Cosmetic, and not ours to fix: our own `useFrame` callbacks already take `delta` and never touch `state.clock` | Open, upstream. `@react-three/fiber@9.7.0` is the current release and still does this; revisit on the next R3F release rather than patching a dependency |
+| 10 | Brand accent colours are used as borders and marker fills in `CityLocator.tsx` (106–107) and `TanzaniaMap.tsx` without any contrast guard | Low–medium. Same class as the icon-fill defect Prism found, which was real; these specific spots are **uncomputed**, so this is a suspicion, not a finding | Open, unassigned. `iconAccent()` in `src/lib/accent.ts` is the tool; the work is deciding the right threshold for a border vs an icon |
+| 11 | No mutation testing — nothing checks whether our tests would catch a deliberately wrong implementation | Low, rising. Proposed by Forge as the structural answer to an agent writing a test that trivially passes against the code it just wrote | Open. Scope to `src/server` and `src/lib`; sequence after #2 |
+| 12 | No cross-route view transitions — the icon tile on a card and the same product's page have no visual relationship | Low. Pure craft, but it is the one page-to-page gap the current stack cannot close | Open, unassigned. Native browser API via React's `<ViewTransition>`, no new dependency (Atlas, verified against the local Next 16 docs) |
+| 13 | The delivery route is computed only on `/delivery/[productId]`, one page after the customer decides | Medium. `resolveDeliveryRoute()` already answers "brand fleet or which courier" — the answer just arrives after the choice it should inform | Open, found by Beacon. The highest-value item from the UX research |
 
 ## Role research
 
@@ -142,10 +155,31 @@ unless something changes:
 
 ### ENG-1 · Atlas — Frontend & 3D
 
-_Pending Phase 0 for build work. The motion/3D landscape below was researched by the
-Lead on 2026-08-14 at the user's request and stands as the shared Phase 0 baseline —
-Atlas should build on it rather than re-derive it, and extend it where a specific
-assignment needs more._
+**Phase 0 recorded 2026-08-15 → [`docs/research/web-development.md`](research/web-development.md),
+building on the Lead's 2026-08-14 motion-stack research below.**
+
+Atlas expected the 3D/motion layer to be the risk area and found the opposite: the R3F
+code is the well-handled part (`next/dynamic` with `ssr: false` behind a
+`useReducedMotion()` gate, so neither Three.js nor its scene graph ships to a user who
+asked for reduced motion). Where current practice actually disagrees with this repo is
+plainer — **two client components importing data they should receive as props**
+(debt #6, #7) — and the fix is moving an import, not adopting a library. The Next.js docs
+name the mechanism precisely: a Server Component passed as `children`/prop to a Client
+Component is *not* pulled into the client bundle.
+
+New and actionable: **View Transitions need no configuration in the App Router** — the
+Lead verified this against `node_modules/next/dist/docs/01-app/02-guides/view-transitions.md`,
+which states it plainly and gives `import { ViewTransition } from 'react'`. Today,
+clicking a product card is a cold navigation: the accent-tinted icon tile on the card and
+the same product's showcase have no on-screen relationship. That is the one gap the
+existing stack cannot close, because it is a browser API rather than an animation
+library's job — and it costs no new dependency, which is exactly the "technical
+restraint" the craft research argued for.
+
+Also flagged: `OrderRequestForm` is a fully client-side form whose validation
+(`src/lib/order.ts`) is already shaped to become a Server Action with `useActionState`.
+Worth doing **as part of** wiring real persistence, not as a standalone refactor of code
+that works correctly today.
 
 #### The animation stack, as it actually stands in August 2026
 
@@ -256,8 +290,87 @@ _Pending Phase 0._
 
 ### ENG-4 · Forge — Platform & backend
 
-_Pending Phase 0._
+**Phase 0 recorded 2026-08-15 → [`docs/research/software-engineering.md`](research/software-engineering.md).**
+Learned the discipline rather than a framework: architecture, testing strategy, delivery,
+and specifically how practice changes when most code in a repo is machine-generated —
+which is our literal situation.
 
-### ENG-5 · Beacon — SEO, design system, content
+The finding worth carrying: four independent sources (Farley, Beck, Thoughtworks Radar
+Vol. 34, DORA-adjacent benchmarking) converge on one mechanism — **generation capacity
+outruns verification capacity**, and tests are the one artifact an agent cannot talk its
+way around. Beck's specific observation is that an agent asked to make tests pass will
+weaken or delete the inconvenient test rather than solve the problem. Thoughtworks names
+the compounding version "cognitive debt", and its *team of coding agents* entry describes
+this repo almost exactly, naming **architecture drift** — agents replicating whatever
+pattern is already present, degraded ones included — as the main risk.
 
-_Pending Phase 0._
+Forge went looking for a respectable case that heavy test discipline is overhead when
+agents can regenerate code cheaply, and did not find one. That is a point in favour of
+the standing baseline, arrived at by trying to falsify it.
+
+One new practice proposed and accepted onto the register: **mutation testing** as a check
+on the test suite itself, scoped to `src/server` and `src/lib`. It is the structural
+answer to the Beck failure mode. Not before debt #2.
+
+Sourcing honesty: no YouTube transcript was retrievable. Everything attributed to Beck
+and Farley comes from newsletter and podcast write-ups that quote them directly, and the
+Radar specifics for two entries come from search summaries rather than full pages —
+flagged as such in the document.
+
+### ENG-5 · Beacon — SEO, content, information architecture
+
+**Phase 0 recorded 2026-08-15 → [`docs/research/wireframing-and-ux.md`](research/wireframing-and-ux.md).**
+
+Three findings worth acting on. **A dynamic UI needs a wireflow, not a wireframe** —
+NN/g draws the line explicitly, and our undocumented state machines (`SearchExplorer`,
+`CityLocator`, `OrderRequestForm`) are exactly the case plain wireframes handle badly:
+nothing outside the code describes the URL-sync or focus-on-error behaviour.
+**Breadcrumbs are conditional, not decorative** — useless below 2–3 tiers, valuable
+beyond, and our real depth is six (`Home → Brands → Brand → Branch → Product → Delivery
+→ Confirmation`) with an inconsistent back-link pattern; the brand page is the one
+detail page missing it. And **the delivery route is computed one page too late**:
+`resolveDeliveryRoute()` decides brand-fleet vs courier, but only on
+`/delivery/[productId]`, after the customer has already committed to a product — the
+answer belongs on `/products/[id]`, where the decision is actually made.
+
+Beacon also checked whether we make the classic mobile-first error of porting one UI to
+every breakpoint, and found we do not — `Navbar` and `SearchExplorer` genuinely diverge
+per breakpoint. A finding that confirmed the codebase rather than contradicting it.
+
+### ENG-6 · Prism — Visual & graphic design
+
+**Phase 0 recorded 2026-08-15 → [`docs/research/graphic-design.md`](research/graphic-design.md).**
+
+Prism's audit found a real, computed accessibility defect rather than an opinion about
+taste, which is the standard this seat exists to meet: **brand accent colours were being
+used as the product-icon fill on a chip tinted with that same accent**, so a dark accent
+drew a dark shape on a dark ground.
+
+The Lead re-computed every brand independently and the finding held — and went one
+further than the report:
+
+| Brand | Accent | Icon on its own chip |
+|---|---|---|
+| Apple | `#1D1D1F` | **1.12:1** — fails |
+| Ford | `#003478` | **1.56:1** — fails |
+| BMW | `#0066B1` | 3.01:1 — borderline |
+| Toyota | `#EB0A1E` | 3.98:1 |
+| Halotel | `#00A651` | 5.39:1 |
+| Oraimo | `#0BC5A0` | 7.54:1 |
+
+Prism reported only Apple; Ford fails the same way and was missed. **Verify a
+contributor's numbers by re-deriving them, not by re-reading them** — the method was
+right and the sweep was incomplete, which is the failure mode a spot-check catches and a
+proofread does not.
+
+The neutral palette, which the team had assumed was the risk, is fine: `--foreground`
+18.14:1, `--muted` 7.72:1, `--accent` 7.86:1 on `--background`. The two tokens Prism
+left uncomputed are also fine — `--accent-2` 6.08:1, `--accent-3` 8.67:1 (Lead-computed).
+The danger was never the core tokens; it is **unvalidated brand data reaching a
+foreground role**, which nothing in the token system guarded against.
+
+Fixed in `src/lib/accent.ts`: `iconAccent()` returns the accent untouched when it already
+clears 3:1 against its own chip, and otherwise the least-lightened variant that does.
+Only Apple (`#616162`) and Ford (`#3d6598`) change. A test asserts the property for every
+brand in the catalogue, so a seventh brand with a dark accent fails the suite instead of
+shipping an invisible icon.
