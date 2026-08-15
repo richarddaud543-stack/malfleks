@@ -11,6 +11,44 @@ deliberate — see [Remaining cutover work](#remaining-cutover-work).
 
 ---
 
+## Decision: Prisma owns the catalogue; Firebase is scoped to Auth and Analytics
+
+**Decided 2026-08-15 by the owner. This closes debt #14 and is not an open question.**
+
+The repo briefly held two persistence stacks — this one, and a Firebase SDK wired to
+project `v-mall-f37c6` — with neither read by any page. That ambiguity was the expensive
+kind: both looked equally live, so whoever came next would build against whichever they
+found first.
+
+**Prisma is the catalogue's source of truth.** Firebase is scoped to **Auth and
+Analytics**, and nothing else. Analytics is already live (`src/lib/firebase.ts`,
+`src/components/firebase/FirebaseAnalytics.tsx`). Auth is not built yet.
+
+The reasoning, from two engineers who reached it independently from opposite ends:
+
+- **The schema is genuinely relational** — real foreign keys, a join table chosen for
+  indexed queries, a tested denormalisation invariant. Firestore has no joins, so every
+  one of those would become a manually synchronised field. That is debt #8 generalised
+  across the whole catalogue rather than contained.
+- **Firestore's real strengths — offline sync and realtime listeners — are not what an
+  ops-managed, public-read catalogue needs.** Paying their modelling cost buys nothing
+  here.
+- **Payment cannot honestly attach to an order record the backend has never seen**, so
+  server persistence is the blocker in front of commerce either way. Prisma is far closer
+  to done: the repository layer already deep-equals every accessor against the static
+  data, and the Postgres cutover is a documented four-file change.
+
+**What this forbids**, so it does not creep back: no Firestore reads or writes, no
+Firestore collections for catalogue data, no second source of truth for brands, branches,
+products or agents.
+
+**What remains open:** one narrowly-scoped exception may be revisited later — letting
+Firestore own a genuinely realtime slice such as live order status, which is the one
+thing it would do better than Postgres here. That would need its own decision recorded
+below this one, not an assumption.
+
+---
+
 ## Quick start
 
 From a fresh clone:
