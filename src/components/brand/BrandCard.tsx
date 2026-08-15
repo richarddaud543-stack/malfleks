@@ -61,14 +61,18 @@ export default function BrandCard({ brand }: { brand: Brand }) {
   return (
     <Link
       href={`/brands/${brand.slug}`}
-      className="group glass-card tint-glow relative block overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-white/25"
+      className="group glass-card tint-glow relative block overflow-hidden rounded-[1.75rem] p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-foreground/20"
       style={{ "--tint": brand.accentColor } as React.CSSProperties}
     >
+      {/* A soft, brand-tinted colour wash in the corner — the dark theme's
+          glow-spot treatment, toned down for a light card (opacity halved,
+          blur increased) so it reads as an ambient tint rather than a hard
+          smear of colour. */}
       <div
-        className="absolute -right-10 -top-10 h-32 w-32 rounded-full opacity-25 blur-2xl transition-opacity duration-300 group-hover:opacity-50"
+        className="absolute -right-12 -top-12 h-36 w-36 rounded-full opacity-[0.14] blur-3xl transition-opacity duration-300 group-hover:opacity-25"
         style={{ background: brand.accentColor }}
       />
-      <div className="relative h-16 w-16 rounded-xl bg-white p-3 shadow-lg">
+      <div className="relative h-16 w-16 rounded-2xl border border-border bg-surface p-3">
         <Image
           src={brand.logo}
           alt={brand.name}
@@ -77,18 +81,16 @@ export default function BrandCard({ brand }: { brand: Brand }) {
           className="object-contain p-3"
         />
       </div>
-      <h3 className="relative mt-4 font-display text-lg font-medium">
+      <h3 className="relative mt-5 font-display text-xl font-semibold tracking-tight text-foreground">
         {brand.name}
       </h3>
-      <p className="relative mt-1 text-xs uppercase tracking-wide text-muted">
+      <p className="relative mt-1 text-xs font-medium uppercase tracking-wide text-muted">
         {brand.category}
       </p>
       {deliveryMix && (
         <span
-          className={`relative mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-            deliveryMix.tone === "positive"
-              ? "bg-emerald-500/15 text-emerald-400"
-              : "bg-amber-500/15 text-amber-400"
+          className={`relative mt-3 inline-flex items-center gap-1.5 rounded-full bg-foreground px-2.5 py-1 text-xs font-medium ${
+            deliveryMix.tone === "positive" ? "text-emerald-400" : "text-amber-400"
           }`}
         >
           <span

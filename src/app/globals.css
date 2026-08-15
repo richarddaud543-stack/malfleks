@@ -1,15 +1,31 @@
 @import "tailwindcss";
 
+/*
+ * Soko — light system, replacing the near-black glass/bloom theme.
+ * Direction: https://beetogreen.com/en, inspected directly (computed styles
+ * pulled from the live page, not eyeballed off a screenshot) — see the
+ * per-token notes below for which values are sampled 1:1 from that site.
+ *
+ * Token names are kept stable from the dark system (--background, --surface,
+ * --foreground, --muted, --border, --accent) so components outside this
+ * round's scope keep compiling; their *meaning* has shifted in one place:
+ * --surface used to be "a card's background" — it's now "a large rounded
+ * section block's fill" (the pale mint panel). Individual cards (product,
+ * listing, brand) now sit on --surface-2 instead. See engineering notes in
+ * BrandCard.tsx / Navbar.tsx for how each token is used.
+ */
 :root {
-  --background: #06070a;
-  --surface: #0e1016;
-  --surface-2: #161923;
-  --foreground: #f2f3f5;
-  --muted: #9ca0ad;
-  --border: #23262f;
-  --accent: #7c9eff;
-  --accent-2: #c65bff;
-  --accent-3: #ff8a5c;
+  --background: #ffffff; /* page ground */
+  --surface: #d4f5e0; /* pale mint — large rounded section-block fill; sampled from beetogreen's button/panel mint */
+  --surface-2: #ffffff; /* individual card fill (BrandCard, product/listing cards) — floats on --background or --surface */
+  --foreground: #0c1e18; /* deep forest ink — body text, headings, and the navbar's "black" pill (beetogreen reuses this exact value both ways) */
+  --muted: #5a6662; /* forest mixed ~68% into white; tuned so it clears 4.5:1 on both --background and --surface, see globals.css contrast notes */
+  --border: #e2e6e4; /* forest mixed ~12% into white */
+  --accent: #005236; /* saturated forest/emerald — links, focus rings, icon accent, badges */
+  --accent-2: #4b1a9a; /* saturated purple — sampled from beetogreen's purple section */
+  --accent-3: #c43d0d; /* warm burnt-orange, darkened from beetogreen's sampled #E54C1E to clear 4.5:1 as text */
+  --lime: #e6ff55; /* primary CTA fill (chartreuse) — sampled from beetogreen's "Book a demo" pill */
+  --lime-foreground: var(--foreground); /* CTA text sits on --lime, not white — see contrast notes */
 }
 
 @theme inline {
@@ -22,6 +38,8 @@
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
   --color-accent-3: var(--accent-3);
+  --color-lime: var(--lime);
+  --color-lime-foreground: var(--lime-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
   --font-display: var(--font-bricolage);
@@ -31,6 +49,22 @@
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* The navbar is a floating pill that overlays content as you scroll, so
+   anything scrolled *to* — a skip-link target, an in-page anchor, a heading —
+   would otherwise land underneath it. Reserving the pill's height plus its top
+   offset means the browser stops short of it instead. */
+html {
+  scroll-padding-top: 6rem;
+}
+
+#main-content,
+:target,
+h1,
+h2,
+h3 {
+  scroll-margin-top: 6rem;
 }
 
 :focus-visible {
@@ -66,31 +100,64 @@ body {
   color: transparent;
 }
 
+/* Large rounded section block — the "content grouped into pale mint panels"
+   motif that carries this whole direction. Everyone building a new section
+   should reach for this rather than inventing another rounded-xl-on-white
+   pattern. Radius steps up on larger screens, matching the reference. */
+.panel {
+  background: var(--surface);
+  border-radius: 1.75rem;
+}
+@media (min-width: 640px) {
+  .panel {
+    border-radius: 2rem;
+  }
+}
+
+/* Individual card — repurposed from the dark theme's frosted-glass card.
+   No blur/translucency needed on a solid light ground; kept as a soft
+   elevated white card with a hairline border instead. Still called
+   `.glass-card` because ~15 call sites outside this round's scope
+   (ProductCard, ListingCard, AgentCard, BranchCard, ...) reference it by
+   that name — renaming would silently break them with no type error. */
 .glass-card {
-  background: linear-gradient(
-    160deg,
-    color-mix(in srgb, var(--surface) 88%, white 3%) 0%,
-    var(--surface) 100%
-  );
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  backdrop-filter: blur(16px);
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--foreground) 4%, transparent),
+    0 16px 40px -20px color-mix(in srgb, var(--foreground) 18%, transparent);
 }
 
 .glow-ring {
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
-.tint-glow {
-  transition: box-shadow 300ms ease, border-color 300ms ease;
-}
-.tint-glow:hover {
-  box-shadow: 0 20px 60px -20px var(--tint, var(--accent));
+/* Soft, diffused "floating" shadow — the navbar pill, footer panel, and
+   anything else that needs to look detached from the page rather than
+   flush with it. */
+.shadow-float {
+  box-shadow:
+    0 1px 2px color-mix(in srgb, var(--foreground) 5%, transparent),
+    0 24px 48px -20px color-mix(in srgb, var(--foreground) 22%, transparent);
 }
 
+/* Brand-tinted hover glow. On the old near-black ground a full-strength
+   `var(--tint)` shadow read as a moody glow; on white the same shadow reads
+   as a hard-edged smear, so it's mixed down to a pastel halo instead. */
+.tint-glow {
+  transition: box-shadow 300ms ease, border-color 300ms ease, transform 300ms ease;
+}
+.tint-glow:hover {
+  box-shadow: 0 24px 48px -20px color-mix(in srgb, var(--tint, var(--accent)) 55%, transparent);
+}
+
+/* Faint structural grid, now drawn in --border instead of a mixed-down one —
+   --border itself is already light enough that it doesn't need thinning
+   further the way the old near-black one did. */
 .bg-grid {
   background-image:
-    linear-gradient(color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--border) 60%, transparent) 1px, transparent 1px);
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 44px 44px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 20%, black 40%, transparent 100%);
 }
@@ -101,12 +168,57 @@ body {
   66% { transform: translate(-3%, 3%) scale(0.96); }
 }
 
+/* Ambient colour-wash blobs. Structurally unchanged from the dark theme —
+   colour was always supplied by call sites via bg-accent/bg-accent-2/
+   bg-accent-3 utility classes, so repointing those tokens at the light
+   palette (mint/purple/orange instead of blue/magenta/orange-on-black) is
+   enough to carry this forward without touching call sites. */
 .blob {
   position: absolute;
   border-radius: 9999px;
   filter: blur(80px);
   animation: blob-drift 18s ease-in-out infinite;
   pointer-events: none;
+}
+
+/* Pill CTA buttons — the navbar's lime primary / black secondary pair, and
+   any future one that needs the same treatment. Colours are pre-verified
+   (see globals.css contrast notes in the room brief / PR description):
+   lime-fill needs dark text, ink-fill needs light text — get either pairing
+   backwards and it silently fails contrast. */
+.btn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  border-radius: 9999px;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+.btn-pill:hover {
+  transform: translateY(-1px);
+}
+.btn-pill:active {
+  transform: translateY(0);
+}
+
+.btn-lime {
+  background: var(--lime);
+  color: var(--lime-foreground);
+}
+.btn-lime:hover {
+  box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--lime) 75%, transparent);
+}
+
+.btn-ink {
+  background: var(--foreground);
+  color: var(--background);
+}
+.btn-ink:hover {
+  box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--foreground) 45%, transparent);
 }
 
 /* Cross-route view transitions (product card -> product page showcase) run
