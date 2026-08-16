@@ -60,7 +60,7 @@ export default function OrderConfirmation() {
         </p>
         <Link
           href="/search"
-          className="mt-8 inline-block rounded-full bg-accent px-6 py-2.5 text-sm font-medium text-background transition-opacity hover:opacity-90"
+          className="btn-pill btn-lime mt-8 px-6 py-2.5 text-sm"
         >
           Browse products
         </Link>
@@ -154,13 +154,13 @@ export default function OrderConfirmation() {
           <div className="mt-10 flex flex-wrap gap-3">
             <Link
               href={`/products/${order.product.id}`}
-              className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-white/30 hover:text-foreground"
+              className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
             >
               Back to {order.product.name}
             </Link>
             <Link
               href="/search"
-              className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-white/30 hover:text-foreground"
+              className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
             >
               Keep browsing
             </Link>

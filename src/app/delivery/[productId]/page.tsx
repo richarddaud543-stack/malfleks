@@ -79,13 +79,15 @@ export default async function DeliveryPage({
       </ScrollReveal>
 
       {route.kind === "brand" ? (
+        // Brand-delivery routes reuse `.panel`'s pale mint fill — the same
+        // "positive" green the rest of the site already spends on brand
+        // delivery (BrandCard's badge, the homepage's "Brand delivery" tile)
+        // — so this reads as unmistakably the good-news panel at a glance,
+        // not just via the badge text.
         <ScrollReveal delay={0.1}>
-          <div
-            data-testid="brand-delivery-panel"
-            className="mt-10 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-8 backdrop-blur-xl"
-          >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2.5 py-1 text-xs font-medium text-emerald-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+          <div data-testid="brand-delivery-panel" className="panel mt-10 p-8">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-1 text-xs font-medium text-accent">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent" />
               Brand delivery
             </span>
             <h2 className="mt-4 font-display text-xl font-medium">
@@ -99,13 +101,18 @@ export default async function DeliveryPage({
           </div>
         </ScrollReveal>
       ) : (
+        // No shared "caution panel" utility exists, so the fill is built
+        // from --accent-3 (the burnt-orange token already tuned to clear
+        // 4.5:1 as text) at the same radius steps as `.panel`, keeping this
+        // visually distinct from the brand-delivery mint without inventing a
+        // new globals.css utility.
         <ScrollReveal delay={0.1}>
           <div
             data-testid="local-agent-panel"
-            className="mt-10 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-8 backdrop-blur-xl"
+            className="mt-10 rounded-[1.75rem] border border-accent-3/25 bg-accent-3/10 p-8 sm:rounded-[2rem]"
           >
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-xs font-medium text-amber-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-background/70 px-2.5 py-1 text-xs font-medium text-accent-3">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-3" />
               Local agent delivery
             </span>
             <h2 className="mt-4 font-display text-xl font-medium">
@@ -136,7 +143,7 @@ export default async function DeliveryPage({
           </p>
           <Link
             href="/search"
-            className="mt-6 inline-block rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-white/30 hover:text-foreground"
+            className="mt-6 inline-block rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
           >
             Find something similar
           </Link>

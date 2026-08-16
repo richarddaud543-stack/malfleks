@@ -12,7 +12,7 @@ export default function BranchCard({
   return (
     <Link
       href={`/brands/${brandSlug}/branches/${branch.id}`}
-      className="glass-card block rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:shadow-[0_20px_50px_-24px_rgba(255,255,255,0.15)]"
+      className="glass-card tint-glow block rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/20"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -23,7 +23,7 @@ export default function BranchCard({
         <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
       </div>
       {!branch.verified && (
-        <p className="mt-3 text-[11px] text-muted/70">
+        <p className="mt-3 text-[11px] text-muted">
           * Illustrative location for this prototype
         </p>
       )}

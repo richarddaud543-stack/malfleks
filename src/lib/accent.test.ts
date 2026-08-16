@@ -23,23 +23,40 @@ describe("contrastRatio", () => {
   });
 });
 
-describe("iconAccent", () => {
-  it("leaves an accent that already passes untouched", () => {
-    // Oraimo is 7.5:1 on its own chip — nothing to correct.
-    expect(iconAccent("#0BC5A0")).toBe("#0BC5A0");
+describe("iconAccent on the light theme", () => {
+  it("leaves a dark accent untouched — those pass on a white-based chip", () => {
+    // Apple and Ford were the failures on the old near-black ground. On white
+    // they are the safest colours in the catalogue, so correcting them would be
+    // damage, not a fix.
+    expect(iconAccent("#1D1D1F")).toBe("#1D1D1F");
+    expect(iconAccent("#003478")).toBe("#003478");
   });
 
-  it("lightens Apple's near-black accent, which fails at 1.12:1 raw", () => {
-    expect(ratioOnChip("#1D1D1F", "#1D1D1F")).toBeLessThan(1.2);
+  it("darkens a bright accent that vanishes on a white chip", () => {
+    // Oraimo raw: ~2.04:1 against its own chip.
+    expect(ratioOnChip("#0BC5A0", "#0BC5A0")).toBeLessThan(3);
 
-    const corrected = iconAccent("#1D1D1F");
-    expect(corrected).not.toBe("#1D1D1F");
-    expect(ratioOnChip(corrected, "#1D1D1F")).toBeGreaterThanOrEqual(3);
+    const corrected = iconAccent("#0BC5A0");
+    expect(corrected).not.toBe("#0BC5A0");
+    expect(ratioOnChip(corrected, "#0BC5A0")).toBeGreaterThanOrEqual(3);
   });
 
-  it("lightens Ford's dark navy, which fails at 1.56:1 raw", () => {
-    expect(ratioOnChip("#003478", "#003478")).toBeLessThan(1.6);
-    expect(ratioOnChip(iconAccent("#003478"), "#003478")).toBeGreaterThanOrEqual(3);
+  it("corrects by darkening, not lightening, on a light ground", () => {
+    // The bug this guards: Oraimo cannot reach 3:1 by lightening at all — even
+    // pure white against its chip tops out around 2.2:1 — so a function that
+    // only lightens returns something that still fails.
+    const corrected = iconAccent("#0BC5A0");
+    const int = parseInt(corrected.slice(1), 16);
+    const sum = ((int >> 16) & 255) + ((int >> 8) & 255) + (int & 255);
+    const rawSum = 0x0b + 0xc5 + 0xa0;
+    expect(sum).toBeLessThan(rawSum);
+  });
+
+  it("makes the smallest change that clears the bar", () => {
+    // Halotel needs only a few percent; it should not be dragged to near-black.
+    const corrected = iconAccent("#00A651");
+    expect(ratioOnChip(corrected, "#00A651")).toBeGreaterThanOrEqual(3);
+    expect(ratioOnChip(corrected, "#00A651")).toBeLessThan(4);
   });
 
   it("returns unparseable input unchanged rather than inventing a colour", () => {

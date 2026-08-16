@@ -3,17 +3,24 @@
  *
  * A brand hands us one hex value and we use it everywhere — glows, dots, tints,
  * and as the fill of the product icon. That last one is the problem: the icon
- * sits on a chip tinted with the *same* colour, so a dark accent draws a dark
- * shape on a dark ground. Apple's `#1D1D1F` lands at 1.12:1 and Ford's
- * `#003478` at 1.56:1, against the 3:1 WCAG 1.4.11 asks of non-text UI.
+ * sits on a chip tinted with the *same* colour, so the accent is always drawn
+ * against a near-copy of itself.
  *
- * So the accent is kept for everything decorative, and only the *foreground*
- * use is corrected — lightened toward white by the smallest amount that clears
- * the threshold, so a brand whose colour already works is returned untouched.
+ * Which colours fail depends entirely on the page ground, and the ground
+ * changed. On the old near-black theme the dark accents disappeared — Apple
+ * `#1D1D1F` at 1.12:1, Ford `#003478` at 1.56:1 — so this file lightened them.
+ * On the light theme the failures invert: the chip is now white-based, and it
+ * is the bright accents that vanish — Oraimo `#0BC5A0` at 2.04:1, Halotel
+ * `#00A651` at 2.87:1. Lightening those makes them worse.
+ *
+ * So the correction is no longer directional by assumption. It searches
+ * outward from the accent in both directions and takes the first result that
+ * clears the bar, which keeps the colour as close to the brand's own as the
+ * contrast requirement allows — and keeps working if the ground changes again.
  */
 
-/** `--surface`, the card ground the icon chip is drawn on. */
-const SURFACE: RGB = [0x0e, 0x10, 0x16];
+/** `--surface-2`: the card fill the icon chip is painted onto. */
+const CHIP_GROUND: RGB = [0xff, 0xff, 0xff];
 
 /** The chip is `${accent}18` — hex alpha 0x18, i.e. 24/255. */
 const CHIP_ALPHA = 0x18 / 255;
@@ -57,17 +64,21 @@ function composite(fg: RGB, alpha: number, bg: RGB): RGB {
   return fg.map((c, i) => c * alpha + bg[i] * (1 - alpha)) as RGB;
 }
 
-function mixWithWhite(color: RGB, amount: number): RGB {
-  return color.map((c) => c + (255 - c) * amount) as RGB;
+/** Moves `color` a fraction of the way toward `target`. */
+function mix(color: RGB, target: RGB, amount: number): RGB {
+  return color.map((c, i) => c + (target[i] - c) * amount) as RGB;
 }
+
+const BLACK: RGB = [0, 0, 0];
+const WHITE: RGB = [255, 255, 255];
 
 /**
  * The colour to fill a product icon with, given its brand accent.
  *
  * Returns the accent unchanged when it already clears 3:1 against its own
- * tinted chip; otherwise the least-lightened variant that does. Unparseable
- * input is returned as given — a malformed colour is a data bug to fix in
- * `src/data/brands.ts`, not something to paper over with a default here.
+ * tinted chip; otherwise the nearest variant that does, darker or lighter.
+ * Unparseable input is returned as given — a malformed colour is a data bug to
+ * fix in `src/data/brands.ts`, not something to paper over with a default.
  */
 export function iconAccent(accent: string): string {
   const rgb = parseHex(accent);
@@ -75,21 +86,29 @@ export function iconAccent(accent: string): string {
 
   // The chip is tinted with the original accent, so the ground stays fixed
   // while the foreground moves.
-  const chip = composite(rgb, CHIP_ALPHA, SURFACE);
+  const chip = composite(rgb, CHIP_ALPHA, CHIP_GROUND);
   if (contrastRatio(rgb, chip) >= MIN_RATIO) return accent;
 
-  // 2% steps: fine enough that a corrected colour still reads as the brand's,
-  // coarse enough to terminate quickly. White always clears the bar, so this
-  // cannot fall through without a result.
+  // Step outward in 2% increments, testing both directions at each step, so the
+  // result is the smallest change that works rather than a fixed direction.
+  // Some accents cannot pass by lightening at all — Oraimo tops out at 2.21:1
+  // even at pure white — which is exactly why this is not hardcoded to one way.
   for (let amount = 0.02; amount <= 1; amount += 0.02) {
-    const lightened = mixWithWhite(rgb, amount);
-    if (contrastRatio(lightened, chip) >= MIN_RATIO) return toHex(lightened);
+    for (const target of [BLACK, WHITE]) {
+      const candidate = mix(rgb, target, amount);
+      if (contrastRatio(candidate, chip) >= MIN_RATIO) return toHex(candidate);
+    }
   }
-  return "#ffffff";
+
+  // Unreachable in practice: black or white clears 3:1 against any chip this
+  // produces. Kept so the function is total rather than falling through.
+  return contrastRatio(BLACK, chip) >= contrastRatio(WHITE, chip)
+    ? "#000000"
+    : "#ffffff";
 }
 
 /** Exposed for tests: the chip colour a given accent produces. */
 export function chipColor(accent: string): RGB | null {
   const rgb = parseHex(accent);
-  return rgb ? composite(rgb, CHIP_ALPHA, SURFACE) : null;
+  return rgb ? composite(rgb, CHIP_ALPHA, CHIP_GROUND) : null;
 }

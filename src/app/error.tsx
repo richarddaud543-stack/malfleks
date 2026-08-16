@@ -16,7 +16,7 @@ export default function Error({
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center px-5 py-32 text-center">
-      <p className="font-accent-serif text-6xl italic text-amber-400">Oops</p>
+      <p className="font-accent-serif text-6xl italic text-accent-3">Oops</p>
       <h1 className="mt-4 font-display text-3xl font-medium tracking-tight">
         Something went wrong
       </h1>
@@ -25,15 +25,12 @@ export default function Error({
         the brand catalog.
       </p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
-        <button
-          onClick={reset}
-          className="rounded-full bg-accent px-7 py-3 text-sm font-medium text-background transition-shadow hover:shadow-[0_0_32px_4px_rgba(124,158,255,0.45)]"
-        >
+        <button onClick={reset} className="btn-pill btn-lime px-7 py-3">
           Try again
         </button>
         <Link
           href="/brands"
-          className="rounded-full border border-border px-7 py-3 text-sm font-medium transition-colors hover:border-white/40"
+          className="btn-pill border border-border px-7 py-3 text-sm font-medium text-foreground transition-colors hover:border-foreground/30"
         >
           Browse all brands
         </Link>

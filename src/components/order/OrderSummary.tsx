@@ -48,9 +48,7 @@ export default function OrderSummary({
         </Row>
         <Row label="Delivery">
           <span
-            className={
-              brandDelivered ? "text-emerald-400" : "text-amber-400"
-            }
+            className={brandDelivered ? "text-accent" : "text-accent-3"}
           >
             {deliveryRouteLabel(route.kind)}
           </span>

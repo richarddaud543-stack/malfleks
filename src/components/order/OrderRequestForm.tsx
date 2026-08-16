@@ -116,8 +116,16 @@ export default function OrderRequestForm({
     return ids.length > 0 ? ids.join(" ") : undefined;
   };
 
-  const inputClass =
-    "w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted hover:border-white/20";
+  // A light-theme input needs a border people can actually see at rest, not
+  // just on hover/focus — `--border` alone (a ~12% tint) reads as almost
+  // nothing on white. `foreground/15` gives a real edge; `/30` on hover and
+  // the app-wide `:focus-visible` ring (globals.css) carry the rest.
+  // `hasError` swaps the border to a WCAG-safe red so a failed field is
+  // visible at a glance, not just to `aria-invalid`.
+  const fieldClass = (hasError: boolean) =>
+    `w-full rounded-xl border ${
+      hasError ? "border-red-600" : "border-foreground/15"
+    } bg-surface-2 px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted hover:border-foreground/30`;
 
   return (
     <form
@@ -156,7 +164,7 @@ export default function OrderRequestForm({
             {errors.agentId && (
               <p
                 id={`${fieldId}-agentId-error`}
-                className="mt-2 text-sm text-red-400"
+                className="mt-2 text-sm text-red-600"
               >
                 {errors.agentId}
               </p>
@@ -188,7 +196,7 @@ export default function OrderRequestForm({
                 onChange={(e) => update({ quantity: e.target.value })}
                 aria-invalid={Boolean(errors.quantity) || undefined}
                 aria-describedby={describe("quantity", false)}
-                className={`${inputClass} sm:max-w-32`}
+                className={`${fieldClass(Boolean(errors.quantity))} sm:max-w-32`}
               />
             </Field>
 
@@ -208,7 +216,7 @@ export default function OrderRequestForm({
                 onChange={(e) => update({ fullName: e.target.value })}
                 aria-invalid={Boolean(errors.fullName) || undefined}
                 aria-describedby={describe("fullName", false)}
-                className={inputClass}
+                className={fieldClass(Boolean(errors.fullName))}
               />
             </Field>
 
@@ -232,7 +240,7 @@ export default function OrderRequestForm({
                 onChange={(e) => update({ phone: e.target.value })}
                 aria-invalid={Boolean(errors.phone) || undefined}
                 aria-describedby={describe("phone", true)}
-                className={inputClass}
+                className={fieldClass(Boolean(errors.phone))}
               />
             </Field>
 
@@ -254,7 +262,7 @@ export default function OrderRequestForm({
                 onChange={(e) => update({ address: e.target.value })}
                 aria-invalid={Boolean(errors.address) || undefined}
                 aria-describedby={describe("address", true)}
-                className={`${inputClass} resize-y`}
+                className={`${fieldClass(Boolean(errors.address))} resize-y`}
               />
             </Field>
           </div>
@@ -262,7 +270,7 @@ export default function OrderRequestForm({
 
         {/* One announcement per failed submit; the per-field messages are
             reached through aria-describedby as focus moves between them. */}
-        <p role="alert" className="text-sm text-red-400">
+        <p role="alert" className="text-sm text-red-600">
           {attempted && errorCount > 0
             ? `${errorCount} ${errorCount === 1 ? "detail needs" : "details need"} fixing before this request can be sent.`
             : ""}
@@ -289,7 +297,7 @@ export default function OrderRequestForm({
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-full bg-accent px-8 py-3 text-sm font-medium text-background shadow-[0_0_0_0_rgba(124,158,255,0)] transition-shadow hover:shadow-[0_0_32px_4px_rgba(124,158,255,0.45)] disabled:opacity-60"
+          className="btn-pill btn-lime w-full px-8 py-3.5 text-sm disabled:opacity-60"
         >
           {submitting
             ? "Sending request…"
@@ -298,6 +306,9 @@ export default function OrderRequestForm({
               : "Confirm agent delivery"}
         </button>
 
+        {/* Load-bearing honesty: this is a request, not a checkout — nothing
+            here is transmitted or charged. Keep this literal, not just a
+            vibe the styling implies. */}
         <p className="text-xs text-muted">
           This sends a request, not a paid order. No payment is taken here —
           the branch confirms availability and price with you first.
@@ -336,7 +347,7 @@ function Field({
       )}
       <div className="mt-2">{children}</div>
       {error && (
-        <p id={errorId} className="mt-2 text-sm text-red-400">
+        <p id={errorId} className="mt-2 text-sm text-red-600">
           {error}
         </p>
       )}

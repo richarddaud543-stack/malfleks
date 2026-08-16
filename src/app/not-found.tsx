@@ -15,10 +15,7 @@ export default function NotFound() {
         The brand, branch or product you&apos;re looking for doesn&apos;t
         exist — it may have moved, or the link might be out of date.
       </p>
-      <Link
-        href="/brands"
-        className="mt-8 inline-flex items-center justify-center rounded-full bg-accent px-7 py-3 text-sm font-medium text-background transition-shadow hover:shadow-[0_0_32px_4px_rgba(124,158,255,0.45)]"
-      >
+      <Link href="/brands" className="btn-pill btn-lime mt-8 px-7 py-3">
         Browse all brands
       </Link>
     </div>

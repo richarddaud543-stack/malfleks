@@ -89,7 +89,7 @@ export default async function BranchPage({
           <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
         </div>
         {!branch.verified && (
-          <p className="mt-3 text-xs text-muted/70">
+          <p className="mt-3 text-xs text-muted">
             * This branch location is illustrative for this prototype and
             has not been independently verified.
           </p>

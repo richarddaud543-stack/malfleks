@@ -27,7 +27,7 @@ export default function AgentChoice({
   return (
     <label
       className={`glass-card flex cursor-pointer items-start gap-3 rounded-2xl p-5 transition-colors ${
-        checked ? "border-accent/60" : "hover:border-white/20"
+        checked ? "border-accent/60" : "hover:border-foreground/20"
       }`}
     >
       <input

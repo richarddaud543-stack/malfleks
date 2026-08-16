@@ -40,7 +40,7 @@ export default async function AgentsPage({
             className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
               !city
                 ? "border-accent bg-accent/15 text-accent"
-                : "border-border text-muted hover:border-white/30"
+                : "border-border text-muted hover:border-foreground/30"
             }`}
           >
             All cities
@@ -52,7 +52,7 @@ export default async function AgentsPage({
               className={`rounded-full border px-4 py-1.5 text-sm transition-colors ${
                 city === c
                   ? "border-accent bg-accent/15 text-accent"
-                  : "border-border text-muted hover:border-white/30"
+                  : "border-border text-muted hover:border-foreground/30"
               }`}
             >
               {c}
@@ -61,17 +61,23 @@ export default async function AgentsPage({
         </div>
       </ScrollReveal>
 
-      <div className="mt-8 space-y-4">
-        {filtered.length > 0 ? (
-          filtered.map((agent, i) => (
-            <ScrollReveal key={agent.id} delay={0.05 * i}>
-              <AgentCard agent={agent} />
-            </ScrollReveal>
-          ))
-        ) : (
-          <p className="text-muted">No agents found for this city yet.</p>
-        )}
-      </div>
+      <ScrollReveal delay={0.15}>
+        <div className="panel mt-8 p-4 sm:p-8">
+          <div className="space-y-4">
+            {filtered.length > 0 ? (
+              filtered.map((agent, i) => (
+                <ScrollReveal key={agent.id} delay={0.05 * i}>
+                  <AgentCard agent={agent} />
+                </ScrollReveal>
+              ))
+            ) : (
+              <p className="text-muted">
+                No agents found for this city yet.
+              </p>
+            )}
+          </div>
+        </div>
+      </ScrollReveal>
     </div>
   );
 }
