@@ -15,11 +15,11 @@ export default function LocatorBranchCard({ entry }: { entry: LocatorBranch }) {
     <Link
       href={`/brands/${brand.slug}/branches/${branch.id}`}
       data-testid="locator-branch"
-      className="tint-glow glass-card flex gap-4 rounded-2xl p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-white/25"
+      className="tint-glow glass-card flex gap-4 rounded-2xl p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-foreground/20"
       style={{ ["--tint" as string]: `${brand.accentColor}70` }}
     >
       <span
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-2"
         style={{ boxShadow: `0 0 0 1px ${brand.accentColor}55` }}
       >
         {/* Decorative: the brand name is spelled out immediately alongside. */}

@@ -36,12 +36,19 @@ export default function TanzaniaMap({
       >
         <defs>
           <linearGradient id="tz-fill" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
-            <stop offset="55%" stopColor="var(--accent-2)" stopOpacity="0.13" />
-            <stop offset="100%" stopColor="var(--accent-3)" stopOpacity="0.16" />
+            <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.26" />
+            <stop offset="55%" stopColor="var(--accent-2)" stopOpacity="0.16" />
+            <stop offset="100%" stopColor="var(--accent-3)" stopOpacity="0.13" />
           </linearGradient>
+          {/* A blurred, accent-tinted copy of the outline used to read as a
+              bloom against the old near-black page — the bright colour
+              "glowing" out of the dark. Against white that same technique
+              just smears colour past the border, so it's redrawn here in
+              --foreground instead: a soft, low-opacity ink shadow, the same
+              language `.shadow-float`/`.glass-card` use to lift a shape off
+              a light ground rather than light it up. */}
           <filter id="tz-glow" x="-25%" y="-25%" width="150%" height="150%">
-            <feGaussianBlur stdDeviation="10" result="blur" />
+            <feGaussianBlur stdDeviation="7" result="blur" />
             <feMerge>
               <feMergeNode in="blur" />
               <feMergeNode in="SourceGraphic" />
@@ -51,8 +58,8 @@ export default function TanzaniaMap({
 
         <path
           d={tanzaniaPath}
-          fill="var(--accent)"
-          opacity="0.18"
+          fill="var(--foreground)"
+          opacity="0.07"
           filter="url(#tz-glow)"
         />
         <path
@@ -66,9 +73,9 @@ export default function TanzaniaMap({
         <path
           d={lakeVictoriaPath}
           fill="var(--background)"
-          fillOpacity="0.55"
+          fillOpacity="0.9"
           stroke="var(--accent)"
-          strokeOpacity="0.3"
+          strokeOpacity="0.4"
           strokeWidth="1"
         />
       </svg>
@@ -107,10 +114,10 @@ export default function TanzaniaMap({
               }}
               className={`flex items-center justify-center rounded-full border text-sm font-medium tabular-nums transition-all duration-300 ${
                 isSelected
-                  ? "border-accent bg-accent text-background shadow-[0_0_28px_-2px_var(--accent)]"
+                  ? "border-accent bg-accent text-background shadow-[0_0_24px_-6px_var(--accent)]"
                   : isEmpty
-                    ? "border-border/60 bg-surface/60 text-muted/40"
-                    : "border-accent/50 bg-surface/90 text-foreground shadow-[0_0_20px_-6px_var(--accent)] group-hover:scale-110 group-hover:border-accent"
+                    ? "border-border/60 bg-background/60 text-muted/40"
+                    : "border-accent/50 bg-background/90 text-foreground shadow-[0_0_16px_-8px_var(--accent)] group-hover:scale-110 group-hover:border-accent"
               }`}
             >
               {city.branchCount}

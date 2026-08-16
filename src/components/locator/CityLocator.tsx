@@ -72,7 +72,7 @@ export default function CityLocator({
             <button
               type="button"
               onClick={() => setFilters((f) => ({ ...f, city: null }))}
-              className="rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-white/30 hover:text-foreground"
+              className="rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
             >
               All cities
             </button>
@@ -113,7 +113,7 @@ export default function CityLocator({
                       ? "text-foreground"
                       : isEmpty
                         ? "cursor-not-allowed border-border/50 text-muted/40"
-                        : "border-border text-muted hover:border-white/30 hover:text-foreground"
+                        : "border-border text-muted hover:border-foreground/20 hover:text-foreground"
                   }`}
                 >
                   <span
@@ -133,7 +133,7 @@ export default function CityLocator({
           <button
             type="button"
             onClick={() => setFilters(defaultLocatorFilters)}
-            className="mt-5 rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-white/30 hover:text-foreground"
+            className="mt-5 rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
           >
             Clear filters
           </button>

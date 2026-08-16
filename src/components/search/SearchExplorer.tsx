@@ -171,7 +171,7 @@ export default function SearchExplorer() {
             setDraft("");
             commit(defaultFilters);
           }}
-          className="self-start rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-white/30 hover:text-foreground"
+          className="self-start rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
         >
           Clear all
         </button>
@@ -207,7 +207,7 @@ export default function SearchExplorer() {
             onClick={() => setPanelOpen((v) => !v)}
             aria-expanded={panelOpen}
             aria-controls="filter-panel"
-            className="rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-white/30 hover:text-foreground lg:hidden"
+            className="rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground lg:hidden"
           >
             Filters{filterCount > 0 ? ` (${filterCount})` : ""}
           </button>
@@ -218,7 +218,7 @@ export default function SearchExplorer() {
               value={filters.sort}
               onChange={(e) => update({ sort: e.target.value as SortKey })}
               aria-label="Sort results"
-              className="rounded-full border border-border bg-surface px-3 py-1.5 text-xs text-foreground outline-none"
+              className="rounded-full border border-border bg-surface-2 px-3 py-1.5 text-xs text-foreground outline-none"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>

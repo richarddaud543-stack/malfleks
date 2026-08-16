@@ -40,7 +40,7 @@ export default function FacetGroup({
                   ? "border-accent bg-accent/15 text-accent"
                   : isEmpty
                     ? "cursor-not-allowed border-border/50 text-muted/40"
-                    : "border-border text-muted hover:border-white/30 hover:text-foreground"
+                    : "border-border text-muted hover:border-foreground/20 hover:text-foreground"
               }`}
             >
               {option.label}
