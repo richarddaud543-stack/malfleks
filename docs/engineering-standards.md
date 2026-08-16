@@ -21,6 +21,23 @@ and not written down is paid for again. This file is where that knowledge lands.
 here. Research that contradicts the brief is the most valuable kind — report it
 rather than quietly conforming.
 
+**Phase 2 — Record.** Every engineer owns a skill file at
+`.claude/skills/<role>/SKILL.md`, loaded automatically when that engineer is
+assigned work. At the end of an assignment, add what you learned that a cold
+engineer would otherwise pay for again: a technique that failed, a constraint
+that was not obvious, a number you actually measured. Delete anything that has
+stopped being true.
+
+These files are the difference between a team and eight strangers. Every
+engineer starts each assignment with no memory of the last one, so knowledge
+that lives only in a finished conversation is knowledge the company buys twice.
+The long-form reasoning belongs in `docs/research/`; the skill file carries the
+sharp, load-bearing specifics — *`count()` does not retry*, *glow is a
+dark-ground technique*, *the API key is not a secret*.
+
+Write them for someone competent who has never seen this repo. Specifics beat
+principles: a measured ratio is worth more than "check contrast".
+
 ## Roster and reporting lines
 
 ```

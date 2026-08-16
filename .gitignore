@@ -23,6 +23,11 @@
 
 # agent worktrees (Claude Code creates these inside the repo)
 /.claude/
+# ...but the team's skill files are the point of the exercise: they are how each
+# engineer's expertise compounds across sessions instead of being re-derived
+# cold every time. They belong in version control.
+!/.claude/skills/
+!/.claude/skills/**
 
 # production
 /build
