@@ -22,12 +22,15 @@
 /out/
 
 # agent worktrees (Claude Code creates these inside the repo)
-/.claude/
-# ...but the team's skill files are the point of the exercise: they are how each
-# engineer's expertise compounds across sessions instead of being re-derived
-# cold every time. They belong in version control.
+#
+# Note the trailing `*`: git cannot re-include a path inside an ignored
+# *directory*, so ignoring `/.claude/` outright would make the negation below a
+# no-op. Ignoring the contents instead leaves the directory itself visible.
+/.claude/*
+# The team's skill files are the point of the exercise — how each engineer's
+# expertise compounds across sessions instead of being re-derived cold every
+# time. They belong in version control.
 !/.claude/skills/
-!/.claude/skills/**
 
 # production
 /build
