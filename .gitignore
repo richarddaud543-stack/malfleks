@@ -29,8 +29,10 @@
 /.claude/*
 # The team's skill files are the point of the exercise — how each engineer's
 # expertise compounds across sessions instead of being re-derived cold every
-# time. They belong in version control.
+# time. They belong in version control, and so do the agent definitions that
+# give each engineer its standing identity.
 !/.claude/skills/
+!/.claude/agents/
 
 # production
 /build
