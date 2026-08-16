@@ -69,6 +69,10 @@ export default function OrderConfirmation() {
   }
 
   const brandDelivered = order.route.kind === "brand";
+  // `slug` was added to the stored record after the first requests were
+  // written, so fall back to `id` for anything still in a customer's
+  // localStorage from an earlier build — the two match for every seed brand.
+  const branchHref = `/brands/${order.brand.slug ?? order.brand.id}/branches/${order.branch.id}`;
 
   return (
     <div data-testid="order-confirmation">
@@ -109,18 +113,43 @@ export default function OrderConfirmation() {
               {brandDelivered ? (
                 <>
                   {order.branch.name} runs its own delivery, so{" "}
-                  {order.brand.name} will handle pickup and drop-off. Call the
-                  branch
-                  {order.branch.phone ? ` on ${order.branch.phone}` : ""} to
-                  confirm stock and agree a delivery time.
+                  {order.brand.name} will handle pickup and drop-off.{" "}
+                  {order.branch.phone ? (
+                    <>
+                      Call the branch on {order.branch.phone} to confirm stock
+                      and agree a delivery time.
+                    </>
+                  ) : (
+                    <>
+                      We don&apos;t have a published number for this branch, so
+                      take your reference to the counter in {order.branch.city}{" "}
+                      to confirm stock and agree a delivery time — its{" "}
+                      <Link href={branchHref} className="underline underline-offset-2 hover:text-foreground">
+                        address and opening hours
+                      </Link>{" "}
+                      are on the branch page.
+                    </>
+                  )}
                 </>
               ) : (
                 <>
                   {order.branch.name} doesn&apos;t deliver, so{" "}
                   {order.route.carrier} — a local agent serving{" "}
-                  {order.branch.city} — carries this order. Call them on{" "}
-                  {order.route.agentPhone} to arrange collection from the
-                  branch.
+                  {order.branch.city} — carries this order.{" "}
+                  {order.route.agentPhone ? (
+                    <>
+                      Call them on {order.route.agentPhone} to arrange
+                      collection from the branch.
+                    </>
+                  ) : (
+                    <>
+                      Their number is on the{" "}
+                      <Link href="/agents" className="underline underline-offset-2 hover:text-foreground">
+                        delivery agents page
+                      </Link>
+                      ; call them to arrange collection from the branch.
+                    </>
+                  )}
                 </>
               )}
             </Step>

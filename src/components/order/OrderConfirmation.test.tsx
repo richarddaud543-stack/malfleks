@@ -10,8 +10,15 @@ import {
 } from "@/lib/order";
 import OrderConfirmation from "./OrderConfirmation";
 
-function store(kind: "brand" | "agent") {
-  const productId = kind === "brand" ? "toyota-corolla" : "toyota-hilux";
+function store(kind: "brand" | "agent" | "brand-no-phone") {
+  const productId =
+    kind === "agent"
+      ? "toyota-hilux"
+      : // `oraimo-dar` delivers its own orders but has no published phone —
+        // 15 of the 19 seed branches don't. See the no-phone case below.
+        kind === "brand-no-phone"
+        ? "oraimo-freepods-4"
+        : "toyota-corolla";
   const product = getProductById(productId) as Product;
   const brand = getBrandById(product.brandId) as Brand;
   const branch = getBranchById(product.branchId) as Branch;
@@ -84,6 +91,30 @@ describe("OrderConfirmation", () => {
     expect(screen.getAllByText(/Arusha Swift Couriers/)).toHaveLength(2);
     // The whole point of the agent route: a number the customer can call.
     expect(screen.getByText(/\+255 68 000 0003/)).toBeVisible();
+  });
+
+  // The whole flow exists to hand the customer to the branch, so the last
+  // step must never be "call the branch" with no number to call — which is
+  // what it was for the 15 seed branches that publish none.
+  it("sends a brand-delivered order to the counter when the branch has no phone", () => {
+    store("brand-no-phone");
+    render(<OrderConfirmation />);
+
+    expect(screen.getByText(/take your reference to the counter/)).toBeVisible();
+    expect(screen.queryByText(/Call the branch on/)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "address and opening hours" })
+    ).toHaveAttribute("href", "/brands/oraimo/branches/oraimo-dar");
+  });
+
+  it("still gives the number when the branch publishes one", () => {
+    store("brand");
+    render(<OrderConfirmation />);
+
+    expect(screen.getByText(/Call the branch on/)).toBeVisible();
+    expect(
+      screen.queryByText(/take your reference to the counter/)
+    ).not.toBeInTheDocument();
   });
 
   it("formats the customer's phone number back for reading", () => {

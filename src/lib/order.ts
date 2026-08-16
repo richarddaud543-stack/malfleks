@@ -294,8 +294,13 @@ export interface OrderRequest {
   product: { id: string; name: string; unitPriceTZS: number };
   quantity: number;
   lineTotalTZS: number;
-  brand: { id: string; name: string };
-  /** Phone is optional in the branch data, and several branches have none. */
+  /** `slug` is what the branch page is addressed by. Optional so a request
+   *  written by an earlier build still parses out of localStorage — readers
+   *  fall back to `id`, which every seed brand currently matches. */
+  brand: { id: string; name: string; slug?: string };
+  /** Phone is optional in the branch data, and several branches have none —
+   *  15 of 19 today. Anything telling the customer to ring the branch has to
+   *  handle its absence; see OrderConfirmation's step 2. */
   branch: { id: string; name: string; city: string; phone?: string };
   route: OrderRouteRecord;
   customer: { fullName: string; phone: string; address: string };
@@ -339,7 +344,7 @@ export function createOrderRequest({
     },
     quantity: order.quantity,
     lineTotalTZS: calculateLineTotal(product.priceTZS, order.quantity),
-    brand: { id: brand.id, name: brand.name },
+    brand: { id: brand.id, name: brand.name, slug: brand.slug },
     branch: {
       id: branch.id,
       name: branch.name,
