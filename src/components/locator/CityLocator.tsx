@@ -72,7 +72,13 @@ export default function CityLocator({
         {/* Google-Maps-style floating search over the map itself, rather than
             a field bolted on beside it — see the note on TanzaniaMap for why
             the map stays a stylised outline rather than becoming a real one. */}
-        <div className="relative">
+        {/* The padding is headroom for the floating field, not decoration:
+            the map's northern markers (Mwanza especially) sit high enough in
+            the viewBox that the pill lands right on top of them and clips
+            one. Reserving the band here — rather than nudging the field up
+            out of the way — keeps the field on the map where it belongs and
+            moves the markers, which have room below, instead. */}
+        <div className="relative pt-16">
           <TanzaniaMap
             cities={cities}
             selectedCity={city}
@@ -92,7 +98,13 @@ export default function CityLocator({
                 }
                 placeholder="Search brand, city or branch…"
                 aria-label="Search branches by brand, city or branch name"
-                className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted"
+                // `type="search"` earns the right semantics and the right
+                // mobile keyboard, but WebKit/Blink also draw their own
+                // unlabelled clear glyph inside the field — which sat next
+                // to ours, two ✕ controls doing the same job. Ours stays:
+                // it is labelled for screen readers and renders in Firefox
+                // too, where the native decoration doesn't exist at all.
+                className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted [&::-webkit-search-cancel-button]:appearance-none"
               />
               {q && (
                 <button
