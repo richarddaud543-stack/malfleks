@@ -28,9 +28,17 @@ export interface LocatorCity {
 export interface LocatorFilters {
   city: string | null;
   brandIds: string[];
+  /** Free-text query over brand, city and branch name. Optional so the many
+   *  call sites and tests written before search existed still type-check —
+   *  every read below treats a missing value the same as `""`. */
+  q?: string;
 }
 
-export const defaultLocatorFilters: LocatorFilters = { city: null, brandIds: [] };
+export const defaultLocatorFilters: LocatorFilters = {
+  city: null,
+  brandIds: [],
+  q: "",
+};
 
 /** Every branch with a resolvable brand, in data order. Branches whose brand is
  *  missing are dropped rather than rendered half-blank. */
@@ -48,11 +56,24 @@ function matchesBrands(entry: LocatorBranch, brandIds: string[]): boolean {
   return brandIds.length === 0 || brandIds.includes(entry.brand.id);
 }
 
+/** A blank query matches everything, so typing and then clearing the search
+ *  field is indistinguishable from never having searched. */
+function matchesQuery(entry: LocatorBranch, q: string | undefined): boolean {
+  const needle = (q ?? "").trim().toLowerCase();
+  if (!needle) return true;
+  return (
+    entry.branch.name.toLowerCase().includes(needle) ||
+    entry.branch.city.toLowerCase().includes(needle) ||
+    entry.brand.name.toLowerCase().includes(needle)
+  );
+}
+
 export function filterBranches(filters: LocatorFilters): LocatorBranch[] {
   return locatorBranches.filter(
     (entry) =>
       (filters.city === null || entry.branch.city === filters.city) &&
-      matchesBrands(entry, filters.brandIds)
+      matchesBrands(entry, filters.brandIds) &&
+      matchesQuery(entry, filters.q)
   );
 }
 
@@ -76,12 +97,18 @@ function centerOf(city: string): LatLng {
   return withCoords!.branch.coords!;
 }
 
-export function getLocatorCities(brandIds: string[] = []): LocatorCity[] {
+export function getLocatorCities(
+  brandIds: string[] = [],
+  q: string = ""
+): LocatorCity[] {
   return cityNames.map((name) => ({
     name,
     center: centerOf(name),
     branchCount: locatorBranches.filter(
-      (entry) => entry.branch.city === name && matchesBrands(entry, brandIds)
+      (entry) =>
+        entry.branch.city === name &&
+        matchesBrands(entry, brandIds) &&
+        matchesQuery(entry, q)
     ).length,
     agents: getAgentsForCity(name),
   }));
@@ -97,13 +124,17 @@ export interface BrandOption {
  * a brand with nothing in the current city stays visible at zero rather than
  * disappearing — knowing Toyota has no Dodoma branch is the useful answer.
  */
-export function getBrandOptions(city: string | null): BrandOption[] {
+export function getBrandOptions(
+  city: string | null,
+  q: string = ""
+): BrandOption[] {
   return brands.map((brand) => ({
     brand,
     count: locatorBranches.filter(
       (entry) =>
         entry.brand.id === brand.id &&
-        (city === null || entry.branch.city === city)
+        (city === null || entry.branch.city === city) &&
+        matchesQuery(entry, q)
     ).length,
   }));
 }
@@ -115,8 +146,8 @@ export function toggleBrand(brandIds: string[], brandId: string): string[] {
     : [...brandIds, brandId];
 }
 
-/** `/locator?city=Mwanza&brand=bmw` — the same param names the search page and
- *  the agents page already use, so links stay predictable across the site. */
+/** `/locator?city=Mwanza&brand=bmw&q=kariakoo` — `q` is the same param name
+ *  `/search` already uses, so a query stays predictable across the site. */
 export function filtersFromParams(params: URLSearchParams): LocatorFilters {
   const city = params.get("city");
   return {
@@ -125,6 +156,7 @@ export function filtersFromParams(params: URLSearchParams): LocatorFilters {
     brandIds: params
       .getAll("brand")
       .filter((id) => brands.some((brand) => brand.id === id)),
+    q: params.get("q") ?? "",
   };
 }
 
@@ -132,5 +164,7 @@ export function paramsFromFilters(filters: LocatorFilters): URLSearchParams {
   const params = new URLSearchParams();
   if (filters.city) params.set("city", filters.city);
   for (const id of filters.brandIds) params.append("brand", id);
+  const q = (filters.q ?? "").trim();
+  if (q) params.set("q", q);
   return params;
 }

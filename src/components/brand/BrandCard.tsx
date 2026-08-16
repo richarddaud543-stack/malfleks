@@ -61,7 +61,13 @@ export default function BrandCard({ brand }: { brand: Brand }) {
   return (
     <Link
       href={`/brands/${brand.slug}`}
-      className="group glass-card tint-glow relative block overflow-hidden rounded-[1.75rem] p-6 transition-all duration-300 hover:-translate-y-1.5 hover:border-foreground/20"
+      // Lift, tilt and glow all live in `.tint-glow` (globals.css) so hover
+      // and keyboard focus get identical feedback from one definition — a
+      // separate `hover:-translate-y-*` utility here would fight it for the
+      // `transform` property rather than combine with it. Colour-only states
+      // (the border) still need both variants named explicitly; colour isn't
+      // motion, so it isn't gated by `.tint-glow`'s reduced-motion carve-out.
+      className="group glass-card tint-glow relative block overflow-hidden rounded-[1.75rem] p-6 hover:border-foreground/20 focus-visible:border-foreground/20"
       style={{ "--tint": brand.accentColor } as React.CSSProperties}
     >
       {/* A soft, brand-tinted colour wash in the corner — the dark theme's

@@ -68,6 +68,43 @@ describe("filterBranches", () => {
       filterBranches(withFilters({ city: "Dodoma", brandIds: ["toyota"] }))
     ).toEqual([]);
   });
+
+  it("matches a free-text query against the branch name", () => {
+    // "Kariakoo" only appears in one branch's own name, not any brand or city.
+    const results = filterBranches(withFilters({ q: "Kariakoo" }));
+    expect(results.map((e) => e.branch.id)).toEqual(["oraimo-dar"]);
+  });
+
+  it("matches a free-text query against the brand name, case-insensitively", () => {
+    const results = filterBranches(withFilters({ q: "TOYOTA" }));
+    expect(results.length).toBe(3);
+    expect(results.every((e) => e.brand.id === "toyota")).toBe(true);
+  });
+
+  it("matches a free-text query against the city", () => {
+    const results = filterBranches(withFilters({ q: "dodoma" }));
+    expect(results.length).toBeGreaterThan(0);
+    expect(results.every((e) => e.branch.city === "Dodoma")).toBe(true);
+  });
+
+  it("treats the query as AND with city and brand", () => {
+    const results = filterBranches(
+      withFilters({ city: "Dar es Salaam", brandIds: ["halotel"], q: "shop" })
+    );
+    expect(results.map((e) => e.branch.id)).toEqual(["halotel-dar"]);
+
+    expect(
+      filterBranches(
+        withFilters({ city: "Dar es Salaam", brandIds: ["halotel"], q: "arusha" })
+      )
+    ).toEqual([]);
+  });
+
+  it("treats a blank or whitespace-only query as no query at all", () => {
+    expect(filterBranches(withFilters({ q: "   " })).length).toBe(
+      branches.length
+    );
+  });
 });
 
 describe("getLocatorCities", () => {
@@ -103,6 +140,15 @@ describe("getLocatorCities", () => {
     // Fargo is based in Dar but covers Arusha through regionsServed.
     expect(arusha.agents.some((a) => a.id === "fargo-courier")).toBe(true);
   });
+
+  it("recounts markers against a free-text search, same as it does for brand", () => {
+    const cities = getLocatorCities([], "Kariakoo");
+    const byName = Object.fromEntries(cities.map((c) => [c.name, c]));
+    expect(byName["Dar es Salaam"].branchCount).toBe(1);
+    expect(byName["Mwanza"].branchCount).toBe(0);
+    // Every city keeps its marker even at zero, so the map shape holds.
+    expect(cities.length).toBe(4);
+  });
 });
 
 describe("getBrandOptions", () => {
@@ -117,6 +163,14 @@ describe("getBrandOptions", () => {
     );
     expect(toyota?.count).toBe(0);
   });
+
+  it("recounts brand chips against a free-text search", () => {
+    const options = getBrandOptions(null, "Kariakoo");
+    const oraimo = options.find((o) => o.brand.id === "oraimo");
+    const toyota = options.find((o) => o.brand.id === "toyota");
+    expect(oraimo?.count).toBe(1);
+    expect(toyota?.count).toBe(0);
+  });
 });
 
 describe("toggleBrand", () => {
@@ -127,8 +181,12 @@ describe("toggleBrand", () => {
 });
 
 describe("filtersFromParams / paramsFromFilters", () => {
-  it("round-trips a city and brand selection", () => {
-    const filters = { city: "Mwanza", brandIds: ["bmw", "halotel"] };
+  it("round-trips a city, brand and search selection", () => {
+    const filters = {
+      city: "Mwanza",
+      brandIds: ["bmw", "halotel"],
+      q: "kenyatta",
+    };
     expect(filtersFromParams(paramsFromFilters(filters))).toEqual(filters);
   });
 
@@ -146,5 +204,26 @@ describe("filtersFromParams / paramsFromFilters", () => {
     expect(
       filtersFromParams(new URLSearchParams("brand=bmw&brand=nokia")).brandIds
     ).toEqual(["bmw"]);
+  });
+
+  it("reads a search query from the URL", () => {
+    expect(
+      filtersFromParams(new URLSearchParams("q=kariakoo")).q
+    ).toBe("kariakoo");
+  });
+
+  it("defaults q to an empty string when absent from the URL", () => {
+    expect(filtersFromParams(new URLSearchParams("")).q).toBe("");
+  });
+
+  it("omits q from the query string when blank, and trims it otherwise", () => {
+    expect(paramsFromFilters(defaultLocatorFilters).toString()).not.toContain(
+      "q="
+    );
+    expect(
+      paramsFromFilters({ city: null, brandIds: [], q: "  corolla  " }).get(
+        "q"
+      )
+    ).toBe("corolla");
   });
 });

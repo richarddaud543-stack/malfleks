@@ -110,4 +110,27 @@ test.describe("branch locator", () => {
       page.getByRole("heading", { name: "CMC Ford — Dodoma" })
     ).toBeVisible();
   });
+
+  test("a text search narrows the branches and joins the shareable URL", async ({
+    page,
+  }) => {
+    await page.goto("/locator");
+
+    const search = page.getByRole("searchbox", { name: /search branches/i });
+    await search.fill("Kariakoo");
+
+    // Same non-retrying-count caveat as everywhere else: wait for the URL
+    // (which only updates once the filter has actually landed) before
+    // reading a `count()`.
+    await expect(page).toHaveURL(/q=Kariakoo/);
+    await expect(page.getByRole("status")).toContainText(
+      "1 branch across Tanzania"
+    );
+    await expect(branchCards(page)).toHaveCount(1);
+    await expect(branchCards(page).first()).toContainText("Oraimo");
+
+    await page.getByRole("button", { name: "Clear search" }).click();
+    await expect(page).not.toHaveURL(/q=/);
+    expect(await branchCards(page).count()).toBeGreaterThan(10);
+  });
 });

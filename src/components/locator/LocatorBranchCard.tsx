@@ -8,15 +8,35 @@ import type { LocatorBranch } from "./locator";
  * know whose showroom you are looking at; here the results span six brands at
  * once, so the logo and accent colour have to carry that identity.
  */
-export default function LocatorBranchCard({ entry }: { entry: LocatorBranch }) {
+export default function LocatorBranchCard({
+  entry,
+  active = false,
+}: {
+  entry: LocatorBranch;
+  /** True while this card's city is "paired" with a hovered/focused marker
+   *  on the map — see CityLocator, which owns the shared pairing state. */
+  active?: boolean;
+}) {
   const { branch, brand } = entry;
 
   return (
     <Link
       href={`/brands/${brand.slug}/branches/${branch.id}`}
       data-testid="locator-branch"
-      className="tint-glow glass-card flex gap-4 rounded-2xl p-4 transition-transform duration-300 hover:-translate-y-0.5 hover:border-foreground/20"
-      style={{ ["--tint" as string]: `${brand.accentColor}70` }}
+      // Lift and tilt live in `.tint-glow` alone (globals.css), same as
+      // BrandCard and BranchCard — a Tailwind `hover:-translate-y-*` here
+      // would set `transform` too and win the cascade, costing the tilt and
+      // leaving keyboard focus with no lift at all. The paired state travels
+      // as `data-paired` so that rule can own its transform as well; only
+      // the accent ring, which nothing else in the class needs, stays inline.
+      data-paired={active ? "true" : undefined}
+      className="tint-glow glass-card flex gap-4 rounded-2xl p-4 hover:border-foreground/20 focus-visible:border-foreground/20"
+      style={{
+        ["--tint" as string]: `${brand.accentColor}70`,
+        ...(active
+          ? { borderColor: "var(--accent)", boxShadow: "0 0 0 1px var(--accent)" }
+          : {}),
+      }}
     >
       <span
         className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-2"

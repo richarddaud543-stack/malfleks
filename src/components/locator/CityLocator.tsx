@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import AgentCard from "@/components/delivery/AgentCard";
 import LocatorBranchCard from "./LocatorBranchCard";
 import TanzaniaMap from "./TanzaniaMap";
@@ -28,8 +29,14 @@ export default function CityLocator({
 }: {
   initialFilters?: LocatorFilters;
 }) {
+  const reduceMotion = useReducedMotion();
   const [filters, setFilters] = useState(initialFilters);
-  const { city, brandIds } = filters;
+  const { city, brandIds, q = "" } = filters;
+
+  // The city a hovered/focused marker or branch card is previewing — read by
+  // both TanzaniaMap and the branch list below so the two halves highlight
+  // each other instead of reading as two lists that happen to share a page.
+  const [pairedCity, setPairedCity] = useState<string | null>(null);
 
   useEffect(() => {
     const query = paramsFromFilters(filters).toString();
@@ -40,13 +47,17 @@ export default function CityLocator({
     );
   }, [filters]);
 
-  const cities = useMemo(() => getLocatorCities(brandIds), [brandIds]);
-  const brandOptions = useMemo(() => getBrandOptions(city), [city]);
+  // The search field joins the same filter object city/brand already use, so
+  // it rides the existing URL-sync effect above rather than needing one of
+  // its own — narrowing is live because there's no debounce to wait out: no
+  // navigation happens here, only a `history.replaceState`.
+  const cities = useMemo(() => getLocatorCities(brandIds, q), [brandIds, q]);
+  const brandOptions = useMemo(() => getBrandOptions(city, q), [city, q]);
   const results = useMemo(() => filterBranches(filters), [filters]);
 
   // Agent coverage is per city, so with no city chosen we show all four.
   const coverage = city ? cities.filter((c) => c.name === city) : cities;
-  const isFiltered = city !== null || brandIds.length > 0;
+  const isFiltered = city !== null || brandIds.length > 0 || q.trim() !== "";
 
   return (
     <div className="grid gap-10 lg:grid-cols-[minmax(0,380px)_1fr] lg:gap-12">
@@ -58,11 +69,44 @@ export default function CityLocator({
           Map of Tanzania — choose a city
         </h2>
 
-        <TanzaniaMap
-          cities={cities}
-          selectedCity={city}
-          onSelect={(next) => setFilters((f) => ({ ...f, city: next }))}
-        />
+        {/* Google-Maps-style floating search over the map itself, rather than
+            a field bolted on beside it — see the note on TanzaniaMap for why
+            the map stays a stylised outline rather than becoming a real one. */}
+        <div className="relative">
+          <TanzaniaMap
+            cities={cities}
+            selectedCity={city}
+            pairedCity={pairedCity}
+            onSelect={(next) => setFilters((f) => ({ ...f, city: next }))}
+            onHoverCity={setPairedCity}
+          />
+
+          <div className="absolute inset-x-2.5 top-2.5 sm:inset-x-4 sm:top-4">
+            <div className="glass-card shadow-float flex items-center gap-2.5 rounded-full px-4 py-2.5">
+              <SearchIcon />
+              <input
+                type="search"
+                value={q}
+                onChange={(e) =>
+                  setFilters((f) => ({ ...f, q: e.target.value }))
+                }
+                placeholder="Search brand, city or branch…"
+                aria-label="Search branches by brand, city or branch name"
+                className="w-full min-w-0 bg-transparent text-sm outline-none placeholder:text-muted"
+              />
+              {q && (
+                <button
+                  type="button"
+                  onClick={() => setFilters((f) => ({ ...f, q: "" }))}
+                  aria-label="Clear search"
+                  className="shrink-0 text-muted transition-colors hover:text-foreground"
+                >
+                  <ClearIcon />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">
@@ -129,15 +173,21 @@ export default function CityLocator({
           </div>
         </fieldset>
 
-        {isFiltered && (
-          <button
-            type="button"
-            onClick={() => setFilters(defaultLocatorFilters)}
-            className="mt-5 rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
-          >
-            Clear filters
-          </button>
-        )}
+        <AnimatePresence>
+          {isFiltered && (
+            <motion.button
+              type="button"
+              onClick={() => setFilters(defaultLocatorFilters)}
+              initial={reduceMotion ? false : { opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
+              transition={{ duration: 0.2 }}
+              className="mt-5 rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
+            >
+              Clear filters
+            </motion.button>
+          )}
+        </AnimatePresence>
       </section>
 
       <div>
@@ -152,8 +202,8 @@ export default function CityLocator({
           <div className="glass-card mt-4 rounded-2xl px-6 py-14 text-center">
             <p className="font-display text-lg">Nothing here yet</p>
             <p className="mt-2 text-sm text-muted">
-              No branch of that brand in this city — try another city, or clear
-              the brand filter.
+              No branch matches that combination — try another city or brand,
+              or clear the search.
             </p>
             <button
               type="button"
@@ -166,8 +216,24 @@ export default function CityLocator({
         ) : (
           <ul className="mt-4 flex flex-col gap-3">
             {results.map((entry) => (
-              <li key={entry.branch.id}>
-                <LocatorBranchCard entry={entry} />
+              <li
+                key={entry.branch.id}
+                // React's onFocus/onBlur bubble (unlike the native DOM
+                // events), so this fires as focus moves onto or off the
+                // card's link inside — no separate handler needed there.
+                onMouseEnter={() => setPairedCity(entry.branch.city)}
+                onMouseLeave={() =>
+                  setPairedCity((c) => (c === entry.branch.city ? null : c))
+                }
+                onFocus={() => setPairedCity(entry.branch.city)}
+                onBlur={() =>
+                  setPairedCity((c) => (c === entry.branch.city ? null : c))
+                }
+              >
+                <LocatorBranchCard
+                  entry={entry}
+                  active={pairedCity === entry.branch.city}
+                />
               </li>
             ))}
           </ul>
@@ -217,5 +283,38 @@ export default function CityLocator({
         </section>
       </div>
     </div>
+  );
+}
+
+function SearchIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="round"
+      className="h-4 w-4 shrink-0 text-muted"
+      aria-hidden="true"
+    >
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.2-3.2" />
+    </svg>
+  );
+}
+
+function ClearIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      className="h-3.5 w-3.5"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12M18 6L6 18" />
+    </svg>
   );
 }

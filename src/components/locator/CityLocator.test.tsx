@@ -156,4 +156,82 @@ describe("CityLocator", () => {
 
     expect(window.location.search).toBe("?city=Mwanza&brand=bmw");
   });
+
+  it("narrows the list live as you type into the search field, and joins the URL", () => {
+    render(<CityLocator />);
+
+    const search = screen.getByRole("searchbox", { name: /search branches/i });
+    fireEvent.change(search, { target: { value: "Kariakoo" } });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "1 branch across Tanzania"
+    );
+    expect(branchNames()).toEqual(["Oraimo Store — Kariakoo"]);
+    expect(window.location.search).toBe("?q=Kariakoo");
+  });
+
+  it("joins the search query with the city and brand filters already selected", () => {
+    render(<CityLocator />);
+
+    fireEvent.click(marker("Dar es Salaam"));
+    const search = screen.getByRole("searchbox", { name: /search branches/i });
+    fireEvent.change(search, { target: { value: "halotel" } });
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "1 branch in Dar es Salaam"
+    );
+    expect(branchNames()).toEqual(["Halotel Shop — Dar es Salaam"]);
+  });
+
+  it("clears the search field via its own clear button", () => {
+    render(<CityLocator />);
+
+    const search = screen.getByRole("searchbox", { name: /search branches/i });
+    fireEvent.change(search, { target: { value: "Kariakoo" } });
+    expect(branchNames()).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear search" }));
+
+    expect(search).toHaveValue("");
+    expect(screen.getAllByTestId("locator-branch")).toHaveLength(19);
+  });
+
+  it("pairs a hovered branch card with its city's marker on the map", () => {
+    render(<CityLocator />);
+
+    const heading = screen
+      .getAllByRole("heading")
+      .find((h) => /Mwanza$/.test(h.textContent ?? ""));
+    const row = heading!.closest("li")!;
+    const pin = marker("Mwanza").firstElementChild as HTMLElement;
+
+    expect(pin).not.toHaveClass("border-accent");
+
+    fireEvent.mouseEnter(row);
+    expect(pin).toHaveClass("border-accent");
+
+    fireEvent.mouseLeave(row);
+    expect(pin).not.toHaveClass("border-accent");
+  });
+
+  it("pairs a hovered marker with its matching branch cards in the list", () => {
+    render(<CityLocator />);
+
+    const heading = screen
+      .getAllByRole("heading")
+      .find((h) => /Dodoma$/.test(h.textContent ?? ""));
+    const card = heading!.closest(
+      '[data-testid="locator-branch"]'
+    ) as HTMLElement;
+
+    // jest-dom's `toHaveStyle` doesn't resolve CSS custom properties in
+    // jsdom, so it reads an inline `var(--accent)` value as unset even
+    // though it's genuinely on the element — asserting the inline style
+    // directly is what actually exercises the pairing logic.
+    fireEvent.mouseEnter(marker("Dodoma"));
+    expect(card.style.borderColor).toBe("var(--accent)");
+
+    fireEvent.mouseLeave(marker("Dodoma"));
+    expect(card.style.borderColor).toBe("");
+  });
 });

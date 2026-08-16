@@ -13,11 +13,12 @@ import { iconAccent } from "@/lib/accent";
  * an ambient colour wash in the back corners, and the real product icon
  * large in the middle.
  *
- * Renders as a single stable root (`props in, one <div> out`) because this
- * lives inside `<ViewTransition name={`product-${id}`}>` in
- * `src/app/products/[id]/page.tsx` — the shared element the card morphs
- * into. No conditional early return here that would swap out the
- * transitioning node itself.
+ * Renders as a single stable root (`props in, one <div> out` — `motion.div`
+ * still renders one real `<div>`, an `initial`/`animate` entrance doesn't
+ * change that) because this lives inside `<ViewTransition
+ * name={`product-${id}`}>` in `src/app/products/[id]/page.tsx` — the shared
+ * element the card morphs into. No conditional early return here that would
+ * swap out the transitioning node itself.
  */
 export default function ProductShowcase({
   accentColor,
@@ -30,7 +31,23 @@ export default function ProductShowcase({
   const iconColor = iconAccent(accentColor);
 
   return (
-    <div
+    <motion.div
+      // A one-shot "materialize" on mount — the showcase's own entrance,
+      // independent of the idle float loop on the icon puck below. A spring
+      // (rather than the duration-based tween the rest of this file uses)
+      // because a settle-in is exactly the "reacts naturally" case motion.dev
+      // frames spring physics for — a single arrival, not a toggled state.
+      // Skipped outright under reduced motion: this stays the single stable
+      // root the surrounding `<ViewTransition>` requires either way, just
+      // rendered straight at its final state with no `initial` to animate
+      // from.
+      initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={
+        reduceMotion
+          ? { duration: 0 }
+          : { type: "spring", stiffness: 260, damping: 24 }
+      }
       className="glass-card shadow-float relative flex h-full w-full items-center justify-center overflow-hidden rounded-[1.75rem] sm:rounded-[2rem]"
       style={{
         background: `linear-gradient(135deg, ${accentColor}14, var(--surface-2) 65%)`,
@@ -85,6 +102,6 @@ export default function ProductShowcase({
           style={{ color: iconColor }}
         />
       </motion.div>
-    </div>
+    </motion.div>
   );
 }

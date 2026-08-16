@@ -50,9 +50,76 @@ Guard them wherever they reach a foreground role — `src/lib/accent.ts` exists 
 ## Standing constraints
 
 - Never colour alone: every state must also differ in text or shape (WCAG 1.4.1).
-- Nothing hover-only; mobile is the primary access mode in Tanzania.
+- Nothing hover-only; mobile is the primary access mode in Tanzania. This is not just a
+  colour rule — a JS-driven interaction (cursor tilt, a glow that mutates inline styles
+  on `onMouseEnter`) needs the exact same audit. `ProductCard.tsx` shipped a glow with no
+  focus handler at all until the 2026-08-16 motion.dev round caught it.
+- `prefers-reduced-motion` gets a complete, static result — not faster, none. Colour and
+  shadow may still change (that's not "motion" in the vestibular sense); transform,
+  rotation and infinite loops must stop outright. Motion's own docs draw this same line
+  (`MotionConfig`'s reduced-motion mode disables transform/layout, lets
+  opacity/backgroundColor persist) — a useful, citable precedent when justifying the same
+  split in hand-written CSS.
 - The `verified` flag separates researched fact from placeholder — never let a restyle
   bury a provenance disclaimer.
+
+## Event handlers belong on the focusable element, not a nested one
+
+`focus`/`blur` don't bubble from a DOM node to its *descendants* — only to its
+*ancestors*, and React's `onFocus`/`onBlur` (via delegated `focusin`/`focusout`) follow
+the same direction. A common shape in this codebase is `<Link><motion.div>...` — the
+`<Link>` is what actually receives focus; a handler placed on the inner `motion.div`
+(the visually-styled child) never fires on focus/blur, because it's a descendant of the
+focused element, not an ancestor. Put interaction handlers (`onMouseEnter`, `onFocus`,
+etc.) on the element that's actually focusable, and let the child read derived state.
+`MagneticButton.tsx` already did this correctly (handlers on `Link`); `ProductCard.tsx`
+didn't, and it's why its glow was hover-only.
+
+## Two classes on one element can't both own `transform`
+
+`.tint-glow`'s `transition` declaration and a Tailwind `hover:-translate-y-*` utility on
+the same element both resolve to the same longhand properties (`transform`,
+`transition-property`, etc.) — the one that wins the cascade wins *entirely*, they don't
+merge. If a shared utility class is meant to own an element's hover/focus transform,
+components using it should not also carry a competing utility class for the same
+property; put the transform in the shared class once.
+
+## `perspective()` as a transform function needs no ancestor wrapper
+
+`transform: perspective(1200px) rotateX(2deg) rotateY(-3deg)` gives a single element its
+own 3D depth — no `.perspective-1000` ancestor div required (that's only needed when
+`preserve-3d` children must project into a *shared* 3D space, e.g. `ProductCard`'s own
+inner tilt). For a restrained, fixed-angle "lift and tilt toward the viewer" on a card in
+a comparison grid, this is CSS-only, needs no client component, and composes with a plain
+`:hover, :focus-visible` selector — cheaper than a JS cursor-tracked tilt, and the right
+choice when the tilt doesn't need to track the pointer (reserve pointer-tracking for a
+single large focal object, where the extra cost buys something — `ProductCard`, not a
+6-up brand grid).
+
+## Numbers measured this round (2026-08-16, motion.dev + Watermelon UI research)
+
+Real, computed values pulled from motion.dev via `getComputedStyle` (not eyeballed):
+nav background `rgb(255,219,42)`; body bg/fg `rgb(14,19,18)` / `rgb(237,237,236)`; H1
+`44px`/`46.2px` line-height/`-1.76px` letter-spacing; body copy `15px`/`23.25px`
+line-height; CTA button `border-radius: 0px` (a token default, `var(--btn-radius, 0)`,
+not an oversight); numbered eyebrows in Geist Mono at `11px`/`1.21px` tracking. Their own
+hover CSS: `transition: opacity 0.2s` — no spring, no custom easing, on an *animation
+library's own UI*. That restraint is the transferable finding, not the sharp-corner
+aesthetic — Soko's soft, rounded, pale-mint direction is a different, already-verified
+bet and shouldn't be pulled toward motion.dev's geometry just because the site is a good
+reference for interaction physics.
+
+## Copy-source registries (Watermelon UI, shadcn-protocol) are safe to study, risky to paste
+
+`ui.watermelon.sh` distributes via `npx shadcn add <url>` — source lands directly in the
+repo, no npm dependency, which is why it's lower-risk to *look at* than a normal package.
+But the components carry shadcn's own token names (`text-muted-foreground`, `bg-sky-600`,
+`border-border/70`) and, for anything beyond a plain Card/Badge, Radix primitives Soko
+doesn't have installed. Treat it as a pattern source: read the rendered "view code" panel
+for hierarchy/spacing/interaction ideas, then hand-rebuild against `--muted`/`--accent`/
+`--border` and re-run the contrast method above — don't paste the JSX. A component
+needing a Radix package we don't have is a "report it," not "npm install it," decision —
+it's a dependency call for the Lead, not a design one.
 
 ## How to keep this file useful
 

@@ -4,12 +4,23 @@
 // See ListingCard.tsx for why this is a triple-slash reference rather than
 // `import {} from "react/canary"` — that form 500s under `next dev`/Turbopack.
 import Link from "next/link";
-import { useRef, ViewTransition } from "react";
-import { motion, useMotionValue, useTransform } from "motion/react";
+import { useRef, useState, ViewTransition } from "react";
+import {
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useSpring,
+  useTransform,
+} from "motion/react";
 import type { Product } from "@/data";
 import ProductIcon from "./ProductIcon";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
+
+// The same cursor-follow spring MagneticButton.tsx uses, so every
+// pointer-tracked element in the app shares one physical feel rather than
+// each inventing its own stiffness/damping.
+const tiltSpring = { stiffness: 300, damping: 20, mass: 0.4 };
 
 export default function ProductCard({
   product,
@@ -19,32 +30,32 @@ export default function ProductCard({
   accentColor: string;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  const [active, setActive] = useState(false);
+
   const x = useMotionValue(0);
   const y = useMotionValue(0);
-  const rotateX = useTransform(y, [-40, 40], [8, -8]);
-  const rotateY = useTransform(x, [-40, 40], [-8, 8]);
+  // Raw pointer position eased through a spring before it drives rotation,
+  // rather than mapped 1:1 — motion.dev's own homepage names this pattern
+  // directly ("05 Spring physics: real spring math for animations that
+  // naturally react to user input"; docs/research/motion-dev-design.md).
+  // The tilt eases toward the cursor instead of snapping to every pixel.
+  const springX = useSpring(x, tiltSpring);
+  const springY = useSpring(y, tiltSpring);
+  const rotateX = useTransform(springY, [-40, 40], [8, -8]);
+  const rotateY = useTransform(springX, [-40, 40], [-8, 8]);
 
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+  function handleMouseMove(e: React.MouseEvent<HTMLAnchorElement>) {
+    if (reduceMotion) return;
     const rect = ref.current?.getBoundingClientRect();
     if (!rect) return;
     x.set(e.clientX - rect.left - rect.width / 2);
     y.set(e.clientY - rect.top - rect.height / 2);
   }
 
-  function handleMouseLeave() {
+  function resetTilt() {
     x.set(0);
     y.set(0);
-  }
-
-  function handleGlowEnter(e: React.MouseEvent<HTMLDivElement>) {
-    e.currentTarget.style.boxShadow = `0 24px 60px -24px ${accentColor}70`;
-    e.currentTarget.style.borderColor = `${accentColor}55`;
-  }
-
-  function handleGlowLeave(e: React.MouseEvent<HTMLDivElement>) {
-    e.currentTarget.style.boxShadow = "";
-    e.currentTarget.style.borderColor = "";
-    handleMouseLeave();
   }
 
   return (
@@ -52,13 +63,33 @@ export default function ProductCard({
       href={`/products/${product.id}`}
       transitionTypes={["product-view"]}
       className="perspective-1000 block"
+      // The glow/tilt affordance lives on this Link, not the inner
+      // motion.div: this is the element that's actually focusable and the
+      // one whose hover area covers the whole card, so hover, keyboard
+      // focus and (via whileTap below) touch/pointer press all drive the
+      // same `active` state — "nothing hover-only" applies to 3D motion
+      // exactly as much as it does to colour.
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setActive(true)}
+      onMouseLeave={() => {
+        setActive(false);
+        resetTilt();
+      }}
+      onFocus={() => setActive(true)}
+      onBlur={() => setActive(false)}
     >
       <motion.div
         ref={ref}
-        onMouseMove={handleMouseMove}
-        onMouseEnter={handleGlowEnter}
-        onMouseLeave={handleGlowLeave}
-        style={{ rotateX, rotateY }}
+        whileTap={reduceMotion ? undefined : { scale: 0.985 }}
+        style={{
+          rotateX,
+          rotateY,
+          boxShadow:
+            active && !reduceMotion
+              ? `0 24px 60px -24px ${accentColor}70`
+              : undefined,
+          borderColor: active ? `${accentColor}55` : undefined,
+        }}
         className="glass-card preserve-3d rounded-2xl p-5 transition-[box-shadow,border-color] duration-300"
       >
         {/* Scoped to the "product-view" transition type — see ListingCard.tsx

@@ -12,7 +12,9 @@ export default function BranchCard({
   return (
     <Link
       href={`/brands/${brandSlug}/branches/${branch.id}`}
-      className="glass-card tint-glow block rounded-2xl p-5 transition-all duration-300 hover:-translate-y-1 hover:border-foreground/20"
+      // See BrandCard.tsx for why lift/tilt/glow live in `.tint-glow` alone
+      // rather than a duplicate `hover:-translate-y-*` utility here.
+      className="glass-card tint-glow block rounded-2xl p-5 hover:border-foreground/20 focus-visible:border-foreground/20"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

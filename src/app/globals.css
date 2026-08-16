@@ -141,14 +141,64 @@ h3 {
     0 24px 48px -20px color-mix(in srgb, var(--foreground) 22%, transparent);
 }
 
-/* Brand-tinted hover glow. On the old near-black ground a full-strength
-   `var(--tint)` shadow read as a moody glow; on white the same shadow reads
-   as a hard-edged smear, so it's mixed down to a pastel halo instead. */
+/* Brand-tinted hover glow — also the card's lift+tilt affordance.
+ *
+ * `:focus-visible` mirrors `:hover` exactly: a mouse-only affordance would
+ * leave keyboard and touch users — the primary access mode in Tanzania —
+ * with no feedback at all (see docs/research/motion-dev-design.md, "nothing
+ * hover-only"). Cards using this class should NOT also carry a Tailwind
+ * `hover:-translate-y-*` utility — both would set `transform` and only one
+ * survives the cascade; the lift lives here, once, so it composes with the
+ * tilt below instead of fighting it.
+ *
+ * The tilt is a small, fixed-angle rotation — not cursor-tracked, that's
+ * reserved for ProductCard's single large focal object, where tracking the
+ * pointer earns its extra cost. `perspective()` as a transform *function*
+ * (rather than a `perspective` property on an ancestor) gives the element
+ * its own 3D depth with no wrapper needed.
+ *
+ * Kept a plain, fast duration-based tween rather than a spring, on the
+ * evidence in the research doc: motion.dev's own hover states use
+ * `transition: opacity 0.2s` with no custom easing at all. Springs are for
+ * things that react to continuous input (ProductCard's cursor tilt); a
+ * binary on/off state change reads better with restraint.
+ */
 .tint-glow {
-  transition: box-shadow 300ms ease, border-color 300ms ease, transform 300ms ease;
+  transition:
+    box-shadow 300ms ease,
+    border-color 300ms ease,
+    transform 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  transform: perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(0);
 }
-.tint-glow:hover {
+.tint-glow:hover,
+.tint-glow:focus-visible {
   box-shadow: 0 24px 48px -20px color-mix(in srgb, var(--tint, var(--accent)) 55%, transparent);
+  transform: perspective(1200px) rotateX(2.5deg) rotateY(-3.5deg) translateY(-6px);
+}
+/* A card can also be lifted from a distance: the locator pairs a hovered map
+   marker with every branch card in that city (see CityLocator). That lift
+   belongs here rather than as a Tailwind `-translate-y-*` on the call site,
+   for the same cascade reason as above — two rules setting `transform` and
+   only one survives. Deliberately translate-only: the tilt above points a
+   card toward a cursor that is over it, and a card tilting toward a pointer
+   sitting on the other side of the page reads as a glitch. */
+.tint-glow[data-paired="true"] {
+  transform: perspective(1200px) translateY(-6px);
+}
+/* "Gets a complete, static result. Not faster — none." Colour/shadow may
+   still change (Motion's own reduced-motion model disables transform and
+   layout while letting opacity/backgroundColor persist — see the research
+   doc's gesture-defaults section); only the spatial motion is removed. */
+@media (prefers-reduced-motion: reduce) {
+  .tint-glow {
+    transition: box-shadow 300ms ease, border-color 300ms ease;
+    transform: none;
+  }
+  .tint-glow:hover,
+  .tint-glow:focus-visible,
+  .tint-glow[data-paired="true"] {
+    transform: none;
+  }
 }
 
 /* Faint structural grid, now drawn in --border instead of a mixed-down one —
@@ -180,6 +230,16 @@ h3 {
   animation: blob-drift 18s ease-in-out infinite;
   pointer-events: none;
 }
+/* The drift loop runs forever by design, which is exactly the shape of
+   motion prefers-reduced-motion exists to remove — a purely decorative wash
+   that never settles is a stronger case for "none" than a one-shot reveal
+   is. Used on the homepage (Atlas) and the brand detail page (Prism); fixed
+   once here rather than in both call sites. */
+@media (prefers-reduced-motion: reduce) {
+  .blob {
+    animation: none;
+  }
+}
 
 /* Pill CTA buttons — the navbar's lime primary / black secondary pair, and
    any future one that needs the same treatment. Colours are pre-verified
@@ -198,18 +258,27 @@ h3 {
   white-space: nowrap;
   transition: transform 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
 }
-.btn-pill:hover {
+.btn-pill:hover,
+.btn-pill:focus-visible {
   transform: translateY(-1px);
 }
 .btn-pill:active {
   transform: translateY(0);
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-pill:hover,
+  .btn-pill:focus-visible,
+  .btn-pill:active {
+    transform: none;
+  }
 }
 
 .btn-lime {
   background: var(--lime);
   color: var(--lime-foreground);
 }
-.btn-lime:hover {
+.btn-lime:hover,
+.btn-lime:focus-visible {
   box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--lime) 75%, transparent);
 }
 
@@ -217,8 +286,19 @@ h3 {
   background: var(--foreground);
   color: var(--background);
 }
-.btn-ink:hover {
+.btn-ink:hover,
+.btn-ink:focus-visible {
   box-shadow: 0 14px 28px -12px color-mix(in srgb, var(--foreground) 45%, transparent);
+}
+
+/* Tailwind's `animate-pulse` (root `loading.tsx` and this round's
+   `brands/loading.tsx`) loops for as long as a route takes to stream in —
+   unbounded, exactly like `.blob` above. Patched once, app-wide, rather than
+   opting out per call site. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
 }
 
 /* Cross-route view transitions (product card -> product page showcase) run
