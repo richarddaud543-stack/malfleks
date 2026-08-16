@@ -1,5 +1,7 @@
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import type { Analytics } from "firebase/analytics";
+import type { Auth } from "firebase/auth";
+import type { AppCheck } from "firebase/app-check";
 
 /**
  * Firebase client setup.
@@ -34,6 +36,21 @@ const config = {
   // Optional: Analytics is skipped entirely when this is absent.
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
 };
+
+/**
+ * The reCAPTCHA v3 *site* key for App Check. Public by the same logic as the
+ * API key above — a site key is meant to be in the page; the secret half never
+ * leaves Google. Absent means App Check is simply not initialised.
+ */
+const appCheckSiteKey = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY;
+
+/**
+ * A debug token registered in the Firebase console, for local development and
+ * CI where reCAPTCHA cannot score a real browser. It is per-developer and
+ * revocable, and it belongs in `.env.local` only — a debug token committed to
+ * the repo would let anyone mint valid App Check tokens.
+ */
+const appCheckDebugToken = process.env.NEXT_PUBLIC_FIREBASE_APP_CHECK_DEBUG_TOKEN;
 
 export type FirebaseConfig = typeof config;
 
@@ -92,4 +109,93 @@ export async function initAnalytics(): Promise<Analytics | null> {
   if (!(await isSupported())) return null;
 
   return getAnalytics(getFirebaseApp());
+}
+
+// ---------------------------------------------------------------------------
+// App Check
+// ---------------------------------------------------------------------------
+
+/** Whether an App Check site key was supplied. Exported so the UI can say so. */
+export function isAppCheckConfigured(): boolean {
+  return Boolean(appCheckSiteKey);
+}
+
+let appCheck: AppCheck | null = null;
+
+/**
+ * App Check, or `null` where it cannot run.
+ *
+ * What it does and does not do, because this is routinely overstated: App Check
+ * attaches an attestation token proving a request came from *this app on a real
+ * browser*, and — once enforcement is switched on per product in the Firebase
+ * console — Firebase rejects client-SDK requests that lack one. It does nothing
+ * about *authorization*: it proves the caller is our app, never that the caller
+ * may read a given document. Security Rules do that.
+ *
+ * It also covers client-SDK traffic only. Everything this app does server-side
+ * runs through the Admin SDK, which bypasses App Check and Security Rules by
+ * design. So App Check's real job here is the sign-in path — it is what stops
+ * a script hammering Firebase Auth from outside a browser.
+ *
+ * Enforcement is an operator action in the console and is deliberately not
+ * assumed here. Google's guidance is to run in monitor-only mode first and
+ * watch the metrics, because enforcing blind locks out real users.
+ *
+ * Idempotent, and initialised early in the client lifecycle: App Check has to
+ * be in place before the SDK calls it protects.
+ */
+export async function initAppCheck(): Promise<AppCheck | null> {
+  if (typeof window === "undefined") return null;
+  if (appCheck) return appCheck;
+  if (!appCheckSiteKey || !isFirebaseConfigured()) return null;
+
+  const { initializeAppCheck, ReCaptchaV3Provider } = await import(
+    "firebase/app-check"
+  );
+
+  if (appCheckDebugToken) {
+    // Read by the SDK off the global at init time. `true` would ask Firebase to
+    // print a fresh token to the console for manual registration; a string
+    // uses one already registered.
+    (
+      globalThis as typeof globalThis & { FIREBASE_APPCHECK_DEBUG_TOKEN?: string }
+    ).FIREBASE_APPCHECK_DEBUG_TOKEN = appCheckDebugToken;
+  }
+
+  appCheck = initializeAppCheck(getFirebaseApp(), {
+    provider: new ReCaptchaV3Provider(appCheckSiteKey),
+    isTokenAutoRefreshEnabled: true,
+  });
+
+  return appCheck;
+}
+
+// ---------------------------------------------------------------------------
+// Auth
+// ---------------------------------------------------------------------------
+
+/**
+ * The Auth instance, browser only.
+ *
+ * `persistence: NONE` is the deliberate part. Firebase's default is to keep a
+ * long-lived session in IndexedDB, which would give this app *two* competing
+ * notions of "signed in": the client SDK's, and the server's session cookie.
+ * They drift — a revoked or expired cookie leaves the client SDK still cheerily
+ * reporting a user — and only one of them can be authoritative on a
+ * server-rendered page. Google's session-cookie guide says to make the client's
+ * copy disposable for exactly this reason.
+ *
+ * So the client SDK is used for one thing: proving an identity long enough to
+ * hand the server an ID token. After that the cookie is the session.
+ */
+export async function getFirebaseAuth(): Promise<Auth> {
+  const { getAuth, inMemoryPersistence, setPersistence } = await import(
+    "firebase/auth"
+  );
+  const auth = getAuth(getFirebaseApp());
+  await setPersistence(auth, inMemoryPersistence);
+  // Sends Firebase's own hosted UI (the account chooser) in the device's
+  // language rather than always English.
+  auth.useDeviceLanguage();
+  return auth;
 }

@@ -304,6 +304,14 @@ export interface OrderRequest {
   branch: { id: string; name: string; city: string; phone?: string };
   route: OrderRouteRecord;
   customer: { fullName: string; phone: string; address: string };
+  /**
+   * Set on the browser's copy once the request has also been written to a
+   * signed-in customer's account, so the confirmation screen can say whether
+   * this reference will outlive the tab. Absent for every signed-out request,
+   * which is all of them until someone signs in. Never sent to the server —
+   * the server decides what it stored.
+   */
+  savedToAccount?: boolean;
 }
 
 export interface OrderRequestSeed {

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import AuthMenu from "@/components/auth/AuthMenu";
 
 const links = [
   { href: "/search", label: "Search" },
@@ -44,6 +45,7 @@ export default function Navbar() {
           <span className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted">
             EN
           </span>
+          <AuthMenu />
           <Link href="/locator" className="btn-pill btn-ink">
             Find a branch
           </Link>
@@ -95,6 +97,9 @@ export default function Navbar() {
                 </Link>
               ))}
               <div className="mt-2 flex items-center gap-2 border-t border-border px-3 pt-3">
+                <AuthMenu compact onNavigate={() => setOpen(false)} />
+              </div>
+              <div className="flex items-center gap-2 px-3 pt-2">
                 <Link
                   href="/locator"
                   onClick={() => setOpen(false)}

@@ -16,6 +16,13 @@
 /test-results
 /blob-report
 /playwright/.cache
+/.playwright-mcp
+
+# firebase emulator + CLI scratch (the emulator writes these next to firebase.json)
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+/.firebase
 
 # next.js
 /.next/

@@ -106,7 +106,9 @@ ever pays down.
 | 13 | The delivery route is computed only on `/delivery/[productId]`, one page after the customer decides | Medium. `resolveDeliveryRoute()` already answers "brand fleet or which courier" — the answer just arrives after the choice it should inform | Open, found by Beacon. The highest-value item from the UX research |
 | 14 | **Two persistence stacks, neither read by a page**: Prisma 7 + SQLite (`src/server/`, `prisma/`) and the Firebase SDK wired to `v-mall-f37c6` | Was high — the expensive kind of ambiguity, since both looked equally live | **Decided 2026-08-15 by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.** Recorded with full reasoning in [`docs/backend.md`](backend.md#decision-prisma-owns-the-catalogue-firebase-is-scoped-to-auth-and-analytics). No Firestore reads or writes; no second source of truth for catalogue data |
 | 15 | Firebase Analytics runs for every visitor with no consent gate | Medium, jurisdiction-dependent. Analytics sets identifiers on load; Soko's market is Tanzania but the site is reachable anywhere | Open. `FirebaseAnalytics.tsx` is a single mount point and `initAnalytics()` already returns `null` when unavailable, so a consent check has one obvious home |
-| 16 | No Firebase Security Rules or App Check in the repo | **Downgraded** by the #14 decision: with Firestore ruled out for catalogue data, there is no Firestore surface to protect. Becomes relevant again only if Auth stores user documents | Open but low. Corrected by Vault: **App Check protects client-SDK requests only** — Admin SDK calls bypass both it and Security Rules — so it was never a precondition for a server-rendered read, as this row previously implied |
+| 16 | No Firebase Security Rules or App Check in the repo | Was downgraded by the #14 decision on the reasoning that it "becomes relevant again only if Auth stores user documents". **That condition was met on 2026-08-16** when Auth shipped with saved order requests | **Done** (2026-08-16, Vault). `firestore.rules` is default-deny with owner-only reads and no client writes at all; 13 assertions run against the real emulator (`npm run test:rules`, own CI job with a pinned JDK), and both directions were checked by injecting the two classic mistakes and watching the suite fail. App Check is wired (`initAppCheck`, reCAPTCHA v3) but **enforcement is an operator action in the console and has not been turned on** — Google's guidance is monitor-only first. See [`docs/auth.md`](auth.md) |
+| 20 | Saved order requests are the first customer PII Soko stores at rest — name, phone and delivery address, per request, in Firestore | Medium. The feature requires it, but no retention policy exists, and rules forbid client deletes so a customer cannot remove their own record | Open, raised by Vault at build time. Needs a retention decision and a delete path (server action + soft-delete call), not just a rule change |
+| 21 | The save-order-request action has a ceiling (200 per customer) but no rate limit | Low–medium. Bounds total damage, not burst rate; Firestore's free tier is 20,000 writes/day project-wide | Open, raised by Vault. The honest fix is App Check *enforcement* plus a per-uid rate limit; only the first is built |
 
 ## Role research
 
@@ -435,3 +437,55 @@ clears 3:1 against its own chip, and otherwise the least-lightened variant that 
 Only Apple (`#616162`) and Ford (`#3d6598`) change. A test asserts the property for every
 brand in the catalogue, so a seventh brand with a dark accent fails the suite instead of
 shipping an invisible icon.
+
+### ENG-7 · Vault — Cloud platform & security
+
+**Phase 0 recorded 2026-08-15 → [`docs/research/firebase-security.md`](research/firebase-security.md).**
+**Phase 1 built 2026-08-16 → [`docs/auth.md`](auth.md)** — Firebase Auth with a
+server-minted session cookie, saved order requests in Firestore, Security Rules and
+App Check. Closes debt #16.
+
+The Phase 0 finding that survived contact with the build: **design auth around a Data
+Access Layer, not a proxy.** There is no `proxy.ts` here, so `verifySession()` in
+`src/server/auth/dal.ts` is not a second layer behind one — it is the only layer, which
+is exactly why it does the authoritative `verifySessionCookie(cookie, true)` rather than
+an optimistic cookie read.
+
+Phase 1 needed one piece of research Phase 0 had not done: **which sign-in method for
+Tanzania.** The answer went against the market's instinct, and the full reasoning is in
+`docs/auth.md`. Short version: Firebase phone auth cannot send a single SMS until an
+operator opens a Blaze billing account *and* allowlists TZ (the SMS region policy
+defaults to allowing **no** regions), it bills per message sent including codes nobody
+types, and it turns a public button into metered spend an attacker controls via SMS
+pumping. Meanwhile **90.59% of mobile browsing in Tanzania is Android** (Statcounter,
+July 2026), where a Google account is part of device setup. The order form *already*
+validates a TZ mobile number, so phone auth would also conflate "the number the driver
+calls" with "the number that owns the account". **Phone becomes right when Soko takes
+money** — mobile-money identity is the MSISDN — and nothing here blocks it: everything
+past `getIdToken()` is provider-agnostic.
+
+Three things worth carrying beyond this assignment:
+
+**A security suite that skips is worse than no suite.** The rules tests need the Firebase
+emulator, which needs Java. Folding them into `npm test` would make every Java-less
+machine fail, and the fix people reach for is to make the suite skip itself — after which
+the green tick means nothing. They are a separate command with their own CI job and a
+pinned JDK, and they **fail loudly** when the emulator is unreachable.
+
+**Passing is not evidence; failing on a mutation is.** Both rule properties were checked
+by deliberately breaking them — `request.auth != null` instead of an owner check (2 tests
+fail) and a client-writable `create` (1 test fails). This is Forge's mutation-testing
+argument (#11) applied by hand to the one file where a false pass is a breach.
+
+**`npm run build`'s route table is a review artifact.** `/account` first shipped as
+prerendered **static**, because `verifySession()` short-circuits before reading cookies
+when no Admin credentials are present — so a CI build running before runtime secrets exist
+would have baked in a permanent redirect to sign-in, and the build output would have
+looked healthy. No test would have caught it. Read the ○/●/ƒ column.
+
+Sources: [Firebase Auth limits](https://firebase.google.com/docs/auth/limits) ·
+[SMS regions](https://cloud.google.com/identity-platform/docs/admin/sms-regions) ·
+[signInWithRedirect best practices](https://firebase.google.com/docs/auth/web/redirect-best-practices) ·
+[Manage session cookies](https://firebase.google.com/docs/auth/admin/manage-cookies) ·
+[Statcounter — Tanzania mobile OS](https://gs.statcounter.com/os-market-share/mobile/tanzania) ·
+[TCRA telecom stats, TanzaniaInvest](https://www.tanzaniainvest.com/telecoms/tcra-telecom-stats-q1-2026)

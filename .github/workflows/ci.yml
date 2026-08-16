@@ -44,6 +44,35 @@ jobs:
       - name: Unit and component tests
         run: npm test
 
+  rules:
+    name: Firestore Security Rules
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # The Firestore emulator is a Java process. GitHub's ubuntu runners ship
+      # a JDK, but pinning it means a runner-image change cannot silently take
+      # this job out — and this is the job that proves one customer cannot read
+      # another's order requests.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - run: npm ci
+
+      # `emulators:exec` starts the emulator, runs the suite, and shuts down —
+      # exiting non-zero if the suite fails. The suite itself fails loudly when
+      # it cannot reach the emulator, so a broken emulator cannot pass as a
+      # skipped test.
+      - name: Rules tests against the Firebase emulator
+        run: npm run test:rules:ci
+
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest

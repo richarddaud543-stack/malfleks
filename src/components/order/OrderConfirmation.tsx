@@ -54,9 +54,19 @@ export default function OrderConfirmation() {
           No order request to show
         </h1>
         <p className="mt-3 text-sm text-muted">
-          Requests are held in this browser tab only — a different tab, or a
-          session that has since closed, won&apos;t have it. Nothing was sent
-          anywhere.
+          A request made without signing in is held in this browser tab only — a
+          different tab, or a session that has since closed, won&apos;t have it.
+          Nothing was sent anywhere.
+        </p>
+        <p className="mt-3 text-sm text-muted">
+          If you were signed in when you made it, it will be on{" "}
+          <Link
+            href="/account"
+            className="underline underline-offset-2 hover:text-foreground"
+          >
+            your account
+          </Link>
+          .
         </p>
         <Link
           href="/search"
@@ -95,9 +105,36 @@ export default function OrderConfirmation() {
         </p>
         <p className="mt-3 text-sm text-muted">
           Quote this when you contact{" "}
-          {brandDelivered ? "the branch" : "the branch or the agent"}. It was
-          generated here, in your browser.
+          {brandDelivered ? "the branch" : "the branch or the agent"}.
         </p>
+
+        {/* The single most useful thing this screen can tell someone: whether
+            the reference will still exist tomorrow. Both branches are stated
+            plainly rather than only celebrating the good one. */}
+        {order.savedToAccount ? (
+          <p className="mt-4 border-t border-border pt-4 text-sm">
+            <span className="font-medium">Saved to your account.</span>{" "}
+            <Link
+              href="/account"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Find it again
+            </Link>{" "}
+            any time — closing this tab won&apos;t lose it.
+          </p>
+        ) : (
+          <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
+            This request lives in this browser tab only, so write the reference
+            down or{" "}
+            <Link
+              href="/sign-in"
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              sign in
+            </Link>{" "}
+            to have the next one kept for you.
+          </p>
+        )}
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px] lg:items-start">
