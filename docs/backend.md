@@ -49,6 +49,44 @@ below this one, not an assumption.
 
 ---
 
+## Decision: Firestore owns saved order requests, and only those
+
+**Decided 2026-08-16, assigned by the Lead, built by ENG-7 · Vault. This is the
+narrowly-scoped exception the decision above left open, now taken.** Full
+reasoning and the operator runbook: [`docs/auth.md`](auth.md).
+
+A signed-in customer's saved order requests live in Firestore at
+`customers/{uid}/orderRequests/{autoId}`. Nothing else does.
+
+Why this is the exception rather than a crack in the decision above:
+
+- **It is user-scoped, not catalogue data.** It is keyed by Firebase uid, joined
+  to nothing, and has no foreign keys. None of the arguments that made the
+  catalogue relational apply to it.
+- **The identity that owns it already lives in Firebase.** Putting these records
+  in Postgres would mean mirroring Firebase uids into a second store — creating
+  exactly the two-sources-of-truth problem debt #14 was closed to avoid, in the
+  one place it is genuinely avoidable.
+- **Ownership is enforceable by path.** `customers/{uid}/…` compared against
+  `request.auth.uid` in Security Rules is a guarantee Postgres would need
+  application code to reproduce.
+
+**What this still forbids, unchanged:** no Firestore reads or writes for
+brands, branches, products or delivery agents; no second source of truth for
+catalogue data. The catalogue is Prisma's. `src/server/orders/saved-requests.ts`
+*reads* the catalogue through the existing `src/data` accessors to rebuild an
+order server-side — it never writes catalogue data to Firestore.
+
+**Cascade note, now live.** The "Cascades" section below flags that the
+seed's pruning and the cascade rules must be revisited "once orders reference
+branches and products". A saved order request stores a *snapshot* of the
+product, branch and brand rather than a foreign key, precisely so a catalogue
+edit cannot orphan or silently rewrite a request a customer is holding a
+reference to. So this decision does not yet force that change — but it is the
+first thing in the system that remembers a catalogue row, and the next one may.
+
+---
+
 ## Quick start
 
 From a fresh clone:

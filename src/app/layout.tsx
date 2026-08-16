@@ -6,6 +6,7 @@ import Footer from "@/components/layout/Footer";
 import SmoothScrollProvider from "@/components/motion/SmoothScrollProvider";
 import GrainOverlay from "@/components/motion/GrainOverlay";
 import FirebaseAnalytics from "@/components/firebase/FirebaseAnalytics";
+import FirebaseAppCheck from "@/components/firebase/FirebaseAppCheck";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,6 +56,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           Skip to content
         </a>
         <GrainOverlay />
+        {/* Before FirebaseAnalytics, and before anything that signs in: App
+            Check has to be attached to the Firebase app ahead of the SDK calls
+            it attests. */}
+        <FirebaseAppCheck />
         <FirebaseAnalytics />
         <SmoothScrollProvider>
           <Navbar />

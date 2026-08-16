@@ -18,6 +18,8 @@ import {
   type OrderField,
   type OrderRequestInput,
 } from "@/lib/order";
+import { saveOrderRequest } from "@/app/actions/order-requests";
+import { useSessionState } from "@/components/auth/session-state";
 import AgentChoice from "./AgentChoice";
 import OrderSummary from "./OrderSummary";
 
@@ -47,6 +49,10 @@ export default function OrderRequestForm({
   const router = useRouter();
   const fieldId = useId();
   const formRef = useRef<HTMLFormElement>(null);
+  // Whether anything may be transmitted at all. `undefined` until the answer
+  // arrives, and treated as signed-out until it does — the safe default is the
+  // one where nothing leaves the device.
+  const session = useSessionState();
 
   const [input, setInput] = useState<OrderRequestInput>(emptyOrderInput);
   const [errors, setErrors] = useState<OrderErrors>({});
@@ -64,7 +70,18 @@ export default function OrderRequestForm({
     }
   }
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  /** Writes the browser's copy. Never throws: storage can simply be off. */
+  function store(request: ReturnType<typeof createOrderRequest>) {
+    try {
+      sessionStorage.setItem(ORDER_STORAGE_KEY, serializeOrderRequest(request));
+    } catch {
+      // Storage can be unavailable (private mode, quota). The confirmation
+      // screen already handles having nothing to show, so navigate anyway
+      // rather than trapping the customer on a form that looks broken.
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setAttempted(true);
 
@@ -88,18 +105,38 @@ export default function OrderRequestForm({
       order: result.value,
     });
 
-    try {
-      sessionStorage.setItem(
-        ORDER_STORAGE_KEY,
-        serializeOrderRequest(request)
-      );
-    } catch {
-      // Storage can be unavailable (private mode, quota). The confirmation
-      // screen already handles having nothing to show, so navigate anyway
-      // rather than trapping the customer on a form that looks broken.
+    store(request);
+    setSubmitting(true);
+
+    // The signed-out path ends here, exactly as it always has: the request is
+    // in this tab and has been transmitted nowhere. The check is deliberately
+    // on the *client* so that is literally true — not "sent and then ignored".
+    if (session?.signedIn) {
+      try {
+        const outcome = await saveOrderRequest({
+          // Ids and the customer's own words only. Price, product name,
+          // carrier and total are re-derived on the server from the catalogue,
+          // so nothing here can misstate what was ordered.
+          productId: product.id,
+          quantity: input.quantity,
+          fullName: result.value.fullName,
+          phone: result.value.phone,
+          address: result.value.address,
+          agentId: result.value.agent?.id ?? null,
+          reference: request.reference,
+          requestedAt: request.requestedAt,
+        });
+
+        if (outcome.saved) {
+          store({ ...request, savedToAccount: true });
+        }
+      } catch {
+        // A failed save costs the customer nothing they had a moment ago: the
+        // browser copy is already written and the confirmation screen simply
+        // will not claim the request was kept.
+      }
     }
 
-    setSubmitting(true);
     router.push("/order/confirmation");
   }
 

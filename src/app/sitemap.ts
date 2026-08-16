@@ -10,6 +10,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: `${siteUrl}/search`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${siteUrl}/locator`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${siteUrl}/agents`, changeFrequency: "weekly", priority: 0.6 },
+    // /account is deliberately absent: it is `noindex` and one person's
+    // private page, same as /order/confirmation. Listing a noindex URL in a
+    // sitemap tells crawlers two opposite things.
+    { url: `${siteUrl}/sign-in`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   const brandRoutes: MetadataRoute.Sitemap = brands.map((brand) => ({

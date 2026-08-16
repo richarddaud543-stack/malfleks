@@ -65,6 +65,7 @@ test.describe("smoke", () => {
     ["/search", "Search — Soko"],
     ["/locator", "Branch locator — Soko"],
     ["/order/confirmation", "Order request received — Soko"],
+    ["/sign-in", "Sign in — Soko"],
     ["/products/toyota-corolla", "Toyota Corolla — Toyota — Soko"],
     ["/brands/toyota", "Toyota — Soko"],
     ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Nyerere Road — Soko"],
