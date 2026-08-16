@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import ScrollReveal from "@/components/motion/ScrollReveal";
+import ScrollStagger from "@/components/motion/ScrollStagger";
 import AmbientBlob from "./AmbientBlob";
 import BrandMarquee from "./BrandMarquee";
 import { brands, branches } from "@/data";
@@ -18,6 +18,12 @@ import { brands, branches } from "@/data";
  * A client component (not `src/app/page.tsx` itself) purely so the ambient
  * blobs and marquee can read `prefers-reduced-motion` — the rest of the
  * homepage stays server-rendered.
+ *
+ * The badge, headline, paragraph, CTA row and marquee panel used to be five
+ * independent `ScrollReveal`s, each timed by its own manually-picked delay.
+ * They're now five `data-reveal` targets under one `ScrollStagger`: a single
+ * arrival, cascading top to bottom in document order, rather than five
+ * separately-triggered fades that happen to land in a similar sequence.
  */
 export default function Hero() {
   const cityCount = new Set(branches.map((b) => b.city)).size;
@@ -35,16 +41,20 @@ export default function Hero() {
       />
       <div className="bg-grid absolute inset-0 h-[640px]" />
 
-      <div className="relative mx-auto max-w-3xl px-5 pb-6 pt-20 text-center sm:pt-24 lg:pt-28">
-        <ScrollReveal>
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted">
+      <ScrollStagger start="top 95%">
+        <div className="relative mx-auto max-w-3xl px-5 pb-6 pt-20 text-center sm:pt-24 lg:pt-28">
+          <span
+            data-reveal
+            className="inline-flex items-center gap-2 rounded-full border border-border bg-surface-2 px-3 py-1 text-xs text-muted"
+          >
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
             Now live across Tanzania
           </span>
-        </ScrollReveal>
 
-        <ScrollReveal delay={0.1}>
-          <h1 className="mt-6 font-display text-6xl font-medium leading-[0.93] tracking-tight sm:text-7xl lg:text-8xl">
+          <h1
+            data-reveal
+            className="mt-6 font-display text-6xl font-medium leading-[0.93] tracking-tight sm:text-7xl lg:text-8xl"
+          >
             Every brand
             <br />
             branch.{" "}
@@ -54,44 +64,43 @@ export default function Hero() {
             <br />
             delivery promise.
           </h1>
-        </ScrollReveal>
 
-        <ScrollReveal delay={0.2}>
-          <p className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg">
+          <p
+            data-reveal
+            className="mx-auto mt-6 max-w-xl text-base text-muted sm:text-lg"
+          >
             Browse authorized branches from Toyota, Ford, BMW, Oraimo, Apple
             and Halotel. If the branch delivers, we route your order
             straight to them — if not, we connect you to a trusted local
             courier automatically.
           </p>
-        </ScrollReveal>
 
-        <ScrollReveal delay={0.3}>
-          <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+          <div data-reveal>
+            <div className="mt-9 flex flex-wrap items-center justify-center gap-4">
+              <Link
+                href="/brands"
+                className="btn-pill btn-lime px-7 py-3.5 text-base"
+              >
+                Explore brands
+              </Link>
+              <Link
+                href="/search"
+                className="btn-pill btn-ink px-7 py-3.5 text-base"
+              >
+                Search products
+              </Link>
+            </div>
             <Link
-              href="/brands"
-              className="btn-pill btn-lime px-7 py-3.5 text-base"
+              href="/agents"
+              className="mt-5 inline-block text-sm font-medium text-muted underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
             >
-              Explore brands
-            </Link>
-            <Link
-              href="/search"
-              className="btn-pill btn-ink px-7 py-3.5 text-base"
-            >
-              Search products
+              Or find a delivery agent near you →
             </Link>
           </div>
-          <Link
-            href="/agents"
-            className="mt-5 inline-block text-sm font-medium text-muted underline decoration-border underline-offset-4 transition-colors hover:text-foreground"
-          >
-            Or find a delivery agent near you →
-          </Link>
-        </ScrollReveal>
-      </div>
+        </div>
 
-      <div className="relative mx-auto max-w-5xl px-5 pb-16 sm:pb-20 lg:pb-24">
-        <ScrollReveal delay={0.35}>
-          <div className="panel px-5 py-7 sm:px-8 sm:py-9">
+        <div className="relative mx-auto max-w-5xl px-5 pb-16 sm:pb-20 lg:pb-24">
+          <div data-reveal className="panel px-5 py-7 sm:px-8 sm:py-9">
             <p className="text-center text-xs font-medium uppercase tracking-widest text-muted">
               {brands.length} brands · {branches.length} branches ·{" "}
               {cityCount} cities
@@ -100,8 +109,8 @@ export default function Hero() {
               <BrandMarquee />
             </div>
           </div>
-        </ScrollReveal>
-      </div>
+        </div>
+      </ScrollStagger>
     </section>
   );
 }
