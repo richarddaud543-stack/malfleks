@@ -17,6 +17,13 @@ const eslintConfig = defineConfig([
     // other engineers' `.next` chunks instead of this checkout's source.
     ".claude/**",
     "**/.next/**",
+    // Generated test artefacts. All three are gitignored, but ESLint has its
+    // own ignore list, so a local `npx playwright test` run would otherwise
+    // make `npm run lint` fail on minified vendor bundles inside the HTML
+    // report — noise from tooling, not from this checkout's source.
+    "playwright-report/**",
+    "test-results/**",
+    "coverage/**",
   ]),
 ]);
 
