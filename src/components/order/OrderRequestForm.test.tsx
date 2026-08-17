@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { getBranchById, getBrandById, getProductById } from "@/data";
 import type { Branch, Brand, Product } from "@/data";
-import { formatTZS } from "@/lib/format";
+import { formatEta, formatTZS } from "@/lib/format";
 import {
   ORDER_STORAGE_KEY,
   parseOrderRequest,
@@ -102,7 +102,7 @@ describe("OrderRequestForm", () => {
 
     const chosen = agentDelivered.route.agents[0];
     expect(
-      screen.getByText(new RegExp(`${chosen.name} · ${chosen.etaEstimate}`))
+      screen.getByText(new RegExp(`${chosen.name} · ${formatEta(chosen.eta)}`))
     ).toBeVisible();
   });
 

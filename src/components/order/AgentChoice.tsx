@@ -1,6 +1,7 @@
 "use client";
 
 import type { DeliveryAgent } from "@/data";
+import { formatEta } from "@/lib/format";
 
 /**
  * One selectable courier. Deliberately a plain radio inside its label — the
@@ -53,7 +54,7 @@ export default function AgentChoice({
           Based in {agent.city} · Serves {agent.regionsServed.join(", ")}
         </span>
         <span className="mt-2 block text-sm text-muted">
-          ETA: {agent.etaEstimate} · {agent.phone}
+          ETA: {formatEta(agent.eta)} · {agent.phone}
         </span>
       </span>
     </label>

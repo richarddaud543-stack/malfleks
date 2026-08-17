@@ -8,12 +8,14 @@ import {
   createOrderRequest,
   deliveryRouteLabel,
   emptyOrderInput,
+  fastestAgent,
   formatPhone,
   generateOrderReference,
   normalizePhone,
   orderBlockReason,
   parseOrderRequest,
   parseQuantity,
+  previewDelivery,
   previewLineTotal,
   resolveDeliveryRoute,
   serializeOrderRequest,
@@ -23,6 +25,7 @@ import {
   type OrderRequestInput,
   type ValidatedOrder,
 } from "./order";
+import { formatEta } from "./format";
 
 function brand(id: string): Brand {
   const found = getBrandById(id);
@@ -117,6 +120,117 @@ describe("orderBlockReason", () => {
     expect(orderBlockReason(product("ford-everest"), unroutable)).toMatch(
       /out of stock/i
     );
+  });
+});
+
+describe("fastestAgent", () => {
+  function agentWith(eta: { minDays: number; maxDays: number }, name: string) {
+    return {
+      id: name,
+      name,
+      city: "Arusha",
+      regionsServed: ["Arusha"],
+      phone: "+255 68 000 0000",
+      eta,
+      verified: false,
+    } satisfies DeliveryAgent;
+  }
+
+  it("has nothing to offer for an empty list", () => {
+    expect(fastestAgent([])).toBeNull();
+  });
+
+  it("ranks on the promised upper bound, not the best case", () => {
+    // A courier that *might* arrive today but may take three days is slower
+    // than one that commits to tomorrow — the customer is promised the max.
+    const optimistic = agentWith({ minDays: 0, maxDays: 3 }, "Optimistic");
+    const dependable = agentWith({ minDays: 1, maxDays: 1 }, "Dependable");
+    expect(fastestAgent([optimistic, dependable])?.name).toBe("Dependable");
+  });
+
+  it("breaks a tie on the upper bound with the lower one", () => {
+    const wide = agentWith({ minDays: 0, maxDays: 2 }, "Wide");
+    const narrow = agentWith({ minDays: 2, maxDays: 2 }, "Narrow");
+    expect(fastestAgent([wide, narrow])?.name).toBe("Wide");
+  });
+
+  it("picks the same-day courier out of the two serving Dar es Salaam", () => {
+    // Elite Digital is a Dar branch that does *not* run its own fleet, so it
+    // routes to the two couriers covering the city — Bolt Send (same-day) and
+    // Fargo Courier (1–2 days).
+    const dar = resolveDeliveryRoute(branch("apple-elite-dar"));
+    expect(dar.agents.length).toBeGreaterThan(1);
+    expect(fastestAgent(dar.agents)?.name).toBe("Bolt Send");
+  });
+});
+
+describe("previewDelivery", () => {
+  it("names the brand's own fleet, and promises no time it cannot know", () => {
+    const outlook = previewDelivery({
+      product: product("toyota-corolla"),
+      brand: brand("toyota"),
+      branch: branch("toyota-dar"),
+    });
+
+    expect(outlook.kind).toBe("brand");
+    expect(outlook.carrier).toBe("Toyota own fleet");
+    expect(outlook.choiceCount).toBe(0);
+    // No branch record carries a delivery time, so there is none to show.
+    expect(outlook.eta).toBeNull();
+    expect(outlook.unavailable).toBeNull();
+  });
+
+  it("gives the soonest courier and how many there are to choose from", () => {
+    const outlook = previewDelivery({
+      product: product("toyota-hilux"),
+      brand: brand("toyota"),
+      branch: branch("toyota-arusha"),
+    });
+
+    expect(outlook.kind).toBe("agent");
+    expect(outlook.carrier).toBe("Arusha Swift Couriers");
+    expect(outlook.choiceCount).toBe(2);
+    expect(outlook.eta).toEqual({ minDays: 0, maxDays: 0 });
+  });
+
+  it("agrees with the delivery page's own rule about what is blocked", () => {
+    // ford-everest is flagged out of stock in the seed data.
+    const seed = {
+      product: product("ford-everest"),
+      brand: brand("ford"),
+      branch: branch("ford-arusha"),
+    };
+    const outlook = previewDelivery(seed);
+
+    expect(outlook.unavailable).toBe("Out of stock");
+    // Same condition, two lengths — a card cannot fit the long sentence, but
+    // the two must never disagree about *whether* it is blocked.
+    expect(
+      orderBlockReason(seed.product, resolveDeliveryRoute(seed.branch))
+    ).not.toBeNull();
+  });
+
+  it("says who is missing when no courier serves the city", () => {
+    const outlook = previewDelivery({
+      product: product("toyota-hilux"),
+      brand: brand("toyota"),
+      branch: { ...branch("toyota-arusha"), city: "Tanga" },
+    });
+
+    expect(outlook.unavailable).toBe("No courier serves Tanga");
+    // Nobody to name, and the caller is told so rather than handed a blank.
+    expect(outlook.carrier).toBeNull();
+    expect(outlook.eta).toBeNull();
+  });
+
+  it("reports stock before routing when both are wrong", () => {
+    const outlook = previewDelivery({
+      product: product("ford-everest"),
+      brand: brand("ford"),
+      branch: { ...branch("ford-arusha"), city: "Tanga" },
+    });
+
+    expect(outlook.unavailable).toBe("Out of stock");
   });
 });
 
@@ -419,7 +533,10 @@ describe("createOrderRequest", () => {
     expect(request.route.carrier).toBe("Arusha Swift Couriers");
     expect(request.route.agentId).toBe("arusha-swift-couriers");
     expect(request.route.agentPhone).toBe(agent.phone);
-    expect(request.route.etaEstimate).toBe(agent.etaEstimate);
+    // The record snapshots the rendered label, not the day counts — it is
+    // what the customer was shown, kept readable without re-deriving it.
+    expect(request.route.etaEstimate).toBe(formatEta(agent.eta));
+    expect(request.route.etaEstimate).toBe("Same-day");
   });
 
   it("carries the branch phone only when the branch data has one", () => {

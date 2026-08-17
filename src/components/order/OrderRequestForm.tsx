@@ -18,6 +18,7 @@ import {
   type OrderField,
   type OrderRequestInput,
 } from "@/lib/order";
+import { formatEta } from "@/lib/format";
 import { saveOrderRequest } from "@/app/actions/order-requests";
 import { useSessionState } from "@/components/auth/session-state";
 import AgentChoice from "./AgentChoice";
@@ -325,7 +326,7 @@ export default function OrderRequestForm({
               route.kind === "brand"
                 ? brandCarrierName(brand)
                 : selectedAgent?.name ?? null,
-            etaEstimate: selectedAgent?.etaEstimate,
+            etaEstimate: selectedAgent ? formatEta(selectedAgent.eta) : undefined,
           }}
           branch={{ name: branch.name, city: branch.city }}
           tint={brand.accentColor}

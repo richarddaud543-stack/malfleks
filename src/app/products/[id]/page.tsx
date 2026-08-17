@@ -14,9 +14,14 @@ import {
   getBranchById,
 } from "@/data";
 import ProductShowcase from "@/components/product/ProductShowcase";
-import DeliveryBadge from "@/components/delivery/DeliveryBadge";
+import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { formatTZS } from "@/lib/format";
+import {
+  orderBlockReason,
+  previewDelivery,
+  resolveDeliveryRoute,
+} from "@/lib/order";
 
 export function generateStaticParams() {
   return products.map((p) => ({ id: p.id }));
@@ -62,6 +67,12 @@ export default async function ProductPage({
   if (!brand || !branch) {
     notFound();
   }
+
+  // Same rule, same answer as /delivery/[productId] — just reached before the
+  // customer commits rather than after. `blockReason` is the long-form version
+  // of `outlook.unavailable`; both come from the one rule in lib/order.
+  const outlook = previewDelivery({ product, brand, branch });
+  const blockReason = orderBlockReason(product, resolveDeliveryRoute(branch));
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">
@@ -116,11 +127,8 @@ export default async function ProductPage({
           </p>
           <p className="mt-4 text-muted">{product.description}</p>
 
-          <div className="mt-6 flex items-center gap-3">
-            <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
-            {!product.inStock && (
-              <span className="text-sm text-muted">Currently out of stock</span>
-            )}
+          <div className="mt-6">
+            <DeliveryRouteLine outlook={outlook} size="prominent" />
           </div>
 
           {product.specs && (
@@ -136,18 +144,46 @@ export default async function ProductPage({
             </dl>
           )}
 
-          <div className="mt-10">
-            <Link
-              href={`/delivery/${product.id}`}
-              className="btn-pill btn-lime px-7 py-3.5 text-base"
+          {/* An order that cannot be routed used to be discovered on the next
+              page, after the customer had already committed to it. The rule
+              runs here now, so the CTA is only offered when pressing it can
+              actually lead somewhere. */}
+          {blockReason ? (
+            <div
+              data-testid="product-unavailable"
+              className="glass-card mt-10 rounded-2xl p-6"
             >
-              Order & choose delivery
-            </Link>
-          </div>
-
-          <p className="mt-3 text-xs text-muted">
-            Available at {branch.name}, {branch.city}
-          </p>
+              <h2 className="font-display text-base font-medium">
+                This can&apos;t be ordered right now
+              </h2>
+              <p className="mt-2 text-sm text-muted">{blockReason}</p>
+              <p className="mt-2 text-sm text-muted">
+                {branch.name} is at {branch.addressLine}, open {branch.hours}
+                {branch.phone ? ` · ${branch.phone}` : ""}.
+              </p>
+              <Link
+                href="/search"
+                className="mt-5 inline-block rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
+              >
+                Find something similar
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-10">
+              <Link
+                href={`/delivery/${product.id}`}
+                className="btn-pill btn-lime px-7 py-3.5 text-base"
+              >
+                Order & choose delivery
+              </Link>
+              {/* Only on the orderable path: the blocked panel above already
+                  names the branch, and "Available at…" under "this can't be
+                  ordered" contradicts itself. */}
+              <p className="mt-3 text-xs text-muted">
+                Available at {branch.name}, {branch.city}
+              </p>
+            </div>
+          )}
         </ScrollReveal>
       </div>
     </div>

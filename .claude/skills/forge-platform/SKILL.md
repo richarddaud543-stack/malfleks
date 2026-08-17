@@ -36,7 +36,18 @@ migration and run the real seed** — no mocks. That is what makes them worth ha
 it is why they caught `Branch.coords` diverging when two branches landed together.
 
 **`prisma migrate dev` does not always regenerate the client** in a way `tsc` picks up —
-run `prisma generate` when types lag the schema.
+run `prisma generate` when types lag the schema. Prisma 7's `migrate dev` also has **no
+`--skip-seed` flag** (it prints usage and exits), so reach for `--create-only` when you
+need to see the SQL before it runs.
+
+**Prisma's generated SQL for a replaced column will not populate the new one.** Swapping
+`DeliveryAgent.etaEstimate` for `etaMinDays`/`etaMaxDays` produced a table rebuild whose
+`INSERT ... SELECT` simply omitted both new NOT NULL columns — correct against an empty
+database, a constraint violation against any real one. The fix is to hand-edit the
+generated migration to translate the old values (`CASE WHEN "etaEstimate" LIKE 'Same-day%'
+THEN 0 …`) before applying it. Always read `--create-only` output when a column is being
+replaced rather than added; the warning block at the top tells you exactly which columns
+were left unset.
 
 **App Check protects client-SDK requests only.** Admin SDK calls bypass both it and
 Security Rules, so it is not a precondition for a server-rendered read. The Firebase web

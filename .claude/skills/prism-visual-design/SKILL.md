@@ -121,6 +121,32 @@ for hierarchy/spacing/interaction ideas, then hand-rebuild against `--muted`/`--
 needing a Radix package we don't have is a "report it," not "npm install it," decision —
 it's a dependency call for the Lead, not a design one.
 
+## A status chip system needs a neutral, and the neutral must not be a fourth hue
+
+`DeliveryRouteLine` renders three states on the same solid dark-ink pill (`bg-foreground`,
+`#0c1e18`) that `DeliveryBadge` established. Measured on that ink:
+
+| Text | Ratio on `#0c1e18` |
+|---|---|
+| `text-emerald-400` `#34d399` — brand fleet | 8.99:1 |
+| `text-amber-400` `#fbbf24` — local courier | 10.36:1 |
+| `text-zinc-200` `#e4e4e7` — unavailable | 13.63:1 |
+
+The design point, not just the numbers: when a product can't be ordered the route is
+*moot*, so the third state is deliberately achromatic rather than a red or a third status
+colour. A saturated "error" hue would compete with the two states that still carry
+meaning, in a results list where most rows are fine.
+
+## Type scale is not portable between a card and a page — check it rendered
+
+The route line shipped at one size and looked right on a search card (`11px` detail under
+a price in a narrow column) and visibly wrong on the product page, dwarfed beside a `4xl`
+heading and a `2xl` price. Nothing in the test suite could see it; a screenshot did
+immediately. Components that appear at two altitudes need an explicit `size` prop with
+each value tuned against its real surroundings — not one size and hope. When the browser
+extension isn't connected, drive Playwright's own Chromium against `next start` and read
+the PNGs; it is a real engine rendering the real production build.
+
 ## How to keep this file useful
 
 After each assignment, record the numbers you measured and any technique that failed

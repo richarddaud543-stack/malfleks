@@ -107,7 +107,8 @@ export async function seedDatabase(prisma: PrismaClient): Promise<SeedCounts> {
           name: agent.name,
           city: agent.city,
           phone: agent.phone,
-          etaEstimate: agent.etaEstimate,
+          etaMinDays: agent.eta.minDays,
+          etaMaxDays: agent.eta.maxDays,
           verified: agent.verified,
           sortOrder: index,
         };

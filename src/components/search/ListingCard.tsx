@@ -13,9 +13,10 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import { motion } from "motion/react";
 import ProductIcon from "@/components/product/ProductIcon";
-import DeliveryBadge from "@/components/delivery/DeliveryBadge";
+import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
+import { previewDelivery } from "@/lib/order";
 import type { Listing } from "@/lib/search";
 
 /**
@@ -24,6 +25,10 @@ import type { Listing } from "@/lib/search";
  */
 export default function ListingCard({ listing }: { listing: Listing }) {
   const { product, brand, branch } = listing;
+  // A `Listing` is exactly the {product, brand, branch} join `previewDelivery`
+  // wants, so the routing rule answers here — on the card the customer is
+  // choosing from — instead of two pages later on /delivery.
+  const outlook = previewDelivery(listing);
 
   return (
     <motion.div
@@ -94,14 +99,13 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           </p>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-3 sm:flex-col sm:items-end">
+        {/* The route line absorbed the separate "Out of stock" note that used
+            to sit beside the badge: out of stock *is* one of the states it
+            renders, and showing both put two competing availability claims a
+            few pixels apart. */}
+        <div className="flex shrink-0 items-start justify-between gap-3 sm:flex-col sm:items-end">
           <p className="font-semibold">{formatTZS(product.priceTZS)}</p>
-          <div className="flex items-center gap-2">
-            {!product.inStock && (
-              <span className="text-[11px] text-muted">Out of stock</span>
-            )}
-            <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
-          </div>
+          <DeliveryRouteLine outlook={outlook} className="sm:items-end" />
         </div>
       </Link>
     </motion.div>

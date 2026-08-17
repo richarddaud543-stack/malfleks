@@ -1,4 +1,5 @@
 import type { DeliveryAgent } from "@/data";
+import { formatEta } from "@/lib/format";
 
 export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
   return (
@@ -17,7 +18,7 @@ export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
         )}
       </div>
       <div className="mt-4 flex items-center justify-between text-sm">
-        <span className="text-muted">ETA: {agent.etaEstimate}</span>
+        <span className="text-muted">ETA: {formatEta(agent.eta)}</span>
         <a href={`tel:${agent.phone}`} className="font-medium text-accent hover:underline">
           {agent.phone}
         </a>

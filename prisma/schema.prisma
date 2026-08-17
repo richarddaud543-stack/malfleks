@@ -147,9 +147,15 @@ model DeliveryAgent {
   name String
   city String
 
-  phone       String
-  etaEstimate String
-  verified    Boolean
+  phone   String
+  verified Boolean
+
+  // Days from pickup, `0` meaning same day; `etaMaxDays` is inclusive. This
+  // replaced a single prose `etaEstimate` column so couriers can be ranked —
+  // the display label is derived by `formatEta()` and never stored, which is
+  // what stops the number and the words drifting apart.
+  etaMinDays Int
+  etaMaxDays Int
 
   sortOrder Int
 

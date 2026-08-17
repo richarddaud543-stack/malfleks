@@ -4,7 +4,14 @@ import { products } from "./products";
 import { deliveryAgents } from "./delivery-agents";
 import type { Brand, Branch, Product, DeliveryAgent } from "./types";
 
-export type { Brand, Branch, Product, DeliveryAgent, BrandCategory } from "./types";
+export type {
+  Brand,
+  Branch,
+  Product,
+  DeliveryAgent,
+  DeliveryEta,
+  BrandCategory,
+} from "./types";
 export { brands, branches, products, deliveryAgents };
 
 export function getAllBrands(): Brand[] {

@@ -16,6 +16,12 @@ The product rule, in one place (`resolveDeliveryRoute` in `src/lib/order.ts`): a
 that runs its own fleet delivers the order itself; otherwise the customer is connected to
 a local courier serving that branch's city. Everything else is presentation.
 
+That rule is now asked at two altitudes, and both must come from the same call:
+`previewDelivery()` for browse surfaces (search card, product page) and the
+`resolveDeliveryRoute` + `orderBlockReason` pair for `/delivery/[productId]`. If you add a
+third surface, wrap the existing rule — do not re-derive "does this branch deliver", or
+the card and the checkout will eventually disagree in front of a customer.
+
 ## What I have learned, and paid for
 
 **Whole-shilling `priceTZS` is correct, not a shortcut.** ISO 4217 formally gives TZS two
@@ -31,8 +37,23 @@ in `src/data/index.test.ts`; keep it passing rather than deleting it.
 **Address validation is weak**: `MIN_ADDRESS_LENGTH = 6`, so `"asdfgh"` passes, in a
 market where addressing is genuinely hard. Debt #18.
 
-**`etaEstimate` is display text, not a comparable value.** Any "fastest courier" feature
-needs a structured field first.
+**Courier ETA is structured now** — `DeliveryAgent.eta` is `{minDays, maxDays}` (day 0 is
+today), and `formatEta()` in `src/lib/format.ts` is the only place it becomes words. This
+file used to warn that the old prose `etaEstimate` was uncomparable; that debt was paid on
+2026-08-17 when "which courier is fastest" was needed. Two things worth keeping:
+
+- **Rank on `maxDays` first, `minDays` only as a tie-break.** The upper bound is what the
+  customer is actually promised, so a 0–3 courier is *slower* than a 1–1 one even though
+  both might arrive today. `fastestAgent()` in `src/lib/order.ts` encodes this.
+- **Never store the label beside the number.** The record written by `createOrderRequest`
+  snapshots the rendered string deliberately — it is a receipt of what the customer was
+  shown — but nothing else does, because two fields for one fact is debt #8 all over again.
+
+**Brand fleets publish no ETA, and that gap is load-bearing.** No branch record carries a
+delivery time, so `previewDelivery()` returns `eta: null` on a brand route and the UI shows
+nothing rather than a plausible guess. This is also why there is **no delivery-speed search
+facet**: filtering on courier speed would silently hide every brand-fleet listing. If
+someone asks for that filter, the answer is to get real fleet times first, not to infer them.
 
 **Price is bucketed into bands, not a slider** — the catalogue spans TZS 32,000 earbuds to
 245,000,000 SUVs, and a linear slider is useless across that range.

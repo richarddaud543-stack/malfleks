@@ -1,5 +1,12 @@
 import { getAgentsForCity } from "@/data";
-import type { Branch, Brand, DeliveryAgent, Product } from "@/data";
+import type {
+  Branch,
+  Brand,
+  DeliveryAgent,
+  DeliveryEta,
+  Product,
+} from "@/data";
+import { formatEta } from "./format";
 
 /**
  * Order request logic.
@@ -43,6 +50,23 @@ export function deliveryRouteLabel(kind: DeliveryRouteKind): string {
 }
 
 /**
+ * The soonest a courier in this set could arrive, or `null` for an empty set.
+ *
+ * Ranked on the *upper* bound first, because that is the figure a customer is
+ * actually promised — a "1–2 days" courier is slower than a "next day" one
+ * even though both could turn up tomorrow. The lower bound only breaks ties.
+ */
+export function fastestAgent(agents: DeliveryAgent[]): DeliveryAgent | null {
+  return agents.reduce<DeliveryAgent | null>((best, agent) => {
+    if (!best) return agent;
+    if (agent.eta.maxDays !== best.eta.maxDays) {
+      return agent.eta.maxDays < best.eta.maxDays ? agent : best;
+    }
+    return agent.eta.minDays < best.eta.minDays ? agent : best;
+  }, null);
+}
+
+/**
  * Who carries a brand-routed order. The branch is already named separately on
  * every summary, so this says what the brand does rather than repeating it.
  */
@@ -68,6 +92,70 @@ export function orderBlockReason(
   }
 
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// The route, answered before the customer commits to it
+// ---------------------------------------------------------------------------
+
+/**
+ * Everything the routing rule can say about a product *while it is still being
+ * browsed* — who would carry it, how soon, and whether it can be ordered at
+ * all. Built from `resolveDeliveryRoute` rather than beside it, so a search
+ * card and the delivery page can never disagree about the answer.
+ */
+export interface DeliveryOutlook {
+  kind: DeliveryRouteKind;
+  /**
+   * Who carries it: the brand's own fleet, or the fastest courier serving the
+   * city. `null` only when an agent route has nobody to offer, which is the
+   * one case where there is genuinely no carrier to name — `unavailable` is
+   * always set alongside it, so nothing has to render a blank.
+   */
+  carrier: string | null;
+  /** How many couriers the customer will get to choose between. `0` on a brand route. */
+  choiceCount: number;
+  /**
+   * Soonest published arrival, or `null` when nobody publishes one. Brand
+   * fleets are always `null`: no branch record carries a delivery time, and
+   * inventing a plausible one is exactly what the `verified` flag exists to
+   * prevent. The UI says less rather than guessing.
+   */
+  eta: DeliveryEta | null;
+  /**
+   * Why this cannot be ordered right now, short enough to sit on a card, or
+   * `null`. `orderBlockReason` stays the full-sentence version for the
+   * delivery page — same condition, two lengths.
+   */
+  unavailable: string | null;
+}
+
+export function previewDelivery({
+  product,
+  brand,
+  branch,
+}: {
+  product: Product;
+  brand: Brand;
+  branch: Branch;
+}): DeliveryOutlook {
+  const route = resolveDeliveryRoute(branch);
+  const fastest = fastestAgent(route.agents);
+
+  const unavailable = !product.inStock
+    ? "Out of stock"
+    : route.kind === "agent" && route.agents.length === 0
+      ? `No courier serves ${branch.city}`
+      : null;
+
+  return {
+    kind: route.kind,
+    carrier:
+      route.kind === "brand" ? brandCarrierName(brand) : (fastest?.name ?? null),
+    choiceCount: route.agents.length,
+    eta: fastest?.eta ?? null,
+    unavailable,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -338,7 +426,10 @@ export function createOrderRequest({
         carrier: order.agent.name,
         agentId: order.agent.id,
         agentPhone: order.agent.phone,
-        etaEstimate: order.agent.etaEstimate,
+        // The record keeps the *rendered* label, not the day counts: it is a
+        // receipt of what the customer was told at the time, and it has to
+        // still read correctly if `formatEta`'s wording ever changes.
+        etaEstimate: formatEta(order.agent.eta),
       }
     : { kind: "brand", carrier: brandCarrierName(brand) };
 

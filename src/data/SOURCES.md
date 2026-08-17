@@ -29,6 +29,12 @@ Sample product images are NOT photographs — they're custom flat-icon illustrat
 
 Confirm and replace all `verified: false` entries with real addresses/contacts before this goes live.
 
+### Courier ETAs (`DeliveryAgent.eta`)
+
+On 2026-08-17 the prose `etaEstimate` field ("Same-day", "1 day", "1–2 days") was replaced by a structured `eta: { minDays, maxDays }` so couriers could be ranked. Every value is a **faithful translation of the string it replaced** — `Same-day` → 0–0, `1 day` → 1–1, `1–2 days` → 1–2 — so no record's `verified` flag changed: the same claim is simply now comparable. The customer-facing label is derived by `formatEta()` and never stored.
+
+Brand-fleet branches publish **no** delivery time at all. Nothing in `branches.ts` carries one, so the UI shows none rather than a plausible-looking guess — see `previewDelivery()` in `src/lib/order.ts`. **Before going live**: get real committed delivery windows from each brand that runs its own fleet, and confirm the courier quotes above with the couriers themselves.
+
 ## Branch coordinates (`Branch.coords`)
 
 Every branch carries a `coords` pair used only to place it on the `/locator` map. These are **approximate city-centre coordinates, not surveyed shopfront positions** — all branches in a city share one coordinate, defined once as `cityCoords` at the top of `src/data/branches.ts`:
