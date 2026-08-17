@@ -7,6 +7,7 @@ import SmoothScrollProvider from "@/components/motion/SmoothScrollProvider";
 import GrainOverlay from "@/components/motion/GrainOverlay";
 import FirebaseAnalytics from "@/components/firebase/FirebaseAnalytics";
 import FirebaseAppCheck from "@/components/firebase/FirebaseAppCheck";
+import ConsentBanner from "@/components/consent/ConsentBanner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -55,11 +56,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         >
           Skip to content
         </a>
+        {/* Mounted here, second only to the skip link, though it is positioned
+            at the bottom of the viewport: DOM order is tab order, and a
+            consent choice a keyboard user only reaches after every link on the
+            page is not really a choice. */}
+        <ConsentBanner />
         <GrainOverlay />
         {/* Before FirebaseAnalytics, and before anything that signs in: App
             Check has to be attached to the Firebase app ahead of the SDK calls
             it attests. */}
         <FirebaseAppCheck />
+        {/* Starts nothing until ConsentBanner has been answered "Allow". */}
         <FirebaseAnalytics />
         <SmoothScrollProvider>
           <Navbar />

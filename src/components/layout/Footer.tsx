@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ConsentPreferencesButton from "@/components/consent/ConsentPreferencesButton";
 
 export default function Footer() {
   return (
@@ -23,6 +24,10 @@ export default function Footer() {
               <li><Link href="/brands" className="transition-colors hover:text-foreground">All brands</Link></li>
               <li><Link href="/agents" className="transition-colors hover:text-foreground">Delivery agents</Link></li>
               <li><Link href="/locator" className="transition-colors hover:text-foreground">Branch locator</Link></li>
+              {/* Withdrawing consent has to be as reachable as granting it,
+                  so it sits in the footer nav rather than inside a policy
+                  page nobody opens. */}
+              <li><ConsentPreferencesButton /></li>
             </ul>
           </div>
 

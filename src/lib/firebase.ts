@@ -100,13 +100,35 @@ export function getFirebaseApp(): FirebaseApp {
  * browser, or no `measurementId`. Call it from a client effect, never at module
  * scope. Returning null rather than throwing keeps analytics a non-event for
  * the people it is not available to.
+ *
+ * **Only call this once the visitor has consented.** The gate is the caller's
+ * (`FirebaseAnalytics`, via `src/lib/consent.ts`) and it is deliberately "do
+ * not call" rather than Google's consent mode: consent mode's `denied` state
+ * still sends cookieless pings, so it means *less* collection, not none.
+ * Declining on Soko means this function is never reached, `firebase/analytics`
+ * is never imported, and no request leaves the browser.
+ *
+ * The `setConsent` call below is the belt to that braces. The Analytics SDK
+ * documents its own default as **every consent type granted** — so once gtag
+ * does load, the ad-related types have to be denied explicitly or they are on.
+ * Soko runs no advertising, so they are denied permanently rather than asked
+ * about; the banner only ever offers the analytics half.
  */
 export async function initAnalytics(): Promise<Analytics | null> {
   if (typeof window === "undefined") return null;
   if (!config.measurementId || !isFirebaseConfigured()) return null;
 
-  const { getAnalytics, isSupported } = await import("firebase/analytics");
+  const { getAnalytics, isSupported, setConsent } = await import(
+    "firebase/analytics"
+  );
   if (!(await isSupported())) return null;
+
+  setConsent({
+    analytics_storage: "granted",
+    ad_storage: "denied",
+    ad_user_data: "denied",
+    ad_personalization: "denied",
+  });
 
   return getAnalytics(getFirebaseApp());
 }

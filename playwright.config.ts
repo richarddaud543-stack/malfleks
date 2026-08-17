@@ -15,6 +15,23 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
+    // Every spec but consent.spec.ts runs as a visitor who has already
+    // answered the analytics banner, so it is not sitting over the bottom of
+    // the viewport intercepting clicks in specs that are about something else.
+    // "denied" rather than "granted" on purpose: no spec should be quietly
+    // firing real Analytics requests. consent.spec.ts overrides this with an
+    // empty state to test the first-visit path.
+    storageState: {
+      cookies: [],
+      origins: [
+        {
+          origin: baseURL,
+          localStorage: [
+            { name: "soko:analytics-consent:v1", value: "denied" },
+          ],
+        },
+      ],
+    },
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
