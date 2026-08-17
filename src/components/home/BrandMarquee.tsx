@@ -5,7 +5,7 @@ import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useReducedMotion } from "motion/react";
-import { brands } from "@/data";
+import type { Brand } from "@/data";
 
 /**
  * An honest, endlessly-looping band of the six real brands on Soko — the
@@ -21,7 +21,7 @@ import { brands } from "@/data";
  * scopes the tween to the track ref and reverts it automatically on
  * unmount or when `reduceMotion` flips, so there's no manual cleanup here.
  */
-export default function BrandMarquee() {
+export default function BrandMarquee({ brands }: { brands: Brand[] }) {
   const reduceMotion = useReducedMotion();
   const trackRef = useRef<HTMLDivElement>(null);
 

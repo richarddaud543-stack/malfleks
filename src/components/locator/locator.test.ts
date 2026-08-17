@@ -11,6 +11,11 @@ import {
   toggleBrand,
   type LocatorFilters,
 } from "./locator";
+import { staticLocatorData } from "./locator.fixture";
+
+// The same catalogue these assertions were written against, now passed in
+// explicitly rather than read from module scope.
+const data = staticLocatorData();
 
 function withFilters(patch: Partial<LocatorFilters>): LocatorFilters {
   return { ...defaultLocatorFilters, ...patch };
@@ -18,7 +23,7 @@ function withFilters(patch: Partial<LocatorFilters>): LocatorFilters {
 
 describe("getLocatorBranches", () => {
   it("joins every branch to its brand", () => {
-    const entries = getLocatorBranches();
+    const entries = getLocatorBranches(data);
     expect(entries.length).toBe(branches.length);
     for (const { branch, brand } of entries) {
       expect(brand.id).toBe(branch.brandId);
@@ -26,7 +31,7 @@ describe("getLocatorBranches", () => {
   });
 
   it("gives every branch a coordinate to plot", () => {
-    for (const { branch } of getLocatorBranches()) {
+    for (const { branch } of getLocatorBranches(data)) {
       expect(branch.coords).toBeDefined();
     }
   });
@@ -34,11 +39,11 @@ describe("getLocatorBranches", () => {
 
 describe("filterBranches", () => {
   it("returns every branch when nothing is selected", () => {
-    expect(filterBranches(defaultLocatorFilters).length).toBe(branches.length);
+    expect(filterBranches(data, defaultLocatorFilters).length).toBe(branches.length);
   });
 
   it("narrows to a single city across all brands", () => {
-    const results = filterBranches(withFilters({ city: "Mwanza" }));
+    const results = filterBranches(data, withFilters({ city: "Mwanza" }));
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((e) => e.branch.city === "Mwanza")).toBe(true);
     // The point of the locator: one city, more than one brand.
@@ -46,14 +51,14 @@ describe("filterBranches", () => {
   });
 
   it("treats several brands as OR", () => {
-    const results = filterBranches(withFilters({ brandIds: ["bmw", "ford"] }));
+    const results = filterBranches(data, withFilters({ brandIds: ["bmw", "ford"] }));
     expect(new Set(results.map((e) => e.brand.id))).toEqual(
       new Set(["bmw", "ford"])
     );
   });
 
   it("treats city and brand as AND", () => {
-    const results = filterBranches(
+    const results = filterBranches(data, 
       withFilters({ city: "Arusha", brandIds: ["toyota"] })
     );
     expect(results.length).toBeGreaterThan(0);
@@ -65,43 +70,43 @@ describe("filterBranches", () => {
   it("returns nothing for a brand with no branch in that city", () => {
     // Toyota has no Dodoma branch.
     expect(
-      filterBranches(withFilters({ city: "Dodoma", brandIds: ["toyota"] }))
+      filterBranches(data, withFilters({ city: "Dodoma", brandIds: ["toyota"] }))
     ).toEqual([]);
   });
 
   it("matches a free-text query against the branch name", () => {
     // "Kariakoo" only appears in one branch's own name, not any brand or city.
-    const results = filterBranches(withFilters({ q: "Kariakoo" }));
+    const results = filterBranches(data, withFilters({ q: "Kariakoo" }));
     expect(results.map((e) => e.branch.id)).toEqual(["oraimo-dar"]);
   });
 
   it("matches a free-text query against the brand name, case-insensitively", () => {
-    const results = filterBranches(withFilters({ q: "TOYOTA" }));
+    const results = filterBranches(data, withFilters({ q: "TOYOTA" }));
     expect(results.length).toBe(3);
     expect(results.every((e) => e.brand.id === "toyota")).toBe(true);
   });
 
   it("matches a free-text query against the city", () => {
-    const results = filterBranches(withFilters({ q: "dodoma" }));
+    const results = filterBranches(data, withFilters({ q: "dodoma" }));
     expect(results.length).toBeGreaterThan(0);
     expect(results.every((e) => e.branch.city === "Dodoma")).toBe(true);
   });
 
   it("treats the query as AND with city and brand", () => {
-    const results = filterBranches(
+    const results = filterBranches(data, 
       withFilters({ city: "Dar es Salaam", brandIds: ["halotel"], q: "shop" })
     );
     expect(results.map((e) => e.branch.id)).toEqual(["halotel-dar"]);
 
     expect(
-      filterBranches(
+      filterBranches(data, 
         withFilters({ city: "Dar es Salaam", brandIds: ["halotel"], q: "arusha" })
       )
     ).toEqual([]);
   });
 
   it("treats a blank or whitespace-only query as no query at all", () => {
-    expect(filterBranches(withFilters({ q: "   " })).length).toBe(
+    expect(filterBranches(data, withFilters({ q: "   " })).length).toBe(
       branches.length
     );
   });
@@ -109,7 +114,7 @@ describe("filterBranches", () => {
 
 describe("getLocatorCities", () => {
   it("covers the four cities and accounts for every branch", () => {
-    const cities = getLocatorCities();
+    const cities = getLocatorCities(data);
     expect(cities.map((c) => c.name).sort()).toEqual([
       "Arusha",
       "Dar es Salaam",
@@ -121,12 +126,12 @@ describe("getLocatorCities", () => {
   });
 
   it("orders cities from north to south", () => {
-    const lats = getLocatorCities().map((c) => c.center.lat);
+    const lats = getLocatorCities(data).map((c) => c.center.lat);
     expect(lats).toEqual([...lats].sort((a, b) => b - a));
   });
 
   it("recounts markers against the selected brands", () => {
-    const cities = getLocatorCities(["toyota"]);
+    const cities = getLocatorCities(data, ["toyota"]);
     const byName = Object.fromEntries(cities.map((c) => [c.name, c]));
     expect(byName["Dar es Salaam"].branchCount).toBe(1);
     // Kept at zero rather than dropped, so the map shape never changes.
@@ -135,14 +140,14 @@ describe("getLocatorCities", () => {
   });
 
   it("carries the agents that serve each city, including out-of-town ones", () => {
-    const arusha = getLocatorCities().find((c) => c.name === "Arusha")!;
+    const arusha = getLocatorCities(data).find((c) => c.name === "Arusha")!;
     expect(arusha.agents).toEqual(getAgentsForCity("Arusha"));
     // Fargo is based in Dar but covers Arusha through regionsServed.
     expect(arusha.agents.some((a) => a.id === "fargo-courier")).toBe(true);
   });
 
   it("recounts markers against a free-text search, same as it does for brand", () => {
-    const cities = getLocatorCities([], "Kariakoo");
+    const cities = getLocatorCities(data, [], "Kariakoo");
     const byName = Object.fromEntries(cities.map((c) => [c.name, c]));
     expect(byName["Dar es Salaam"].branchCount).toBe(1);
     expect(byName["Mwanza"].branchCount).toBe(0);
@@ -153,19 +158,19 @@ describe("getLocatorCities", () => {
 
 describe("getBrandOptions", () => {
   it("counts every branch of a brand when no city is chosen", () => {
-    const total = getBrandOptions(null).reduce((sum, o) => sum + o.count, 0);
+    const total = getBrandOptions(data, null).reduce((sum, o) => sum + o.count, 0);
     expect(total).toBe(branches.length);
   });
 
   it("keeps a brand listed at zero in a city it does not serve", () => {
-    const toyota = getBrandOptions("Dodoma").find(
+    const toyota = getBrandOptions(data, "Dodoma").find(
       (o) => o.brand.id === "toyota"
     );
     expect(toyota?.count).toBe(0);
   });
 
   it("recounts brand chips against a free-text search", () => {
-    const options = getBrandOptions(null, "Kariakoo");
+    const options = getBrandOptions(data, null, "Kariakoo");
     const oraimo = options.find((o) => o.brand.id === "oraimo");
     const toyota = options.find((o) => o.brand.id === "toyota");
     expect(oraimo?.count).toBe(1);
@@ -187,7 +192,7 @@ describe("filtersFromParams / paramsFromFilters", () => {
       brandIds: ["bmw", "halotel"],
       q: "kenyatta",
     };
-    expect(filtersFromParams(paramsFromFilters(filters))).toEqual(filters);
+    expect(filtersFromParams(data, paramsFromFilters(filters))).toEqual(filters);
   });
 
   it("serialises untouched filters to an empty query", () => {
@@ -195,25 +200,25 @@ describe("filtersFromParams / paramsFromFilters", () => {
   });
 
   it("drops a city that no branch is in rather than showing an empty page", () => {
-    expect(filtersFromParams(new URLSearchParams("city=Atlantis")).city).toBe(
+    expect(filtersFromParams(data, new URLSearchParams("city=Atlantis")).city).toBe(
       null
     );
   });
 
   it("drops an unknown brand id", () => {
     expect(
-      filtersFromParams(new URLSearchParams("brand=bmw&brand=nokia")).brandIds
+      filtersFromParams(data, new URLSearchParams("brand=bmw&brand=nokia")).brandIds
     ).toEqual(["bmw"]);
   });
 
   it("reads a search query from the URL", () => {
     expect(
-      filtersFromParams(new URLSearchParams("q=kariakoo")).q
+      filtersFromParams(data, new URLSearchParams("q=kariakoo")).q
     ).toBe("kariakoo");
   });
 
   it("defaults q to an empty string when absent from the URL", () => {
-    expect(filtersFromParams(new URLSearchParams("")).q).toBe("");
+    expect(filtersFromParams(data, new URLSearchParams("")).q).toBe("");
   });
 
   it("omits q from the query string when blank, and trims it otherwise", () => {

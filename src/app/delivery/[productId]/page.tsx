@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  products,
+  getAllProducts,
   getProductById,
   getBrandById,
   getBranchById,
-} from "@/data";
+} from "@/server/repositories";
 import OrderRequestForm from "@/components/order/OrderRequestForm";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { formatTZS } from "@/lib/format";
@@ -16,7 +16,8 @@ import {
   resolveDeliveryRoute,
 } from "@/lib/order";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const products = await getAllProducts();
   return products.map((p) => ({ productId: p.id }));
 }
 
@@ -26,7 +27,7 @@ export async function generateMetadata({
   params: Promise<{ productId: string }>;
 }): Promise<Metadata> {
   const { productId } = await params;
-  const product = getProductById(productId);
+  const product = await getProductById(productId);
 
   if (!product) {
     return { title: "Delivery" };
@@ -41,14 +42,14 @@ export default async function DeliveryPage({
   params: Promise<{ productId: string }>;
 }) {
   const { productId } = await params;
-  const product = getProductById(productId);
+  const product = await getProductById(productId);
 
   if (!product) {
     notFound();
   }
 
-  const brand = getBrandById(product.brandId);
-  const branch = getBranchById(product.branchId);
+  const brand = await getBrandById(product.brandId);
+  const branch = await getBranchById(product.branchId);
 
   if (!brand || !branch) {
     notFound();

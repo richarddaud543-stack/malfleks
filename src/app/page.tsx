@@ -2,17 +2,32 @@ import Link from "next/link";
 import Hero from "@/components/home/Hero";
 import AmbientBlob from "@/components/home/AmbientBlob";
 import ShowcaseCarousel from "@/components/home/ShowcaseCarousel";
-import BrandGrid from "@/components/brand/BrandGrid";
+import { getFeatured } from "@/components/home/featured";
+import BrandGrid, { groupBranchesByBrand } from "@/components/brand/BrandGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import ScrollStagger from "@/components/motion/ScrollStagger";
-import { getAllBrands } from "@/data";
+import {
+  getAllBranches,
+  getAllBrands,
+  getAllProducts,
+} from "@/server/repositories";
 
-export default function Home() {
-  const brands = getAllBrands();
+export default async function Home() {
+  // One round trip each, in parallel — these three queries are independent.
+  const [brands, branches, products] = await Promise.all([
+    getAllBrands(),
+    getAllBranches(),
+    getAllProducts(),
+  ]);
+
+  // Picked here rather than in the carousel: the client only needs the six
+  // chosen items, not the whole catalogue it chose them from.
+  const featured = getFeatured(brands, products);
+  const branchesByBrandId = groupBranchesByBrand(branches);
 
   return (
     <div>
-      <Hero />
+      <Hero brands={brands} branches={branches} />
 
       <section className="mx-auto max-w-6xl px-5 py-20">
         <ScrollReveal>
@@ -29,7 +44,7 @@ export default function Home() {
           </div>
         </ScrollReveal>
         <div className="mt-8">
-          <BrandGrid brands={brands} />
+          <BrandGrid brands={brands} branchesByBrandId={branchesByBrandId} />
         </div>
       </section>
 
@@ -51,7 +66,7 @@ export default function Home() {
             </p>
           </div>
           <div data-reveal className="panel mt-8 px-5 py-10 sm:px-8 sm:py-12">
-            <ShowcaseCarousel />
+            <ShowcaseCarousel items={featured} />
           </div>
         </ScrollStagger>
       </section>

@@ -1,13 +1,14 @@
 import * as React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { act, render, screen, fireEvent, within } from "@testing-library/react";
-import ShowcaseCarousel, { getFeatured } from "./ShowcaseCarousel";
-import { brands } from "@/data";
+import ShowcaseCarousel from "./ShowcaseCarousel";
+import { getFeatured } from "./featured";
+import { brands, products } from "@/data";
 
 // The same picking logic the component itself uses, so "slide N shows
 // product N" assertions below don't hardcode a second, potentially-drifting
 // copy of "which product represents which brand".
-const featured = getFeatured();
+const featured = getFeatured(brands, products);
 
 /** The slide's `<h3>` holds only the product name — no sibling text nodes
  *  to worry about, unlike the brand/category line above it. */
@@ -78,7 +79,7 @@ describe("ShowcaseCarousel", () => {
     beforeEach(() => useReducedMotion.mockReturnValue(true));
 
     it("renders every brand's featured product at once, with no carousel chrome", () => {
-      render(<ShowcaseCarousel />);
+      render(<ShowcaseCarousel items={featured} />);
 
       for (const brand of brands) {
         expect(screen.getByText(brand.name)).toBeInTheDocument();
@@ -97,7 +98,7 @@ describe("ShowcaseCarousel", () => {
     });
 
     it("auto-advances to the next brand's product after the interval, and stops advancing once paused", () => {
-      render(<ShowcaseCarousel />);
+      render(<ShowcaseCarousel items={featured} />);
 
       expect(activeProductHeading()).toHaveTextContent(featured[0].product.name);
 
@@ -113,7 +114,7 @@ describe("ShowcaseCarousel", () => {
     });
 
     it("pauses on hover and resumes once the pointer leaves", () => {
-      const { container } = render(<ShowcaseCarousel />);
+      const { container } = render(<ShowcaseCarousel items={featured} />);
       const root = container.firstChild as HTMLElement;
 
       fireEvent.mouseEnter(root);
@@ -126,7 +127,7 @@ describe("ShowcaseCarousel", () => {
     });
 
     it("lets a manual click jump to a specific product via the dot controls", () => {
-      render(<ShowcaseCarousel />);
+      render(<ShowcaseCarousel items={featured} />);
 
       fireEvent.click(
         screen.getByRole("button", {
@@ -138,7 +139,7 @@ describe("ShowcaseCarousel", () => {
     });
 
     it("wraps from the last product back to the first via the next control", () => {
-      render(<ShowcaseCarousel />);
+      render(<ShowcaseCarousel items={featured} />);
 
       const next = screen.getByRole("button", { name: /next featured product/i });
       for (let i = 0; i < brands.length; i++) {

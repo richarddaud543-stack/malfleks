@@ -1,12 +1,4 @@
-import {
-  branches,
-  brands,
-  getAgentsForCity,
-  getBrandById,
-  type Brand,
-  type Branch,
-  type DeliveryAgent,
-} from "@/data";
+import type { Brand, Branch, DeliveryAgent } from "@/data";
 import type { LatLng } from "./geo";
 
 /** A branch already joined to its brand — the locator lists every brand at
@@ -40,15 +32,56 @@ export const defaultLocatorFilters: LocatorFilters = {
   q: "",
 };
 
-/** Every branch with a resolvable brand, in data order. Branches whose brand is
- *  missing are dropped rather than rendered half-blank. */
-const locatorBranches: LocatorBranch[] = branches.flatMap((branch) => {
-  const brand = getBrandById(branch.brandId);
-  return brand ? [{ branch, brand }] : [];
-});
+/**
+ * Everything the locator needs, resolved once.
+ *
+ * This used to be module-scope state computed from the static arrays, which
+ * meant the whole catalogue was reachable from a client bundle and the map
+ * could never show a branch that was not compiled in. It is now built by the
+ * server page and passed down, so the same functions work against the database.
+ */
+export interface LocatorData {
+  /** Every branch with a resolvable brand, in data order. */
+  branches: LocatorBranch[];
+  /** Cities with a branch and a coordinate, north to south. */
+  cityNames: string[];
+  brands: Brand[];
+  /** Couriers covering each city, keyed by city name. */
+  agentsByCity: Record<string, DeliveryAgent[]>;
+}
 
-export function getLocatorBranches(): LocatorBranch[] {
-  return locatorBranches;
+/**
+ * Joins branches to brands and orders the cities. Branches whose brand is
+ * missing are dropped rather than rendered half-blank, exactly as before.
+ */
+export function buildLocatorData(
+  branches: Branch[],
+  brands: Brand[],
+  agentsByCity: Record<string, DeliveryAgent[]>
+): LocatorData {
+  const brandById = new Map(brands.map((b) => [b.id, b]));
+  const locatorBranches: LocatorBranch[] = branches.flatMap((branch) => {
+    const brand = brandById.get(branch.brandId);
+    return brand ? [{ branch, brand }] : [];
+  });
+
+  const center = (city: string): LatLng =>
+    locatorBranches.find((e) => e.branch.city === city && e.branch.coords)!
+      .branch.coords!;
+
+  const cityNames = Array.from(
+    new Set(
+      locatorBranches
+        .filter((entry) => entry.branch.coords)
+        .map((entry) => entry.branch.city)
+    )
+  ).sort((a, b) => center(b).lat - center(a).lat);
+
+  return { branches: locatorBranches, cityNames, brands, agentsByCity };
+}
+
+export function getLocatorBranches(data: LocatorData): LocatorBranch[] {
+  return data.branches;
 }
 
 function matchesBrands(entry: LocatorBranch, brandIds: string[]): boolean {
@@ -68,8 +101,11 @@ function matchesQuery(entry: LocatorBranch, q: string | undefined): boolean {
   );
 }
 
-export function filterBranches(filters: LocatorFilters): LocatorBranch[] {
-  return locatorBranches.filter(
+export function filterBranches(
+  data: LocatorData,
+  filters: LocatorFilters
+): LocatorBranch[] {
+  return data.branches.filter(
     (entry) =>
       (filters.city === null || entry.branch.city === filters.city) &&
       matchesBrands(entry, filters.brandIds) &&
@@ -77,40 +113,32 @@ export function filterBranches(filters: LocatorFilters): LocatorBranch[] {
   );
 }
 
-/** Cities that have at least one branch and a coordinate to plot it at, in
- *  north-to-south order — so tabbing through the markers reads down the map
- *  rather than jumping around it. */
-const cityNames = Array.from(
-  new Set(
-    locatorBranches
-      .filter((entry) => entry.branch.coords)
-      .map((entry) => entry.branch.city)
-  )
-).sort((a, b) => centerOf(b).lat - centerOf(a).lat);
-
-function centerOf(city: string): LatLng {
-  // Every branch in a city carries the same city-centre coordinate, so the
-  // first one that has coordinates is the city's position.
-  const withCoords = locatorBranches.find(
+/** Every branch in a city carries the same city-centre coordinate, so the
+ *  first one that has coordinates is the city's position. Cities are ordered
+ *  north to south in `buildLocatorData`, so tabbing through the markers reads
+ *  down the map rather than jumping around it. */
+function centerOf(data: LocatorData, city: string): LatLng {
+  const withCoords = data.branches.find(
     (entry) => entry.branch.city === city && entry.branch.coords
   );
   return withCoords!.branch.coords!;
 }
 
 export function getLocatorCities(
+  data: LocatorData,
   brandIds: string[] = [],
   q: string = ""
 ): LocatorCity[] {
-  return cityNames.map((name) => ({
+  return data.cityNames.map((name) => ({
     name,
-    center: centerOf(name),
-    branchCount: locatorBranches.filter(
+    center: centerOf(data, name),
+    branchCount: data.branches.filter(
       (entry) =>
         entry.branch.city === name &&
         matchesBrands(entry, brandIds) &&
         matchesQuery(entry, q)
     ).length,
-    agents: getAgentsForCity(name),
+    agents: data.agentsByCity[name] ?? [],
   }));
 }
 
@@ -125,12 +153,13 @@ export interface BrandOption {
  * disappearing — knowing Toyota has no Dodoma branch is the useful answer.
  */
 export function getBrandOptions(
+  data: LocatorData,
   city: string | null,
   q: string = ""
 ): BrandOption[] {
-  return brands.map((brand) => ({
+  return data.brands.map((brand) => ({
     brand,
-    count: locatorBranches.filter(
+    count: data.branches.filter(
       (entry) =>
         entry.brand.id === brand.id &&
         (city === null || entry.branch.city === city) &&
@@ -148,14 +177,17 @@ export function toggleBrand(brandIds: string[], brandId: string): string[] {
 
 /** `/locator?city=Mwanza&brand=bmw&q=kariakoo` — `q` is the same param name
  *  `/search` already uses, so a query stays predictable across the site. */
-export function filtersFromParams(params: URLSearchParams): LocatorFilters {
+export function filtersFromParams(
+  data: LocatorData,
+  params: URLSearchParams
+): LocatorFilters {
   const city = params.get("city");
   return {
     // A stale or misspelt city degrades to "all cities" rather than an empty page.
-    city: city && cityNames.includes(city) ? city : null,
+    city: city && data.cityNames.includes(city) ? city : null,
     brandIds: params
       .getAll("brand")
-      .filter((id) => brands.some((brand) => brand.id === id)),
+      .filter((id) => data.brands.some((brand) => brand.id === id)),
     q: params.get("q") ?? "",
   };
 }

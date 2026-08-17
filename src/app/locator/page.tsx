@@ -2,23 +2,61 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import LocatorExplorer from "@/components/locator/LocatorExplorer";
-import { branches } from "@/data";
-import { getLocatorCities } from "@/components/locator/locator";
+import {
+  buildLocatorData,
+  getLocatorCities,
+  type LocatorData,
+} from "@/components/locator/locator";
+import {
+  getAllBranches,
+  getAllBrands,
+  getAllDeliveryAgents,
+} from "@/server/repositories";
+import type { DeliveryAgent } from "@/data";
 
-// Busiest city first, so the description leads with where most of the
-// marketplace actually is rather than with the map's north-to-south order.
-const cityNames = getLocatorCities()
-  .sort((a, b) => b.branchCount - a.branchCount)
-  .map((c) => c.name);
+/**
+ * Builds the locator's dataset from the database.
+ *
+ * Agent coverage is grouped here rather than queried per city: the same match
+ * `getAgentsForCity` makes (the agent's own city, or a region it serves), done
+ * once over every agent instead of once per city.
+ */
+async function loadLocatorData(): Promise<LocatorData> {
+  const [branches, brands, agents] = await Promise.all([
+    getAllBranches(),
+    getAllBrands(),
+    getAllDeliveryAgents(),
+  ]);
 
-export const metadata: Metadata = {
-  title: "Branch locator",
-  description:
-    `Find all ${branches.length} brand branches across ${cityNames.join(", ")} on one map — ` +
-    "every brand at once, with the delivery agents covering each city.",
-};
+  const cities = Array.from(new Set(branches.map((b) => b.city)));
+  const agentsByCity: Record<string, DeliveryAgent[]> = {};
+  for (const city of cities) {
+    agentsByCity[city] = agents.filter(
+      (a) => a.city === city || a.regionsServed.includes(city)
+    );
+  }
 
-export default function LocatorPage() {
+  return buildLocatorData(branches, brands, agentsByCity);
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await loadLocatorData();
+  // Busiest city first, so the description leads with where most of the
+  // marketplace actually is rather than with the map's north-to-south order.
+  const cityNames = getLocatorCities(data)
+    .sort((a, b) => b.branchCount - a.branchCount)
+    .map((c) => c.name);
+
+  return {
+    title: "Branch locator",
+    description:
+      `Find all ${data.branches.length} brand branches across ${cityNames.join(", ")} on one map — ` +
+      "every brand at once, with the delivery agents covering each city.",
+  };
+}
+
+export default async function LocatorPage() {
+  const data = await loadLocatorData();
   return (
     <div className="relative">
       <div
@@ -55,7 +93,7 @@ export default function LocatorPage() {
         <div className="mt-12">
           {/* useSearchParams needs a Suspense boundary to keep this route static. */}
           <Suspense fallback={<LocatorSkeleton />}>
-            <LocatorExplorer />
+            <LocatorExplorer data={data} />
           </Suspense>
         </div>
       </div>

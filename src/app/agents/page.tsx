@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { deliveryAgents } from "@/data";
+import { getAllDeliveryAgents } from "@/server/repositories";
 import AgentCard from "@/components/delivery/AgentCard";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
@@ -7,14 +7,17 @@ export const metadata = {
   title: "Delivery agents",
 };
 
-const cities = Array.from(new Set(deliveryAgents.map((a) => a.city))).sort();
-
 export default async function AgentsPage({
   searchParams,
 }: {
   searchParams: Promise<{ city?: string }>;
 }) {
   const { city } = await searchParams;
+  // Was module scope, which a query cannot be. This page already awaits
+  // searchParams, so it was never static anyway (debt #3).
+  const deliveryAgents = await getAllDeliveryAgents();
+  const cities = Array.from(new Set(deliveryAgents.map((a) => a.city))).sort();
+
   const filtered = city
     ? deliveryAgents.filter(
         (a) => a.city === city || a.regionsServed.includes(city)

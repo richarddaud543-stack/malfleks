@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import type { Brand, BrandCategory } from "@/data";
+import type { Brand, Branch, BrandCategory } from "@/data";
 import BrandGrid from "./BrandGrid";
 
 const categories: { value: BrandCategory | "all"; label: string }[] = [
@@ -26,7 +26,13 @@ const categories: { value: BrandCategory | "all"; label: string }[] = [
  * `hover:border-white/30` is invisible on the light ground (white on
  * white) — a real, shipped bug, not just a spot to add motion.
  */
-export default function BrandCatalog({ brands }: { brands: Brand[] }) {
+export default function BrandCatalog({
+  brands,
+  branchesByBrandId,
+}: {
+  brands: Brand[];
+  branchesByBrandId: Record<string, Branch[]>;
+}) {
   const [active, setActive] = useState<BrandCategory | "all">("all");
   const reduceMotion = useReducedMotion();
 
@@ -66,7 +72,7 @@ export default function BrandCatalog({ brands }: { brands: Brand[] }) {
         })}
       </div>
       <div className="mt-8">
-        <BrandGrid brands={filtered} />
+        <BrandGrid brands={filtered} branchesByBrandId={branchesByBrandId} />
       </div>
     </div>
   );

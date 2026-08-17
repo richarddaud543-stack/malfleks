@@ -4,7 +4,7 @@ import Link from "next/link";
 import ScrollStagger from "@/components/motion/ScrollStagger";
 import AmbientBlob from "./AmbientBlob";
 import BrandMarquee from "./BrandMarquee";
-import { brands, branches } from "@/data";
+import type { Brand, Branch } from "@/data";
 
 /**
  * The homepage hero for the light direction. Replaces the deleted
@@ -25,7 +25,13 @@ import { brands, branches } from "@/data";
  * arrival, cascading top to bottom in document order, rather than five
  * separately-triggered fades that happen to land in a similar sequence.
  */
-export default function Hero() {
+export default function Hero({
+  brands,
+  branches,
+}: {
+  brands: Brand[];
+  branches: Branch[];
+}) {
   const cityCount = new Set(branches.map((b) => b.city)).size;
 
   return (
@@ -106,7 +112,7 @@ export default function Hero() {
               {cityCount} cities
             </p>
             <div className="mt-6">
-              <BrandMarquee />
+              <BrandMarquee brands={brands} />
             </div>
           </div>
         </div>

@@ -2,16 +2,32 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import SearchExplorer from "@/components/search/SearchExplorer";
-import { products } from "@/data";
+import { buildListings } from "@/lib/search";
+import {
+  getAllBranches,
+  getAllBrands,
+  getAllProducts,
+} from "@/server/repositories";
 
-export const metadata: Metadata = {
-  title: "Search",
-  description:
-    `Search ${products.length} products across every brand, branch and city on Soko — ` +
-    "filter by brand, category, city, price and delivery method.",
-};
+// The product count is part of the description, so metadata is a query too.
+export async function generateMetadata(): Promise<Metadata> {
+  const products = await getAllProducts();
+  return {
+    title: "Search",
+    description:
+      `Search ${products.length} products across every brand, branch and city on Soko — ` +
+      "filter by brand, category, city, price and delivery method.",
+  };
+}
 
-export default function SearchPage() {
+export default async function SearchPage() {
+  const [brands, branches, products] = await Promise.all([
+    getAllBrands(),
+    getAllBranches(),
+    getAllProducts(),
+  ]);
+  const catalogue = buildListings(brands, branches, products);
+
   return (
     <div className="relative">
       <div
@@ -50,7 +66,7 @@ export default function SearchPage() {
         <div className="mt-10">
           {/* useSearchParams needs a Suspense boundary to keep this route static. */}
           <Suspense fallback={<SearchSkeleton />}>
-            <SearchExplorer />
+            <SearchExplorer catalogue={catalogue} />
           </Suspense>
         </div>
       </div>

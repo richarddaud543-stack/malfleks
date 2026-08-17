@@ -97,18 +97,38 @@ let cachedListings: Listing[] | null = null;
  * Every product joined to its brand and branch. Products pointing at a missing
  * brand or branch are dropped rather than rendered half-blank.
  */
-export function getListings(): Listing[] {
-  if (cachedListings) return cachedListings;
-
+/**
+ * Joins products to their brand and branch. Pure — it takes the three record
+ * sets rather than reaching for them, so a server page can build listings from
+ * the database and hand them to the client without the catalogue arrays being
+ * reachable from a client bundle (debt #6).
+ *
+ * A product whose brand or branch is missing is dropped rather than rendered
+ * half-joined: an orphan listing has no city, no delivery route and no brand
+ * name, which is worse than not appearing.
+ */
+export function buildListings(
+  brands: Brand[],
+  branches: Branch[],
+  products: Product[]
+): Listing[] {
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const branchById = new Map(branches.map((b) => [b.id, b]));
 
-  cachedListings = products.flatMap((product) => {
+  return products.flatMap((product) => {
     const brand = brandById.get(product.brandId);
     const branch = branchById.get(product.branchId);
     return brand && branch ? [{ product, brand, branch }] : [];
   });
+}
 
+/**
+ * The static-data listings, memoised. Still the default for `searchProducts`
+ * and the source used by unit tests; pages pass their own DB-built set.
+ */
+export function getListings(): Listing[] {
+  if (cachedListings) return cachedListings;
+  cachedListings = buildListings(brands, branches, products);
   return cachedListings;
 }
 

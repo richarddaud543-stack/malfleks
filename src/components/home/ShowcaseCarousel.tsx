@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   AnimatePresence,
@@ -12,29 +12,13 @@ import {
 import ProductIcon from "@/components/product/ProductIcon";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
-import { brands, products } from "@/data";
+// Catalogue records arrive as props from the server page. Nothing here reads
+// the catalogue itself: this is a client component, and importing the arrays
+// shipped every product in the browser bundle (debt #6).
 import type { Brand, Product } from "@/data";
+import type { FeaturedItem } from "./featured";
 
 const AUTOPLAY_MS = 4500;
-
-export interface FeaturedItem {
-  brand: Brand;
-  product: Product;
-}
-
-/**
- * One representative, preferably in-stock, product per brand. Exported so
- * the carousel's own test can use it as the source of truth for "what
- * appears at slide N" instead of re-deriving the picking logic itself.
- */
-export function getFeatured(): FeaturedItem[] {
-  return brands.flatMap((brand) => {
-    const brandProducts = products.filter((p) => p.brandId === brand.id);
-    const product =
-      brandProducts.find((p) => p.inStock) ?? brandProducts[0] ?? null;
-    return product ? [{ brand, product }] : [];
-  });
-}
 
 function wrap(index: number, length: number): number {
   return ((index % length) + length) % length;
@@ -52,9 +36,8 @@ function wrap(index: number, length: number): number {
  * chrome at all — nothing auto-advances, nothing is hidden behind paging
  * that would otherwise need controls to reach.
  */
-export default function ShowcaseCarousel() {
+export default function ShowcaseCarousel({ items }: { items: FeaturedItem[] }) {
   const reduceMotion = useReducedMotion();
-  const items = useMemo(() => getFeatured(), []);
   const [index, setIndex] = useState(0);
   const [manuallyPaused, setManuallyPaused] = useState(false);
   const [hovered, setHovered] = useState(false);

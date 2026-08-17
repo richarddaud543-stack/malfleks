@@ -2,21 +2,30 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  branches,
+  getAllBranches,
+  getAllBrands,
   getBrandBySlug,
   getBrandById,
   getBranchById,
   getProductsByBranchId,
-} from "@/data";
+} from "@/server/repositories";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import ProductGrid from "@/components/product/ProductGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
-export function generateStaticParams() {
-  return branches.map((b) => {
-    const brand = getBrandById(b.brandId);
-    return { slug: brand?.slug ?? b.brandId, branchId: b.id };
-  });
+export async function generateStaticParams() {
+  // Brands are fetched once and indexed rather than queried per branch, which
+  // would be one round trip per prerendered page.
+  const [branches, brands] = await Promise.all([
+    getAllBranches(),
+    getAllBrands(),
+  ]);
+  const slugByBrandId = new Map(brands.map((b) => [b.id, b.slug]));
+
+  return branches.map((b) => ({
+    slug: slugByBrandId.get(b.brandId) ?? b.brandId,
+    branchId: b.id,
+  }));
 }
 
 export async function generateMetadata({
@@ -25,8 +34,8 @@ export async function generateMetadata({
   params: Promise<{ slug: string; branchId: string }>;
 }): Promise<Metadata> {
   const { branchId } = await params;
-  const branch = getBranchById(branchId);
-  const brand = branch ? getBrandById(branch.brandId) : undefined;
+  const branch = await getBranchById(branchId);
+  const brand = branch ? await getBrandById(branch.brandId) : undefined;
 
   if (!branch || !brand) {
     return { title: "Branch not found" };
@@ -49,14 +58,14 @@ export default async function BranchPage({
   params: Promise<{ slug: string; branchId: string }>;
 }) {
   const { slug, branchId } = await params;
-  const brand = getBrandBySlug(slug);
-  const branch = getBranchById(branchId);
+  const brand = await getBrandBySlug(slug);
+  const branch = await getBranchById(branchId);
 
   if (!brand || !branch || branch.brandId !== brand.id) {
     notFound();
   }
 
-  const branchProducts = getProductsByBranchId(branch.id);
+  const branchProducts = await getProductsByBranchId(branch.id);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">

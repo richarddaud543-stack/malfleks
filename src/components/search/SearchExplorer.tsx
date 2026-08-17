@@ -17,6 +17,7 @@ import {
   isDefaultFilters,
   searchProducts,
   sortOptions,
+  type Listing,
   type SearchFilters,
   type SortKey,
 } from "@/lib/search";
@@ -31,7 +32,13 @@ import ListingCard from "./ListingCard";
 /** How long typing settles before the query is pushed into the URL. */
 const QUERY_DEBOUNCE_MS = 250;
 
-export default function SearchExplorer() {
+/**
+ * `catalogue` is the joined listing set, built on the server and passed in.
+ * It used to come from `searchProducts`' default argument, which reached for
+ * the static arrays and therefore shipped every product to the browser —
+ * fine at 38 products, untenable at 38,000 (debt #6).
+ */
+export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -92,8 +99,8 @@ export default function SearchExplorer() {
   const [panelOpen, setPanelOpen] = useState(false);
 
   const { listings, facets } = useMemo(
-    () => searchProducts(filters),
-    [filters]
+    () => searchProducts(filters, catalogue),
+    [filters, catalogue]
   );
 
   const filterCount = activeFilterCount(filters);

@@ -8,11 +8,11 @@ import { ViewTransition } from "react";
 // under `next dev`/Turbopack (it tries to resolve a module that only exists
 // under the "types" export condition).
 import {
-  products,
+  getAllProducts,
   getProductById,
   getBrandById,
   getBranchById,
-} from "@/data";
+} from "@/server/repositories";
 import ProductShowcase from "@/components/product/ProductShowcase";
 import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import ScrollReveal from "@/components/motion/ScrollReveal";
@@ -23,7 +23,8 @@ import {
   resolveDeliveryRoute,
 } from "@/lib/order";
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const products = await getAllProducts();
   return products.map((p) => ({ id: p.id }));
 }
 
@@ -33,8 +34,8 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const product = getProductById(id);
-  const brand = product ? getBrandById(product.brandId) : undefined;
+  const product = await getProductById(id);
+  const brand = product ? await getBrandById(product.brandId) : undefined;
 
   if (!product || !brand) {
     return { title: "Product not found" };
@@ -55,14 +56,14 @@ export default async function ProductPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProductById(id);
+  const product = await getProductById(id);
 
   if (!product) {
     notFound();
   }
 
-  const brand = getBrandById(product.brandId);
-  const branch = getBranchById(product.branchId);
+  const brand = await getBrandById(product.brandId);
+  const branch = await getBranchById(product.branchId);
 
   if (!brand || !branch) {
     notFound();

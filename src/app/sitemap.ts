@@ -1,9 +1,21 @@
 import type { MetadataRoute } from "next";
-import { brands, branches, products, getBrandById } from "@/data";
+import {
+  getAllBranches,
+  getAllBrands,
+  getAllProducts,
+} from "@/server/repositories";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const [brands, branches, products] = await Promise.all([
+    getAllBrands(),
+    getAllBranches(),
+    getAllProducts(),
+  ]);
+  // Indexed once instead of a lookup per branch, as in generateStaticParams.
+  const slugByBrandId = new Map(brands.map((b) => [b.id, b.slug]));
+
   const staticRoutes: MetadataRoute.Sitemap = [
     { url: `${siteUrl}/`, changeFrequency: "weekly", priority: 1 },
     { url: `${siteUrl}/brands`, changeFrequency: "weekly", priority: 0.9 },
@@ -23,9 +35,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   const branchRoutes: MetadataRoute.Sitemap = branches.map((branch) => {
-    const brand = getBrandById(branch.brandId);
     return {
-      url: `${siteUrl}/brands/${brand?.slug ?? branch.brandId}/branches/${branch.id}`,
+      url: `${siteUrl}/brands/${slugByBrandId.get(branch.brandId) ?? branch.brandId}/branches/${branch.id}`,
       changeFrequency: "weekly" as const,
       priority: 0.7,
     };

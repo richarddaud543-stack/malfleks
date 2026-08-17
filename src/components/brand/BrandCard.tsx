@@ -1,6 +1,5 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getBranchesByBrandId } from "@/data";
 import type { Brand, Branch } from "@/data";
 
 export interface DeliveryMixSummary {
@@ -55,8 +54,20 @@ export function summarizeDeliveryMix(
   };
 }
 
-export default function BrandCard({ brand }: { brand: Brand }) {
-  const deliveryMix = summarizeDeliveryMix(getBranchesByBrandId(brand.id));
+/**
+ * `branches` arrives as a prop rather than being fetched here. This card is
+ * rendered inside `BrandCatalog`, which is a client component, so an async
+ * server component is not an option — the branches are loaded once by the page
+ * and indexed by brand.
+ */
+export default function BrandCard({
+  brand,
+  branches,
+}: {
+  brand: Brand;
+  branches: Branch[];
+}) {
+  const deliveryMix = summarizeDeliveryMix(branches);
 
   return (
     <Link

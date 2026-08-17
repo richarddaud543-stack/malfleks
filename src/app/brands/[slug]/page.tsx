@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
+import type { BrandCategory } from "@/data";
 import {
-  brands,
+  getAllBrands,
   getBrandBySlug,
   getBranchesByBrandId,
-  type BrandCategory,
-} from "@/data";
+} from "@/server/repositories";
 import BranchCard from "@/components/branch/BranchCard";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
@@ -21,7 +21,8 @@ const CATEGORY_LABELS: Record<BrandCategory, string> = {
   telecom: "Telecom",
 };
 
-export function generateStaticParams() {
+export async function generateStaticParams() {
+  const brands = await getAllBrands();
   return brands.map((b) => ({ slug: b.slug }));
 }
 
@@ -31,7 +32,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const brand = getBrandBySlug(slug);
+  const brand = await getBrandBySlug(slug);
 
   if (!brand) {
     return { title: "Brand not found" };
@@ -50,13 +51,13 @@ export default async function BrandPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const brand = getBrandBySlug(slug);
+  const brand = await getBrandBySlug(slug);
 
   if (!brand) {
     notFound();
   }
 
-  const branches = getBranchesByBrandId(brand.id);
+  const branches = await getBranchesByBrandId(brand.id);
 
   return (
     <div className="relative mx-auto max-w-6xl px-5 py-16">

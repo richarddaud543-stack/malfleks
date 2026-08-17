@@ -19,7 +19,7 @@ describe("BrandMarquee", () => {
   it("renders the track duplicated (two back-to-back copies) when motion is allowed, so the xPercent: -50 loop has a seam to land on", () => {
     useReducedMotion.mockReturnValue(false);
 
-    render(<BrandMarquee />);
+    render(<BrandMarquee brands={brands} />);
 
     for (const brand of brands) {
       expect(screen.getAllByAltText(brand.name)).toHaveLength(2);
@@ -29,7 +29,7 @@ describe("BrandMarquee", () => {
   it("renders exactly one copy, with no loop, when motion is reduced", () => {
     useReducedMotion.mockReturnValue(true);
 
-    render(<BrandMarquee />);
+    render(<BrandMarquee brands={brands} />);
 
     for (const brand of brands) {
       expect(screen.getAllByAltText(brand.name)).toHaveLength(1);
@@ -39,7 +39,7 @@ describe("BrandMarquee", () => {
   it("hides the whole strip from assistive tech — brand names are already spelled out in the hero copy, and a duplicated logo strip would otherwise announce each one twice", () => {
     useReducedMotion.mockReturnValue(false);
 
-    const { container } = render(<BrandMarquee />);
+    const { container } = render(<BrandMarquee brands={brands} />);
 
     expect(container.firstChild).toHaveAttribute("aria-hidden", "true");
   });

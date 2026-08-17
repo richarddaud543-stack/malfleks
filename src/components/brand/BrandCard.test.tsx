@@ -1,15 +1,10 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { Branch, Brand } from "@/data";
 import BrandCard, { summarizeDeliveryMix } from "./BrandCard";
 
-const { getBranchesByBrandId } = vi.hoisted(() => ({
-  getBranchesByBrandId: vi.fn<(brandId: string) => Branch[]>(),
-}));
-
-vi.mock("@/data", () => ({
-  getBranchesByBrandId,
-}));
+// No module mock any more: the card takes its branches as a prop, so each case
+// hands it exactly the mix it is about.
 
 function branch(id: string, deliveryOffered: boolean): Branch {
   return {
@@ -94,13 +89,12 @@ describe("summarizeDeliveryMix", () => {
 
 describe("BrandCard delivery-mix indicator", () => {
   it("renders the derived mix as visible text, not just a colour, and without needing hover", () => {
-    getBranchesByBrandId.mockReturnValue([
-      branch("a", true),
-      branch("b", false),
-      branch("c", false),
-    ]);
-
-    render(<BrandCard brand={brand} />);
+    render(
+      <BrandCard
+        brand={brand}
+        branches={[branch("a", true), branch("b", false), branch("c", false)]}
+      />
+    );
 
     const badge = screen.getByText("1 of 3 branches deliver directly");
     expect(badge).toBeVisible();
@@ -108,18 +102,19 @@ describe("BrandCard delivery-mix indicator", () => {
   });
 
   it("switches to the positive tone and copy when every branch delivers", () => {
-    getBranchesByBrandId.mockReturnValue([branch("a", true), branch("b", true)]);
-
-    render(<BrandCard brand={brand} />);
+    render(
+      <BrandCard
+        brand={brand}
+        branches={[branch("a", true), branch("b", true)]}
+      />
+    );
 
     const badge = screen.getByText("Delivers directly at all 2 branches");
     expect(badge.className).toContain("text-emerald-400");
   });
 
   it("renders no delivery-mix indicator when the brand has no branch data", () => {
-    getBranchesByBrandId.mockReturnValue([]);
-
-    render(<BrandCard brand={brand} />);
+    render(<BrandCard brand={brand} branches={[]} />);
 
     expect(screen.queryByText(/deliver/i)).not.toBeInTheDocument();
     // The rest of the card still renders normally.
@@ -127,9 +122,7 @@ describe("BrandCard delivery-mix indicator", () => {
   });
 
   it("still renders the brand name as a level-3 heading, matching the /brands page smoke test", () => {
-    getBranchesByBrandId.mockReturnValue([branch("a", true)]);
-
-    render(<BrandCard brand={brand} />);
+    render(<BrandCard brand={brand} branches={[branch("a", true)]} />);
 
     expect(screen.getByRole("heading", { level: 3, name: "Acme" })).toBeVisible();
   });

@@ -12,6 +12,7 @@ import {
   getLocatorCities,
   paramsFromFilters,
   toggleBrand,
+  type LocatorData,
   type LocatorFilters,
 } from "./locator";
 
@@ -25,8 +26,10 @@ import {
  * shareable; `initialFilters` is how a shared link comes back in.
  */
 export default function CityLocator({
+  data,
   initialFilters = defaultLocatorFilters,
 }: {
+  data: LocatorData;
   initialFilters?: LocatorFilters;
 }) {
   const reduceMotion = useReducedMotion();
@@ -51,9 +54,15 @@ export default function CityLocator({
   // it rides the existing URL-sync effect above rather than needing one of
   // its own — narrowing is live because there's no debounce to wait out: no
   // navigation happens here, only a `history.replaceState`.
-  const cities = useMemo(() => getLocatorCities(brandIds, q), [brandIds, q]);
-  const brandOptions = useMemo(() => getBrandOptions(city, q), [city, q]);
-  const results = useMemo(() => filterBranches(filters), [filters]);
+  const cities = useMemo(
+    () => getLocatorCities(data, brandIds, q),
+    [data, brandIds, q]
+  );
+  const brandOptions = useMemo(
+    () => getBrandOptions(data, city, q),
+    [data, city, q]
+  );
+  const results = useMemo(() => filterBranches(data, filters), [data, filters]);
 
   // Agent coverage is per city, so with no city chosen we show all four.
   const coverage = city ? cities.filter((c) => c.name === city) : cities;

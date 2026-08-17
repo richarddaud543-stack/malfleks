@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import CityLocator from "./CityLocator";
+import { staticLocatorData } from "./locator.fixture";
+
+const data = staticLocatorData();
 
 /** Markers read "<city>, <n> branches" — the count is part of the accessible
  *  name so a screen-reader user gets the weighting the marker size conveys. */
@@ -22,7 +25,7 @@ const coverage = () => screen.getByRole("region", { name: /who delivers/i });
 
 describe("CityLocator", () => {
   it("lists every branch in the country before anything is selected", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
     expect(screen.getByRole("status")).toHaveTextContent(
       "19 branches across Tanzania"
     );
@@ -30,7 +33,7 @@ describe("CityLocator", () => {
   });
 
   it("plots one marker per city, weighted by branch count", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
     expect(marker("Dar es Salaam")).toHaveAccessibleName(
       "Dar es Salaam, 7 branches"
     );
@@ -38,7 +41,7 @@ describe("CityLocator", () => {
   });
 
   it("makes each marker a real, focusable button rather than a clickable div", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
     const dodoma = marker("Dodoma");
     expect(dodoma.tagName).toBe("BUTTON");
     dodoma.focus();
@@ -46,7 +49,7 @@ describe("CityLocator", () => {
   });
 
   it("filters the list to a city when its marker is activated", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(marker("Mwanza"));
 
@@ -58,7 +61,7 @@ describe("CityLocator", () => {
   });
 
   it("returns to every branch when the selected marker is activated again", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(marker("Arusha"));
     expect(screen.getByRole("status")).toHaveTextContent("6 branches in Arusha");
@@ -71,7 +74,7 @@ describe("CityLocator", () => {
   });
 
   it("combines a brand filter with the selected city", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(brandChip("Halotel"));
     expect(screen.getByRole("status")).toHaveTextContent(
@@ -83,7 +86,7 @@ describe("CityLocator", () => {
   });
 
   it("reweights the markers when a brand is filtered", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(brandChip("Toyota"));
 
@@ -98,7 +101,7 @@ describe("CityLocator", () => {
 
   it("offers a way back out of an empty result", () => {
     render(
-      <CityLocator initialFilters={{ city: "Dodoma", brandIds: ["bmw"] }} />
+      <CityLocator data={data} initialFilters={{ city: "Dodoma", brandIds: ["bmw"] }} />
     );
 
     expect(screen.getByRole("status")).toHaveTextContent("No branches match");
@@ -110,13 +113,13 @@ describe("CityLocator", () => {
   });
 
   it("opens on the city from a shared link", () => {
-    render(<CityLocator initialFilters={{ city: "Arusha", brandIds: [] }} />);
+    render(<CityLocator data={data} initialFilters={{ city: "Arusha", brandIds: [] }} />);
     expect(screen.getByRole("status")).toHaveTextContent("6 branches in Arusha");
     expect(marker("Arusha")).toHaveAttribute("aria-pressed", "true");
   });
 
   it("links a branch through to its brand's branch page", () => {
-    render(<CityLocator initialFilters={{ city: "Dodoma", brandIds: [] }} />);
+    render(<CityLocator data={data} initialFilters={{ city: "Dodoma", brandIds: [] }} />);
     expect(screen.getAllByTestId("locator-branch")[0]).toHaveAttribute(
       "href",
       "/brands/ford/branches/ford-dodoma"
@@ -124,7 +127,7 @@ describe("CityLocator", () => {
   });
 
   it("shows the couriers covering the selected city, and all four otherwise", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     // Fargo covers all four cities, so it appears once per city up front.
     expect(within(coverage()).getAllByText("Fargo Courier")).toHaveLength(4);
@@ -141,7 +144,7 @@ describe("CityLocator", () => {
   });
 
   it("shows the delivery status of every branch", () => {
-    render(<CityLocator initialFilters={{ city: "Dodoma", brandIds: [] }} />);
+    render(<CityLocator data={data} initialFilters={{ city: "Dodoma", brandIds: [] }} />);
     // Neither Dodoma branch runs its own fleet, so both hand off to an agent.
     for (const card of screen.getAllByTestId("locator-branch")) {
       expect(within(card).getByText("Local agent delivery")).toBeInTheDocument();
@@ -149,7 +152,7 @@ describe("CityLocator", () => {
   });
 
   it("keeps a shared link in step with what is on screen", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(marker("Mwanza"));
     fireEvent.click(brandChip("BMW"));
@@ -158,7 +161,7 @@ describe("CityLocator", () => {
   });
 
   it("narrows the list live as you type into the search field, and joins the URL", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     const search = screen.getByRole("searchbox", { name: /search branches/i });
     fireEvent.change(search, { target: { value: "Kariakoo" } });
@@ -171,7 +174,7 @@ describe("CityLocator", () => {
   });
 
   it("joins the search query with the city and brand filters already selected", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     fireEvent.click(marker("Dar es Salaam"));
     const search = screen.getByRole("searchbox", { name: /search branches/i });
@@ -184,7 +187,7 @@ describe("CityLocator", () => {
   });
 
   it("clears the search field via its own clear button", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     const search = screen.getByRole("searchbox", { name: /search branches/i });
     fireEvent.change(search, { target: { value: "Kariakoo" } });
@@ -197,7 +200,7 @@ describe("CityLocator", () => {
   });
 
   it("pairs a hovered branch card with its city's marker on the map", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     const heading = screen
       .getAllByRole("heading")
@@ -215,7 +218,7 @@ describe("CityLocator", () => {
   });
 
   it("pairs a hovered marker with its matching branch cards in the list", () => {
-    render(<CityLocator />);
+    render(<CityLocator data={data} />);
 
     const heading = screen
       .getAllByRole("heading")
