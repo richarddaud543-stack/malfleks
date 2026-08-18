@@ -15,7 +15,6 @@ import { iconAccent } from "@/lib/accent";
 // Catalogue records arrive as props from the server page. Nothing here reads
 // the catalogue itself: this is a client component, and importing the arrays
 // shipped every product in the browser bundle (debt #6).
-import type { Brand, Product } from "@/data";
 import type { FeaturedItem } from "./featured";
 
 const AUTOPLAY_MS = 4500;
