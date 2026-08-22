@@ -163,8 +163,15 @@ export default function TanzaniaMap({
                   ? "border-accent bg-accent text-background shadow-[0_0_24px_-6px_var(--accent)]"
                   : isEmpty
                     ? "border-border/60 bg-background/60 text-muted/40"
+                    // /60, not /50: at 50% over this fill the resting outline
+                    // measures 2.62:1 and misses WCAG 1.4.11's 3:1, and the
+                    // outline is the whole boundary of the control. /60 is
+                    // 3.31:1 — the smallest step on Tailwind's scale that
+                    // clears it, so the marker stays as faint as it was drawn
+                    // to be. Empty markers keep /60 of --border because an
+                    // inactive control is exempt.
                     : `bg-background/90 text-foreground shadow-[0_0_16px_-8px_var(--accent)] ${
-                        isPaired ? "border-accent" : "border-accent/50"
+                        isPaired ? "border-accent" : "border-accent/60"
                       }`
               }`}
             >

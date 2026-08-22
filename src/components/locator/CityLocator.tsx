@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import AgentCard from "@/components/delivery/AgentCard";
+import { borderAccent } from "@/lib/accent";
 import LocatorBranchCard from "./LocatorBranchCard";
 import TanzaniaMap from "./TanzaniaMap";
 import {
@@ -168,7 +169,10 @@ export default function CityLocator({
                   style={
                     isSelected
                       ? {
-                          borderColor: brand.accentColor,
+                          // The fill keeps the brand's own colour; only the
+                          // border is corrected, because the border is the
+                          // part that has to be seen. See lib/accent.ts.
+                          borderColor: borderAccent(brand.accentColor),
                           background: `${brand.accentColor}22`,
                         }
                       : undefined

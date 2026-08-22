@@ -1,16 +1,31 @@
 import { describe, expect, it } from "vitest";
 import { brands } from "@/data";
-import { chipColor, contrastRatio, iconAccent } from "./accent";
+import {
+  borderAccent,
+  chipColor,
+  contrastRatio,
+  iconAccent,
+  pageGround,
+  selectedChipColor,
+} from "./accent";
+
+function toRgb(hex: string): [number, number, number] {
+  const int = parseInt(hex.slice(1), 16);
+  return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
 
 /** Ratio of a candidate icon colour against the chip a given accent produces. */
 function ratioOnChip(iconHex: string, accent: string): number {
-  const int = parseInt(iconHex.slice(1), 16);
-  const icon: [number, number, number] = [
-    (int >> 16) & 255,
-    (int >> 8) & 255,
-    int & 255,
-  ];
-  return contrastRatio(icon, chipColor(accent)!);
+  return contrastRatio(toRgb(iconHex), chipColor(accent)!);
+}
+
+/** A border has two neighbours; both have to clear the bar. */
+function borderRatios(borderHex: string, accent: string) {
+  const border = toRgb(borderHex);
+  return {
+    onPage: contrastRatio(border, pageGround),
+    onFill: contrastRatio(border, selectedChipColor(accent)!),
+  };
 }
 
 describe("contrastRatio", () => {
@@ -69,6 +84,66 @@ describe("iconAccent on the light theme", () => {
       expect(
         ratio,
         `${brand.name} (${brand.accentColor}) renders its icon at ${ratio.toFixed(2)}:1`
+      ).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe("borderAccent — the selected brand filter chip", () => {
+  it("leaves accents that already clear both neighbours untouched", () => {
+    // Toyota, Ford, BMW and Apple all pass raw; correcting them would be
+    // damage to brand identity for no accessibility gain.
+    expect(borderAccent("#EB0A1E")).toBe("#EB0A1E");
+    expect(borderAccent("#003478")).toBe("#003478");
+    expect(borderAccent("#0066B1")).toBe("#0066B1");
+    expect(borderAccent("#1D1D1F")).toBe("#1D1D1F");
+  });
+
+  it("darkens Oraimo, which fails against the page at 2.21:1", () => {
+    expect(borderRatios("#0BC5A0", "#0BC5A0").onPage).toBeLessThan(3);
+
+    const corrected = borderAccent("#0BC5A0");
+    expect(corrected).not.toBe("#0BC5A0");
+
+    const { onPage, onFill } = borderRatios(corrected, "#0BC5A0");
+    expect(onPage).toBeGreaterThanOrEqual(3);
+    expect(onFill).toBeGreaterThanOrEqual(3);
+  });
+
+  it("corrects Halotel, which passes on the page but fails on its own fill", () => {
+    // The regression this guards: Halotel is 3.19:1 against the white page and
+    // 2.75:1 against the tint inside the chip. An implementation that checked
+    // only the page — the obvious one to write — returns it unchanged and the
+    // border still vanishes along its inner edge. Both grounds, or neither.
+    const raw = borderRatios("#00A651", "#00A651");
+    expect(raw.onPage).toBeGreaterThanOrEqual(3);
+    expect(raw.onFill).toBeLessThan(3);
+
+    const { onPage, onFill } = borderRatios(borderAccent("#00A651"), "#00A651");
+    expect(onPage).toBeGreaterThanOrEqual(3);
+    expect(onFill).toBeGreaterThanOrEqual(3);
+  });
+
+  it("makes the smallest change that clears the bar", () => {
+    // Halotel needs a few percent, not a drag to near-black.
+    const { onFill } = borderRatios(borderAccent("#00A651"), "#00A651");
+    expect(onFill).toBeLessThan(4);
+  });
+
+  it("returns unparseable input unchanged rather than inventing a colour", () => {
+    expect(borderAccent("not-a-colour")).toBe("not-a-colour");
+  });
+
+  it("gives every brand a selected-chip border that clears 3:1 on both sides", () => {
+    for (const brand of brands) {
+      const { onPage, onFill } = borderRatios(
+        borderAccent(brand.accentColor),
+        brand.accentColor
+      );
+      expect(
+        Math.min(onPage, onFill),
+        `${brand.name} (${brand.accentColor}) draws its selected border at ` +
+          `${onPage.toFixed(2)}:1 on the page and ${onFill.toFixed(2)}:1 on the fill`
       ).toBeGreaterThanOrEqual(3);
     }
   });
