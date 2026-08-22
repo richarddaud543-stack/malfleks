@@ -7,8 +7,11 @@ import { describe, expect, it } from "vitest";
 import { getProductById } from "@/data";
 import {
   buildOrderRequest,
+  deleteFromCollection,
+  isValidRequestId,
   sanitizeReference,
   sanitizeRequestedAt,
+  type RequestCollection,
   type SaveOrderRequestInput,
 } from "./saved-requests";
 
@@ -190,5 +193,81 @@ describe("sanitizeRequestedAt", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(Number.isNaN(Date.parse(result.value.requestedAt))).toBe(false);
+  });
+});
+
+describe("isValidRequestId", () => {
+  it("accepts a Firestore auto id", () => {
+    expect(isValidRequestId("aBcDeFgHiJkLmNoPqRsT")).toBe(true);
+  });
+
+  it("rejects an id carrying a path separator", () => {
+    // The one that matters. `collection.doc("a/b/c")` is legal Firestore and
+    // addresses a nested document, so an id echoed straight back from the
+    // browser is a way out of the customer's own subcollection.
+    expect(isValidRequestId("aBcDeFgHiJkLmNoPqR/x")).toBe(false);
+    expect(isValidRequestId("../../customers/other")).toBe(false);
+  });
+
+  it("rejects the wrong length, and anything that is not a string", () => {
+    expect(isValidRequestId("tooShort")).toBe(false);
+    expect(isValidRequestId("aBcDeFgHiJkLmNoPqRsTu")).toBe(false);
+    expect(isValidRequestId(null)).toBe(false);
+    expect(isValidRequestId(42)).toBe(false);
+  });
+});
+
+describe("deleteFromCollection", () => {
+  const VALID = "aBcDeFgHiJkLmNoPqRsT";
+
+  /** A Firestore stand-in that records what was asked of it. */
+  function fakeCollection(exists: boolean) {
+    const calls = { get: 0, delete: 0, ids: [] as string[] };
+    const collection: RequestCollection = {
+      doc(id: string) {
+        calls.ids.push(id);
+        return {
+          async get() {
+            calls.get += 1;
+            return { exists };
+          },
+          async delete() {
+            calls.delete += 1;
+          },
+        };
+      },
+    };
+    return { collection, calls };
+  }
+
+  it("deletes a request that exists", async () => {
+    const { collection, calls } = fakeCollection(true);
+    await expect(deleteFromCollection(collection, VALID)).resolves.toEqual({
+      deleted: true,
+    });
+    expect(calls.delete).toBe(1);
+    expect(calls.ids).toEqual([VALID]);
+  });
+
+  it("reports not-found instead of claiming success", async () => {
+    // Firestore's delete() resolves happily for a document that was never
+    // there, so without the read first this path would tell the customer their
+    // details were removed when nothing was.
+    const { collection, calls } = fakeCollection(false);
+    await expect(deleteFromCollection(collection, VALID)).resolves.toEqual({
+      deleted: false,
+      reason: "not-found",
+    });
+    expect(calls.delete).toBe(0);
+  });
+
+  it("never touches Firestore for a malformed id", async () => {
+    const { collection, calls } = fakeCollection(true);
+    await expect(
+      deleteFromCollection(collection, "aBcDeFgHiJkLmNoPqR/x")
+    ).resolves.toEqual({ deleted: false, reason: "invalid-id" });
+    expect(calls.ids).toEqual([]);
+    expect(calls.get).toBe(0);
+    expect(calls.delete).toBe(0);
   });
 });

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatTZS } from "@/lib/format";
 import { deliveryRouteLabel, formatPhone } from "@/lib/order";
 import type { SavedOrderRequest } from "@/server/orders/saved-requests";
+import DeleteSavedRequest from "./DeleteSavedRequest";
 
 /**
  * One saved order request.
@@ -92,6 +93,10 @@ export default function SavedRequestCard({
           </dd>
         </div>
       </dl>
+
+      {/* The only interactive part of an otherwise static card, so it is the
+          only part that is a client component. */}
+      <DeleteSavedRequest id={request.id} reference={request.reference} />
     </li>
   );
 }

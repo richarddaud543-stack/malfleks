@@ -223,3 +223,80 @@ export async function listOrderRequestsForCustomer(
     };
   });
 }
+
+/**
+ * A Firestore auto-generated document id: 20 characters of `[A-Za-z0-9]`.
+ *
+ * This is a security check, not a tidiness one. `collection.doc(id)` happily
+ * accepts a *path* — `doc("a/b/c")` addresses a nested document — so an id
+ * taken from the browser and passed straight through could step outside the
+ * customer's own subcollection. Every id we hand out is one Firestore
+ * generated in `saveOrderRequestForCustomer`, so anything else is a forged
+ * request and gets no further.
+ */
+export function isValidRequestId(id: unknown): id is string {
+  return typeof id === "string" && /^[A-Za-z0-9]{20}$/.test(id);
+}
+
+export type DeleteOutcome =
+  | { deleted: true }
+  | { deleted: false; reason: "invalid-id" | "not-found" };
+
+/**
+ * The half of the delete path that does not need a real Firestore.
+ *
+ * Split out for the same reason `buildOrderRequest` is pure: the part worth
+ * testing is the decision — is this id even ours to look at, and did it exist —
+ * not the network call underneath. Mirrors `buildListings`/`getListings`.
+ */
+export interface RequestDocument {
+  get(): Promise<{ exists: boolean }>;
+  delete(): Promise<unknown>;
+}
+
+export interface RequestCollection {
+  doc(id: string): RequestDocument;
+}
+
+export async function deleteFromCollection(
+  requests: RequestCollection,
+  id: string
+): Promise<DeleteOutcome> {
+  if (!isValidRequestId(id)) return { deleted: false, reason: "invalid-id" };
+
+  const doc = requests.doc(id);
+
+  // Read before delete. Firestore's `delete()` succeeds on a document that was
+  // never there, so without this the UI would cheerfully report "removed" for
+  // an id that belonged to somebody else — telling the caller nothing about
+  // whether it existed, which is its own small information leak.
+  const snapshot = await doc.get();
+  if (!snapshot.exists) return { deleted: false, reason: "not-found" };
+
+  await doc.delete();
+  return { deleted: true };
+}
+
+/**
+ * Removes one saved request, permanently.
+ *
+ * A hard delete rather than the soft delete debt #20 first proposed, and the
+ * reason is that the "evidence" argument in `firestore.rules` does not survive
+ * contact with what Soko actually does. Nothing is transmitted to the branch
+ * and nothing is charged, so there is no counterparty holding the other half
+ * of this record and no dispute it could ever settle. What is left is a name,
+ * a phone number and a home address kept after the person asked us to stop
+ * keeping them. Redacting the fields and retaining a shell would be the right
+ * shape if a branch had ever been told; today it just means the deletion is
+ * not quite a deletion.
+ *
+ * `uid` comes from the verified session, so the path is the authorization:
+ * a customer can only ever address their own subcollection, and an id from
+ * another customer's reads as `not-found` rather than deleting anything.
+ */
+export async function deleteOrderRequestForCustomer(
+  uid: string,
+  id: string
+): Promise<DeleteOutcome> {
+  return deleteFromCollection(collection(uid), id);
+}

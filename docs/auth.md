@@ -328,14 +328,32 @@ verification.
   writes/day for the whole project. A signed-in customer can still burn writes
   faster than is reasonable. The honest fix is App Check enforcement plus a
   per-uid rate limit, and only the first of those is built.
-- **Deleting a saved request is not implemented**, and rules forbid client
-  deletes. A customer currently cannot remove their own record — which is
-  defensible for an order request but is a real data-rights gap once this holds
-  live customer data. Needs a server action and a decision about soft delete.
+- **Deleting a saved request is implemented** (2026-08-21). `deleteOrderRequest`
+  in `src/app/actions/order-requests.ts` goes through the Admin SDK exactly as
+  the write does, so `firestore.rules` keeps denying client deletes — the rules
+  did not change and did not need to. The control is `DeleteSavedRequest`, an
+  inline two-step confirm rather than `window.confirm()`, on each card in
+  `/account`.
+
+  Two things about it worth knowing rather than rediscovering. It is a **hard
+  delete, not the soft delete debt #20 first proposed**: the "an order request
+  is evidence" reasoning written into `firestore.rules` assumes a counterparty,
+  and Soko has none — nothing is transmitted to the branch and nothing is
+  charged, so a retained shell would settle no dispute and would just mean the
+  deletion is not quite a deletion. And the id from the browser is **never
+  trusted as a path** — `collection.doc("a/b/c")` is legal Firestore and
+  addresses a nested document, so `isValidRequestId` requires a 20-character
+  auto id before anything touches the network. That is the case with a test on
+  it.
 - **PII lives in Firestore**: name, phone number and delivery address per saved
   request. That is the point of the feature, but it is the first place Soko
-  stores customer PII at rest, and it deserves a retention decision that nobody
-  has made.
+  stores customer PII at rest. A customer can now remove a request themselves,
+  which covers the data-rights half. **What is still unmade is the retention
+  decision**: how long an untouched saved request should live before it expires
+  on its own, and whether closing an account should purge the subcollection.
+  Both are the owner's calls, not an engineer's — a number invented here would
+  read as policy to whoever found it next. The mechanism to enforce whatever is
+  chosen (a TTL policy on the collection, or a scheduled purge) is not built.
 - **A console error appears during sign-in and is not ours.**
   "Cross-Origin-Opener-Policy policy would block the window.closed call",
   repeated while Firebase polls for a closed popup. `accounts.google.com` sends
