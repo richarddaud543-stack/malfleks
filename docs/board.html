@@ -1,0 +1,1309 @@
+<title>Soko Engineering Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&family=Geist:wght@400;450;500&display=swap">
+
+<style>
+/* ─────────────────────────────────────────────────────────────
+   Soko's own tokens, lifted from src/app/globals.css so this
+   board reads as part of the product it documents.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --ground:      #ffffff;
+  --surface:     #f2faf5;
+  --surface-2:   #ffffff;
+  --mint:        #d4f5e0;
+  --ink:         #0c1e18;
+  --muted:       #5a6662;
+  --line:        #e2e6e4;
+  --line-strong: #c9d4ce;
+  --accent:      #005236;
+  --accent-soft: #e3f2ea;
+  --violet:      #4b1a9a;
+  --ember:       #c43d0d;
+  --lime:        #e6ff55;
+  --lime-ink:    #0c1e18;
+  --shadow:      0 1px 2px rgba(12,30,24,.05), 0 12px 32px -20px rgba(12,30,24,.35);
+
+  --done:      var(--accent);
+  --done-bg:   #e3f2ea;
+  --half:      #8a5a00;
+  --half-bg:   #fdf3dd;
+  --open:      var(--ember);
+  --open-bg:   #fcece5;
+  --parked:    #5a6662;
+  --parked-bg: #eef1ef;
+}
+
+:root:not([data-theme="light"]) {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ground:      #08120e;
+    --surface:     #0f1c17;
+    --surface-2:   #12211b;
+    --mint:        #1b3a2c;
+    --ink:         #e7f1ec;
+    --muted:       #93a49c;
+    --line:        #1e3129;
+    --line-strong: #2c443a;
+    --accent:      #4fd99b;
+    --accent-soft: #10291f;
+    --violet:      #b79cf0;
+    --ember:       #ff8a5c;
+    --lime:        #e6ff55;
+    --lime-ink:    #0c1e18;
+    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
+
+    --done:      #4fd99b;
+    --done-bg:   #10291f;
+    --half:      #f0c04a;
+    --half-bg:   #2c2410;
+    --open:      #ff8a5c;
+    --open-bg:   #331a11;
+    --parked:    #93a49c;
+    --parked-bg: #18241f;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ground:      #08120e;
+  --surface:     #0f1c17;
+  --surface-2:   #12211b;
+  --mint:        #1b3a2c;
+  --ink:         #e7f1ec;
+  --muted:       #93a49c;
+  --line:        #1e3129;
+  --line-strong: #2c443a;
+  --accent:      #4fd99b;
+  --accent-soft: #10291f;
+  --violet:      #b79cf0;
+  --ember:       #ff8a5c;
+  --lime:        #e6ff55;
+  --lime-ink:    #0c1e18;
+  --shadow:      0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
+
+  --done:      #4fd99b;
+  --done-bg:   #10291f;
+  --half:      #f0c04a;
+  --half-bg:   #2c2410;
+  --open:      #ff8a5c;
+  --open-bg:   #331a11;
+  --parked:    #93a49c;
+  --parked-bg: #18241f;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  margin: 0;
+}
+
+.serif {
+  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--accent);
+}
+
+code, .mono, td.mono {
+  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .86em;
+}
+
+a { color: var(--accent); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.wrap {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* ── Masthead ─────────────────────────────────────────── */
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background:
+    radial-gradient(1100px 380px at 82% -12%, var(--accent-soft), transparent 62%),
+    var(--ground);
+}
+.masthead-inner { padding: 64px 0 40px; }
+
+.eyebrow {
+  font-size: 11px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 500;
+  margin: 0 0 14px;
+}
+
+h1 { font-size: clamp(2.4rem, 6vw, 3.9rem); line-height: 1.02; }
+
+.thesis {
+  margin: 20px 0 0;
+  max-width: 60ch;
+  font-size: 1.08rem;
+  color: var(--muted);
+}
+.thesis strong { color: var(--ink); font-weight: 500; }
+
+.asof {
+  margin-top: 22px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.asof .mono { color: var(--ink); }
+
+/* ── Stat strip ───────────────────────────────────────── */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  margin-top: 40px;
+}
+.stat { background: var(--surface-2); padding: 16px 18px; }
+.stat b {
+  display: block;
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-size: 1.65rem;
+  font-weight: 600;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.stat span {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+/* ── Section nav ──────────────────────────────────────── */
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.navbar nav {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding: 10px 24px;
+  max-width: 1080px;
+  margin: 0 auto;
+  scrollbar-width: thin;
+}
+.navbar a {
+  flex: 0 0 auto;
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 5px 11px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.navbar a:hover { color: var(--ink); background: var(--surface); border-color: var(--line); }
+
+/* ── Sections ─────────────────────────────────────────── */
+section { padding: 62px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 58px; }
+section:last-of-type { border-bottom: 0; }
+.sec-head { max-width: 64ch; margin-bottom: 32px; }
+.sec-head h2 { font-size: clamp(1.6rem, 3.4vw, 2.1rem); }
+.sec-head p { color: var(--muted); margin: 12px 0 0; }
+
+.card {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+
+/* ── Routing rule diagram ─────────────────────────────── */
+.rule {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  align-items: stretch;
+}
+@media (min-width: 760px) { .rule { grid-template-columns: 1fr auto 1fr; } }
+
+.rule-q {
+  grid-column: 1 / -1;
+  background: var(--mint);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 18px 22px;
+  text-align: center;
+}
+.rule-q b { font-family: "Bricolage Grotesque", sans-serif; font-size: 1.05rem; font-weight: 600; }
+.rule-q span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+.branch-box { border-radius: 14px; padding: 20px; border: 1px solid var(--line); background: var(--surface-2); }
+.branch-box.yes { border-color: var(--accent); }
+.branch-box.no  { border-color: var(--line-strong); }
+.branch-box h4 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
+.branch-box p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
+.branch-box .count {
+  display: inline-block; margin-top: 12px; font-size: 12px;
+  padding: 3px 9px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.vs {
+  display: none; align-self: center; color: var(--muted);
+  font-family: "Instrument Serif", serif; font-style: italic; font-size: 1.2rem;
+}
+@media (min-width: 760px) { .vs { display: block; } }
+
+/* ── Roster ───────────────────────────────────────────── */
+.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
+.eng {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.eng.lead { grid-column: 1 / -1; background: var(--mint); border-color: var(--line-strong); }
+.eng-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.eng-id {
+  font-family: "Geist Mono", monospace; font-size: 10.5px;
+  letter-spacing: .08em; color: var(--muted);
+  border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 5px;
+}
+.eng h4 { font-size: 1.12rem; font-weight: 600; }
+.eng .role { font-size: 13px; color: var(--accent); font-weight: 500; }
+.eng p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
+.eng .owns {
+  font-family: "Geist Mono", monospace; font-size: 11px;
+  color: var(--muted); border-top: 1px dashed var(--line); padding-top: 9px; margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* ── Phases ───────────────────────────────────────────── */
+.phases { display: grid; gap: 14px; grid-template-columns: 1fr; counter-reset: phase -1; }
+@media (min-width: 820px) { .phases { grid-template-columns: repeat(3, 1fr); } }
+.phase { position: relative; padding: 20px 20px 20px 22px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 14px 14px 0; }
+.phase .n {
+  font-family: "Geist Mono", monospace; font-size: 11px; color: var(--accent);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.phase h4 { font-size: 1.05rem; margin-top: 5px; }
+.phase p { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); }
+
+.gate {
+  margin-top: 18px; padding: 16px 20px; border-radius: 12px;
+  background: var(--lime); color: var(--lime-ink);
+  font-size: 14.5px;
+}
+.gate b { font-family: "Bricolage Grotesque", sans-serif; }
+
+/* ── Flow diagrams ────────────────────────────────────── */
+.flow { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+.flow pre {
+  margin: 0; padding: 22px;
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12.5px; line-height: 1.65; color: var(--ink);
+  white-space: pre;
+}
+
+/* ── Split panels ─────────────────────────────────────── */
+.split { display: grid; gap: 14px; grid-template-columns: 1fr; }
+@media (min-width: 780px) { .split { grid-template-columns: 1fr 1fr; } }
+.panel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
+.panel h4 { font-size: 1.02rem; display: flex; align-items: center; gap: 9px; }
+.panel ul { margin: 12px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); }
+.panel li { margin-bottom: 6px; }
+.panel li b { color: var(--ink); font-weight: 500; }
+.tag {
+  font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .07em;
+  text-transform: uppercase; padding: 2px 7px; border-radius: 5px;
+  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--line);
+}
+
+/* ── Schema ───────────────────────────────────────────── */
+.models { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.model { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface-2); }
+.model header {
+  background: var(--surface); padding: 9px 13px;
+  font-family: "Geist Mono", monospace; font-size: 12.5px; font-weight: 500;
+  border-bottom: 1px solid var(--line);
+  display: flex; justify-content: space-between; align-items: center;
+}
+.model header em { font-style: normal; font-size: 10px; color: var(--muted); letter-spacing: .06em; }
+.model ul { margin: 0; padding: 10px 13px; list-style: none; }
+.model li {
+  font-family: "Geist Mono", monospace; font-size: 11.5px; color: var(--muted);
+  padding: 2.5px 0; display: flex; justify-content: space-between; gap: 10px;
+}
+.model li b { color: var(--ink); font-weight: 400; }
+.model li.key b { color: var(--accent); }
+
+/* ── Wireframes ───────────────────────────────────────── */
+.wires { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
+.wire { border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); overflow: hidden; }
+.wire .frame {
+  background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 6px;
+  border-bottom: 1px solid var(--line); min-height: 168px;
+}
+.wire .cap { padding: 11px 14px; }
+.wire .cap b { font-family: "Bricolage Grotesque", sans-serif; font-size: 13.5px; font-weight: 600; display: block; }
+.wire .cap span { font-family: "Geist Mono", monospace; font-size: 10.5px; color: var(--muted); }
+.bx { background: var(--line); border-radius: 3px; }
+.bx.h { height: 9px; }
+.bx.t { height: 15px; background: var(--line-strong); }
+.bx.a { background: var(--accent); opacity: .55; }
+.bx.m { background: var(--mint); }
+.row { display: flex; gap: 6px; }
+.row > * { flex: 1; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.fill { flex: 1; min-height: 26px; }
+
+/* ── Palette ──────────────────────────────────────────── */
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
+.sw { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
+.sw .chip { height: 54px; }
+.sw .meta { padding: 8px 10px; background: var(--surface-2); }
+.sw .meta b { display: block; font-size: 12px; font-weight: 500; }
+.sw .meta code { color: var(--muted); font-size: 10.5px; }
+
+.specimen { margin-top: 16px; display: grid; gap: 12px; }
+.spec-row {
+  background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 12px; padding: 16px 18px;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.spec-row .label { font-family: "Geist Mono", monospace; font-size: 10.5px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+/* ── Table ────────────────────────────────────────────── */
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
+table { border-collapse: collapse; width: 100%; min-width: 660px; background: var(--surface-2); }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
+th {
+  background: var(--surface); font-family: "Geist Mono", monospace;
+  font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 500;
+}
+tbody tr:last-child td { border-bottom: 0; }
+td.num { font-variant-numeric: tabular-nums; color: var(--muted); width: 42px; }
+td p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; }
+
+.pill {
+  display: inline-block; white-space: nowrap;
+  font-family: "Geist Mono", monospace; font-size: 10.5px; letter-spacing: .05em;
+  text-transform: uppercase; padding: 3px 9px; border-radius: 999px; font-weight: 500;
+}
+.pill.done   { background: var(--done-bg);   color: var(--done); }
+.pill.half   { background: var(--half-bg);   color: var(--half); }
+.pill.open   { background: var(--open-bg);   color: var(--open); }
+.pill.parked { background: var(--parked-bg); color: var(--parked); }
+
+/* ── Owner decisions ──────────────────────────────────── */
+.asks { display: grid; gap: 12px; }
+.ask {
+  display: flex; gap: 16px; align-items: flex-start;
+  border: 1px solid var(--line); border-left: 4px solid var(--lime);
+  background: var(--surface-2); border-radius: 0 13px 13px 0; padding: 17px 20px;
+}
+.ask .who {
+  font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--muted); padding-top: 3px; flex: 0 0 62px;
+}
+.ask h4 { font-size: 1rem; }
+.ask p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
+
+footer { padding: 40px 0 64px; color: var(--muted); font-size: 13px; }
+footer p { margin: 0 0 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+html { scroll-behavior: smooth; }
+</style>
+
+<header class="masthead">
+  <div class="wrap masthead-inner">
+    <p class="eyebrow">Soko Ltd · Engineering</p>
+    <h1>How this thing<br>gets built</h1>
+    <p class="thesis">
+      Soko is a multi-brand marketplace for Tanzania. The product isn't the catalogue —
+      it's the <strong>routing decision</strong>: if a branch runs its own delivery, the
+      customer gets the brand's fleet; if it doesn't, we connect them to a local courier.
+      Everything on this page exists to serve that one rule.
+    </p>
+    <p class="asof">
+      State as of <span class="mono">2026-08-21</span> · branch <span class="mono">master</span> ·
+      head <span class="mono">1182952</span> · <span class="serif">no remote yet</span>
+    </p>
+
+    <div class="stats">
+      <div class="stat"><b>9</b><span>People</span></div>
+      <div class="stat"><b>12</b><span>Routes</span></div>
+      <div class="stat"><b>113</b><span>Pages built</span></div>
+      <div class="stat"><b>366</b><span>Unit tests</span></div>
+      <div class="stat"><b>57</b><span>E2E tests</span></div>
+      <div class="stat"><b>42</b><span>Components</span></div>
+      <div class="stat"><b>21</b><span>Debt items</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="navbar">
+  <nav>
+    <a href="#product">The rule</a>
+    <a href="#team">The team</a>
+    <a href="#process">How work flows</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#data">Database</a>
+    <a href="#auth">Auth</a>
+    <a href="#design">Design system</a>
+    <a href="#screens">Screens</a>
+    <a href="#quality">Quality</a>
+    <a href="#debt">Debt register</a>
+    <a href="#you">Needs you</a>
+  </nav>
+</div>
+
+<main class="wrap">
+
+  <!-- ═══════════════════ THE RULE ═══════════════════ -->
+  <section id="product">
+    <div class="sec-head">
+      <p class="eyebrow">The product</p>
+      <h2>One question, asked at every branch</h2>
+      <p>
+        <code>resolveDeliveryRoute()</code> is four lines long and everything else is
+        downstream of it. It reads one boolean on the branch and decides who carries the box.
+      </p>
+    </div>
+
+    <div class="rule">
+      <div class="rule-q">
+        <b>Does this branch run its own delivery?</b>
+        <span><code>branch.deliveryOffered</code> — src/lib/order.ts</span>
+      </div>
+
+      <div class="branch-box yes">
+        <h4>Yes → brand fleet</h4>
+        <p>
+          The brand carries it. No courier in the loop, no third-party handoff, and no
+          published ETA — brands don't quote one, so we don't invent one.
+        </p>
+        <span class="count">6 of 19 branches</span>
+      </div>
+
+      <div class="vs">or</div>
+
+      <div class="branch-box no">
+        <h4>No → local courier</h4>
+        <p>
+          We match couriers serving that branch's city. Couriers <em>do</em> publish an
+          ETA, so the estimate shown is theirs, not ours.
+        </p>
+        <span class="count">13 of 19 branches · 5 couriers</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <h4>Why the answer arrives before the click</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        The route used to be computed on the delivery page — one page <em>after</em> the
+        customer had already chosen. <code>previewDelivery()</code> now runs the same rule on
+        the search card and the product page, so an unorderable product says so on its own
+        page instead of after the click. Deliberate non-goal: <strong>there is no
+        delivery-speed filter.</strong> Only couriers publish an ETA, so filtering on speed
+        would silently hide every brand-fleet listing. Show the number; don't filter on one
+        we only have half of.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ TEAM ═══════════════════ -->
+  <section id="team">
+    <div class="sec-head">
+      <p class="eyebrow">The roster</p>
+      <h2>Eight engineers and a lead</h2>
+      <p>
+        Each is a separate agent with its own brief, its own owned directories, and its own
+        accumulated skill file. They start every assignment with <span class="serif">no memory
+        of the last one</span> — which is exactly why so much of this project is written down.
+      </p>
+    </div>
+
+    <div class="roster">
+      <article class="eng lead">
+        <div class="eng-top"><span class="eng-id">LEAD</span><h4>Engineering Lead</h4></div>
+        <div class="role">Assigns · reviews · integrates</div>
+        <p>
+          Sole writer to <code>master</code> — a single writer avoids the git conflicts eight
+          parallel agents would otherwise generate. Reviews for whether work solves the right
+          problem in the right shape, and owns the debt register. Doesn't out-engineer the
+          specialists.
+        </p>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-1</span><h4>Atlas</h4></div>
+        <div class="role">Frontend &amp; Motion</div>
+        <p>Pages, components, scroll-driven work, view transitions — anything visual that moves.</p>
+        <div class="owns">components/home · motion · search · locator</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-2</span><h4>Mercury</h4></div>
+        <div class="role">Data &amp; business logic</div>
+        <p>The domain types and their invariants. Pricing, currency, faceted search, and the routing rule itself.</p>
+        <div class="owns">src/data · src/lib</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-3</span><h4>Sentinel</h4></div>
+        <div class="role">QA &amp; accessibility</div>
+        <p>Writes and audits tests, diagnoses flaky specs, and judges whether coverage is real or theatre.</p>
+        <div class="owns">e2e/ · test strategy</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-4</span><h4>Forge</h4></div>
+        <div class="role">Platform &amp; backend</div>
+        <p>Prisma, the repository layer, migrations, seeding, CI and build tooling.</p>
+        <div class="owns">src/server · prisma/ · .github/workflows</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-5</span><h4>Beacon</h4></div>
+        <div class="role">SEO, content &amp; IA</div>
+        <p>New routes, titles, sitemap entries, navigation structure, wireframes, and the order flow's honesty.</p>
+        <div class="owns">agents · delivery · order routes</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-6</span><h4>Prism</h4></div>
+        <div class="role">Visual &amp; graphic design</div>
+        <p>Palette, typography, spacing, tokens, and every colour or contrast decision.</p>
+        <div class="owns">globals.css · brand/product components</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-7</span><h4>Vault</h4></div>
+        <div class="role">Cloud platform &amp; security</div>
+        <p>Firebase config, authentication, Security Rules, App Check, sessions, credentials and quotas.</p>
+        <div class="owns">firestore.rules · server/auth · server/firebase</div>
+      </article>
+
+      <article class="eng">
+        <div class="eng-top"><span class="eng-id">ENG-8</span><h4>Ledger</h4></div>
+        <div class="role">Commerce &amp; payments</div>
+        <p>Money, the order record, mobile money, pricing strategy, and who bears delivery risk.</p>
+        <div class="owns">src/lib/order.ts</div>
+      </article>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h4>Why the roster grew</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        <strong>Prism</strong> was split off Beacon on 14 Aug — "design system" alongside SEO,
+        content and IA is two jobs, so the visual half got its own seat. <strong>Vault</strong>
+        and <strong>Ledger</strong> arrived on 15 Aug, each because the project acquired a real
+        problem nobody owned: Firebase landed with no Security Rules and no App Check, and
+        "whoever touches it next" is not an owner. Soko takes no money yet, in a market whose
+        payment rails are mobile money rather than cards — that's a speciality, not a ticket.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ PROCESS ═══════════════════ -->
+  <section id="process">
+    <div class="sec-head">
+      <p class="eyebrow">Working agreement</p>
+      <h2>No assignment begins cold</h2>
+      <p>
+        Every engineer runs the same three phases. The numbering is the actual sequence, and
+        skipping the first one is what the gate exists to prevent.
+      </p>
+    </div>
+
+    <div class="phases">
+      <div class="phase">
+        <div class="n">Phase 0</div>
+        <h4>Onboard</h4>
+        <p>
+          Research current professional standards for your domain on the live web before
+          writing any code. Record findings with real sources. Prefer primary sources and
+          recent material — the stack moves and training data goes stale.
+        </p>
+      </div>
+      <div class="phase">
+        <div class="n">Phase 1</div>
+        <h4>Build</h4>
+        <p>
+          Implement, explicitly applying what Phase 0 established. Where the research
+          <em>changed</em> your approach, say so in the report. Research that contradicts the
+          brief is the most valuable kind.
+        </p>
+      </div>
+      <div class="phase">
+        <div class="n">Phase 2</div>
+        <h4>Record</h4>
+        <p>
+          Write what you learned into your own skill file — a technique that failed, a
+          constraint that wasn't obvious, a number you actually measured. Delete anything
+          that stopped being true.
+        </p>
+      </div>
+    </div>
+
+    <div class="gate">
+      <b>The gate.</b> Nothing merges to <code>master</code> without its Phase 0 research
+      recorded in the handbook. Ten research reports currently live in
+      <code>docs/research/</code> — one per discipline, each auditing the real code rather
+      than summarising the web.
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4>Why the skill files exist <span class="tag">durable</span></h4>
+        <ul>
+          <li>Every engineer starts each assignment with <b>no memory of the last one</b>.</li>
+          <li>Knowledge that lives only in a finished conversation is knowledge the company buys twice.</li>
+          <li>Long-form reasoning goes in <code>docs/research/</code>; the sharp load-bearing specifics go in the skill file.</li>
+          <li>Written for someone competent who has never seen this repo — <b>a measured ratio beats "check contrast"</b>.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Integration discipline <span class="tag">measured</span></h4>
+        <ul>
+          <li>Branches land <b>one at a time, on arrival</b> — never batched.</li>
+          <li>Every branch in the 14 Aug round needed Lead work to be shippable, and none of it showed up inside the branch. <b>It was all seam damage.</b></li>
+          <li>That's the argument for smaller batches, not for more review.</li>
+          <li>CI runs E2E against a production build, because <code>next dev</code> compiles per request and times specs out under parallel workers.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+  <section id="architecture">
+    <div class="sec-head">
+      <p class="eyebrow">Architecture</p>
+      <h2>Two stores, one owner each</h2>
+      <p>
+        The most expensive ambiguity this project had was two persistence stacks that both
+        looked live. It was settled by decision, written down, and restated in the agent
+        briefs so no one re-opens it by accident.
+      </p>
+    </div>
+
+    <div class="flow">
+<pre>
+  browser                        Next.js 16 · App Router                data
+  ───────                        ───────────────────────                ────
+
+  /search  /locator  ──────────▶  Server Component
+  /products/[id]                    └─ getListings()  ─────────────▶  Prisma 7
+                                       buildListings() (pure)         SQLite
+                                                                      6 models
+
+  order form  ─────────────────▶  Server Action
+  (client-side only until                                             ─────────
+   the customer signs in)         "use server"
+                                    ├─ verifySession()  ───────────▶  Firebase
+                                    │    session cookie                 Auth
+                                    ├─ buildOrderRequest()
+                                    │    re-derives price from the
+                                    │    catalogue, never the payload
+                                    └─ Admin SDK write  ───────────▶  Firestore
+                                                                      customers/
+                                                                        {uid}/
+                                                                        orderRequests
+
+  every page  ─────────────────▶  Analytics  ── gated on consent ──▶  (off by
+                                                                       default)
+</pre>
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4>Prisma owns the catalogue <span class="tag">settled</span></h4>
+        <ul>
+          <li>The schema is <b>genuinely relational</b> and Firestore has no joins — today's tested invariants would become manually-synced fields.</li>
+          <li>Pages read the database, not the bundled arrays. That cutover landed 17 Aug.</li>
+          <li><code>src/data</code> is still the <b>editorial source</b> and the seed mirrors it, so the two can drift. <code>parity.test.ts</code> is the interim guard.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Firebase is scoped to Auth, Analytics and saved requests <span class="tag">settled</span></h4>
+        <ul>
+          <li>No Firestore reads or writes for catalogue data. No second source of truth.</li>
+          <li>Saved order requests are the one exception: <b>user-scoped, not relational, nothing joins them</b>, and the identity that owns them already lives in Firebase.</li>
+          <li>Putting them in SQL would mean mirroring Firebase uids into a second store for no gain.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ DATABASE ═══════════════════ -->
+  <section id="data">
+    <div class="sec-head">
+      <p class="eyebrow">Database</p>
+      <h2>Six tables, and the reasons behind them</h2>
+      <p>
+        Prisma 7 on SQLite via <code>better-sqlite3</code>. Every top-level model carries a
+        <code>sortOrder</code>, and text columns are used instead of enums.
+      </p>
+    </div>
+
+    <div class="models">
+      <div class="model">
+        <header><span>Brand</span><em>6 rows</em></header>
+        <ul>
+          <li class="key"><b>id</b><span>@id</span></li>
+          <li class="key"><b>slug</b><span>@unique</span></li>
+          <li><b>name</b><span>String</span></li>
+          <li><b>accentColor</b><span>hex</span></li>
+        </ul>
+      </div>
+      <div class="model">
+        <header><span>Branch</span><em>19 rows</em></header>
+        <ul>
+          <li class="key"><b>brandId</b><span>→ Brand</span></li>
+          <li><b>city</b><span>String</span></li>
+          <li><b>deliveryOffered</b><span>Boolean</span></li>
+          <li><b>verified</b><span>12 true</span></li>
+          <li><b>coords</b><span>city centre</span></li>
+        </ul>
+      </div>
+      <div class="model">
+        <header><span>Product</span><em>38 rows</em></header>
+        <ul>
+          <li class="key"><b>branchId</b><span>→ Branch</span></li>
+          <li class="key"><b>brandId</b><span>denormalised</span></li>
+          <li><b>priceTZS</b><span>Int</span></li>
+          <li><b>slug</b><span>@unique</span></li>
+        </ul>
+      </div>
+      <div class="model">
+        <header><span>ProductSpec</span><em>table, not JSON</em></header>
+        <ul>
+          <li class="key"><b>productId</b><span>→ Product</span></li>
+          <li><b>label</b><span>String</span></li>
+          <li><b>value</b><span>String</span></li>
+        </ul>
+      </div>
+      <div class="model">
+        <header><span>DeliveryAgent</span><em>5 rows</em></header>
+        <ul>
+          <li class="key"><b>id</b><span>@id</span></li>
+          <li><b>name</b><span>String</span></li>
+          <li><b>verified</b><span>2 true</span></li>
+        </ul>
+      </div>
+      <div class="model">
+        <header><span>AgentRegion</span><em>join</em></header>
+        <ul>
+          <li class="key"><b>agentId</b><span>→ Agent</span></li>
+          <li><b>city</b><span>String</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4><code>verified</code> is a first-class column</h4>
+        <ul>
+          <li>Every branch and courier record says whether it's <b>researched fact or illustrative placeholder</b>.</li>
+          <li>Invented data must never claim <code>verified: true</code>. Provenance is logged in <code>src/data/SOURCES.md</code>.</li>
+          <li>Map coordinates are approximate <b>city-centre</b> points shared by every branch in a city — so adding them deliberately did <em>not</em> flip anyone's flag.</li>
+          <li>Currently 12 of 19 branches and 2 of 5 couriers are verified.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Shape decisions worth knowing</h4>
+        <ul>
+          <li><code>priceTZS</code> is an <b>Int</b> — the catalogue spans TZS 32K earbuds to TZS 245M SUVs and floats have no business here.</li>
+          <li><code>specs</code> and <code>regionsServed</code> became <b>tables, not JSON columns</b>, so they can be queried and constrained.</li>
+          <li><code>Product.brandId</code> stays <b>denormalised</b> alongside <code>branchId</code>; the seed asserts they agree.</li>
+          <li>Search prices are <b>bucketed into bands, not a slider</b> — a slider across that range is unusable.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ AUTH ═══════════════════ -->
+  <section id="auth">
+    <div class="sec-head">
+      <p class="eyebrow">Authentication</p>
+      <h2>Client proves identity, server holds the session</h2>
+      <p>
+        Google sign-in only. <code>onAuthStateChanged</code> doesn't exist during SSR, so the
+        client SDK's notion of "signed in" is invisible to a Server Component — the cookie is
+        the only thing a server-rendered page can check.
+      </p>
+    </div>
+
+    <div class="flow">
+<pre>
+  browser                                    server
+  ───────                                    ──────
+
+  signInWithPopup(Google)
+      │
+      └── ID token ────────────────────────▶ signInWithIdToken()   [Server Action]
+                                                ├─ verifyIdToken(token, checkRevoked)
+                                                ├─ reject if auth_time is stale (&gt; 5 min)
+                                                └─ createSessionCookie()
+                                                        │
+                                                        ▼
+                                                  soko_session
+                                                  httpOnly · Lax
+                                                  Secure in prod · 5 days
+
+  client SDK signs itself out                       ┊
+  (inMemoryPersistence — one                        ┊
+   session, one authority)                          ┊
+                                                    ▼
+  every later request ─────────────────────▶ verifySession()      [DAL, React cache()]
+                                                └─ verifySessionCookie(cookie, true)
+</pre>
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4>A Data Access Layer, not a proxy</h4>
+        <ul>
+          <li>There is <b>no <code>proxy.ts</code></b> in this repo. The DAL isn't a second layer behind one — it is the only layer, which is why it's authoritative rather than optimistic.</li>
+          <li>Next's own guidance: proxy "should not be your only line of defense" — it runs on prefetches, and a matcher edit can silently drop a route out of coverage.</li>
+          <li><code>verifySessionCookie(cookie, true)</code> is the revocation-checking form. It costs a round trip per render pass, which is what <code>cache()</code> is for.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Security Rules <span class="tag">emulator-tested</span></h4>
+        <ul>
+          <li>Default-deny, owner-only reads, and <b>no client writes at all</b>. Every write goes through the Admin SDK, which bypasses rules by design.</li>
+          <li>Ownership is keyed by the <b>path</b>, not a field — a field can be spoofed on the write that creates it; a path segment compared against <code>request.auth.uid</code> cannot.</li>
+          <li>13 assertions run against the real emulator on their own CI job. Both directions were checked by injecting the two classic mistakes and watching the suite fail.</li>
+          <li>App Check is wired (reCAPTCHA v3) but <b>enforcement is still an unclicked console action</b>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ DESIGN ═══════════════════ -->
+  <section id="design">
+    <div class="sec-head">
+      <p class="eyebrow">Design system</p>
+      <h2>Forest, mint and one loud chartreuse</h2>
+      <p>
+        Tokens live in <code>src/app/globals.css</code> and Prism owns them. This page is
+        painted in the same palette, so what you're reading is the system itself.
+      </p>
+    </div>
+
+    <div class="swatches">
+      <div class="sw"><div class="chip" style="background:#0c1e18"></div><div class="meta"><b>Forest ink</b><code>#0c1e18</code></div></div>
+      <div class="sw"><div class="chip" style="background:#005236"></div><div class="meta"><b>Accent</b><code>#005236</code></div></div>
+      <div class="sw"><div class="chip" style="background:#d4f5e0"></div><div class="meta"><b>Mint surface</b><code>#d4f5e0</code></div></div>
+      <div class="sw"><div class="chip" style="background:#e6ff55"></div><div class="meta"><b>Lime CTA</b><code>#e6ff55</code></div></div>
+      <div class="sw"><div class="chip" style="background:#4b1a9a"></div><div class="meta"><b>Violet</b><code>#4b1a9a</code></div></div>
+      <div class="sw"><div class="chip" style="background:#c43d0d"></div><div class="meta"><b>Ember</b><code>#c43d0d</code></div></div>
+      <div class="sw"><div class="chip" style="background:#5a6662"></div><div class="meta"><b>Muted</b><code>#5a6662</code></div></div>
+      <div class="sw"><div class="chip" style="background:#e2e6e4"></div><div class="meta"><b>Border</b><code>#e2e6e4</code></div></div>
+    </div>
+
+    <div class="specimen">
+      <div class="spec-row">
+        <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:1.7rem;font-weight:600">Bricolage Grotesque</span>
+        <span class="label">Display · headings</span>
+      </div>
+      <div class="spec-row">
+        <span class="serif" style="font-size:1.7rem">Instrument Serif italic</span>
+        <span class="label">Accent · one phrase at a time</span>
+      </div>
+      <div class="spec-row">
+        <span style="font-size:1.05rem">Geist — body copy, forms and everything you actually read</span>
+        <span class="label">Body</span>
+      </div>
+      <div class="spec-row">
+        <span class="mono" style="font-size:1.05rem">TOY-DAR-K7M4</span>
+        <span class="label">Mono · references, read down the phone</span>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4>Contrast is computed, not eyeballed</h4>
+        <ul>
+          <li><code>src/lib/accent.ts</code> searches <b>outward from a brand's own colour in both directions</b> and takes the first variant clearing 3:1 — so the correction is the smallest one that works.</li>
+          <li>Not directional by assumption: on the light ground, bright accents fail and <b>lightening them makes it worse</b>. Oraimo tops out at 2.21:1 even at pure white.</li>
+          <li>A border has <b>two neighbours</b>, so it's checked against both. Halotel passes on the page at 3.19:1 and fails inside its own chip at 2.75:1.</li>
+          <li>Brand colours are identity, so four of six brands are returned untouched.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>Imagery, and what we won't do</h4>
+        <ul>
+          <li>Brand logos are <b>real, from Wikimedia Commons</b>, attributed in <code>SOURCES.md</code>.</li>
+          <li>Product imagery is a <b>custom SVG icon set</b>, tinted per brand. Commons searches for generic categories kept surfacing vintage or competitor-branded photos.</li>
+          <li>No scraped product photography. If real photos ever land, they go through <code>next/image</code> with a provenance entry.</li>
+          <li>Motion respects <code>prefers-reduced-motion</code> — including view transitions, which run outside React where <code>useReducedMotion()</code> can't see them.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ SCREENS ═══════════════════ -->
+  <section id="screens">
+    <div class="sec-head">
+      <p class="eyebrow">Screens</p>
+      <h2>Twelve routes, 113 pages</h2>
+      <p>
+        Every route ships page-specific metadata and a sitemap entry — except the two private
+        ones, which are <code>noindex</code> and deliberately absent from the sitemap.
+      </p>
+    </div>
+
+    <div class="wires">
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="bx a" style="height:34px"></div>
+          <div class="grid3"><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div></div>
+          <div class="grid3"><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div></div>
+          <div class="bx h" style="width:50%"></div>
+          <div class="fill bx"></div>
+        </div>
+        <div class="cap"><b>Home</b><span>/</span></div>
+      </div>
+
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="row"><div class="bx h" style="flex:0 0 30%"></div><div class="bx h"></div></div>
+          <div class="row" style="flex:1">
+            <div style="flex:0 0 32%;display:flex;flex-direction:column;gap:6px">
+              <div class="bx h"></div><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div class="bx m" style="height:32px"></div>
+              <div class="bx m" style="height:32px"></div>
+              <div class="bx m" style="height:32px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><b>Search</b><span>/search · URL-as-state</span></div>
+      </div>
+
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="row" style="flex:1">
+            <div style="flex:0 0 44%;display:flex;flex-direction:column;gap:6px">
+              <div class="bx a" style="flex:1;opacity:.3"></div>
+              <div class="bx h"></div>
+            </div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div class="bx m" style="height:28px"></div>
+              <div class="bx m" style="height:28px"></div>
+              <div class="bx m" style="height:28px"></div>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><b>Locator</b><span>/locator · map + branches</span></div>
+      </div>
+
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="row" style="flex:1">
+            <div class="bx a" style="flex:0 0 46%;opacity:.35"></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+              <div class="bx h" style="width:70%"></div>
+              <div class="bx h" style="width:40%"></div>
+              <div class="bx m" style="height:22px"></div>
+              <div class="bx h"></div>
+              <div class="bx" style="height:24px;background:#e6ff55"></div>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><b>Product</b><span>/products/[id] · morph target</span></div>
+      </div>
+
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="bx h" style="width:55%"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <div class="bx m" style="height:26px"></div>
+            <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
+            <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
+            <div class="bx h"></div>
+            <div class="bx" style="height:22px;background:#e6ff55"></div>
+          </div>
+        </div>
+        <div class="cap"><b>Order request</b><span>/delivery/[productId]</span></div>
+      </div>
+
+      <div class="wire">
+        <div class="frame">
+          <div class="bx t"></div>
+          <div class="bx h" style="width:45%"></div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+            <div class="bx m" style="height:44px"></div>
+            <div class="bx m" style="height:44px"></div>
+            <div class="row" style="justify-content:flex-end">
+              <div class="bx" style="height:16px;flex:0 0 34%;background:#c43d0d;opacity:.5"></div>
+            </div>
+          </div>
+        </div>
+        <div class="cap"><b>Account</b><span>/account · noindex · ƒ dynamic</span></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h4>The one page-to-page relationship worth building</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        A product's icon tile on a search card and the same product's showcase on its own page
+        are the same object, so they <strong>morph across the navigation</strong> rather than
+        swapping. React's <code>&lt;ViewTransition&gt;</code> with a shared
+        <code>product-${id}</code> name, scoped to a <code>product-view</code> transition type
+        so an unrelated same-page filter change can't fire it. Native browser API, no new
+        dependency.
+      </p>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ QUALITY ═══════════════════ -->
+  <section id="quality">
+    <div class="sec-head">
+      <p class="eyebrow">Quality</p>
+      <h2>What "done" has to mean</h2>
+      <p>The standing baseline is non-negotiable and predates any individual assignment.</p>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <h4>Before any hand-off</h4>
+        <ul>
+          <li><code>npx tsc --noEmit</code>, <code>npm run lint</code>, <code>npm test</code> — all clean.</li>
+          <li>Every new page ships <b>page-specific metadata and a sitemap entry</b>.</li>
+          <li>Every new feature ships <b>at least one real behavioural test</b>.</li>
+          <li>Accessibility is part of done: real labels, keyboard operation, announced errors, the global <code>:focus-visible</code> ring left intact.</li>
+          <li>Data provenance via the <code>verified</code> flag.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>The lesson that cost the most <span class="tag">durable</span></h4>
+        <ul>
+          <li>Two bugs escaped the <b>entire</b> test suite and were caught by a human using the page: a skip link that moved scroll but not focus, and a doubled <code>&lt;title&gt;</code>.</li>
+          <li>Both are now guarded across every affected route.</li>
+          <li><b>Open the page and use it — passing tests are not the same as looking.</b></li>
+          <li>Mutation testing is on the register precisely because an agent can write a test that trivially passes against the code it just wrote.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="stats" style="margin-top:16px">
+      <div class="stat"><b>366</b><span>Unit tests</span></div>
+      <div class="stat"><b>33</b><span>Test files</span></div>
+      <div class="stat"><b>57</b><span>E2E specs run</span></div>
+      <div class="stat"><b>13</b><span>Rules assertions</span></div>
+      <div class="stat"><b>10</b><span>Research reports</span></div>
+      <div class="stat"><b>0</b><span>CI runs, ever</span></div>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ DEBT ═══════════════════ -->
+  <section id="debt">
+    <div class="sec-head">
+      <p class="eyebrow">Technical debt register</p>
+      <h2>Kept current, or it isn't a register</h2>
+      <p>
+        Debt that is only mentioned in passing is debt nobody ever pays down. Two rows were
+        found <span class="serif">stale or simply wrong</span> on 21 Aug and corrected in
+        place — a wrong entry costs more than an open one, because someone will go hunting.
+      </p>
+    </div>
+
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr><th class="num">#</th><th>Item</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="num">2</td>
+            <td><b>No git remote, no deployment</b><p>All work exists on one disk. Also blocks CI from ever running.</p></td>
+            <td><span class="pill open">Open</span></td>
+          </tr>
+          <tr>
+            <td class="num">1</td>
+            <td><b>CI pipeline</b><p>Workflow runs types, lint, unit and E2E — inert until #2 closes.</p></td>
+            <td><span class="pill done">Built</span></td>
+          </tr>
+          <tr>
+            <td class="num">8</td>
+            <td><b>Database and <code>src/data</code> are two sources of one truth</b><p>Site reads the DB now; the arrays remain editorial. <code>parity.test.ts</code> guards the seam.</p></td>
+            <td><span class="pill half">Half</span></td>
+          </tr>
+          <tr>
+            <td class="num">9</td>
+            <td><b>R3F constructs a deprecated <code>THREE.Clock</code></b><p>Cosmetic, and not ours — our own <code>useFrame</code> callbacks never touch <code>state.clock</code>.</p></td>
+            <td><span class="pill parked">Upstream</span></td>
+          </tr>
+          <tr>
+            <td class="num">10</td>
+            <td><b>Accent colours used as borders with no contrast guard</b><p>Computed 21 Aug. Two real failures fixed; the row's own file references were wrong and were corrected.</p></td>
+            <td><span class="pill done">Done</span></td>
+          </tr>
+          <tr>
+            <td class="num">11</td>
+            <td><b>No mutation testing</b><p>Nothing checks whether the tests would catch a deliberately wrong implementation. Sequenced after #2.</p></td>
+            <td><span class="pill open">Open</span></td>
+          </tr>
+          <tr>
+            <td class="num">12</td>
+            <td><b>Cross-route view transitions</b><p>Shipped 15 Aug; the row was never updated and sat "open" for six days.</p></td>
+            <td><span class="pill done">Done</span></td>
+          </tr>
+          <tr>
+            <td class="num">14</td>
+            <td><b>Two persistence stacks, neither read by a page</b><p>Decided by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.</p></td>
+            <td><span class="pill done">Decided</span></td>
+          </tr>
+          <tr>
+            <td class="num">15</td>
+            <td><b>Analytics ran with no consent gate</b><p>Gate is "never call <code>initAnalytics</code>", not Google's consent mode — <code>denied</code> still sends cookieless pings.</p></td>
+            <td><span class="pill done">Done</span></td>
+          </tr>
+          <tr>
+            <td class="num">16</td>
+            <td><b>No Security Rules or App Check</b><p>Rules shipped and emulator-tested. App Check wired; <b>enforcement is an operator action, not yet taken.</b></p></td>
+            <td><span class="pill half">Half</span></td>
+          </tr>
+          <tr>
+            <td class="num">20</td>
+            <td><b>Customer PII at rest with no delete path</b><p>Delete path built 21 Aug — hard delete via the Admin SDK, rules unchanged. <b>Retention policy still unmade.</b></p></td>
+            <td><span class="pill half">Half</span></td>
+          </tr>
+          <tr>
+            <td class="num">21</td>
+            <td><b>Save action has a ceiling but no rate limit</b><p>200 per customer bounds total damage, not burst rate. Honest fix needs App Check enforcement too.</p></td>
+            <td><span class="pill open">Open</span></td>
+          </tr>
+          <tr>
+            <td class="num">5</td>
+            <td><b>Product imagery is an icon set, not photography</b><p>Deliberate. Revisit before launch.</p></td>
+            <td><span class="pill parked">Accepted</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════════ NEEDS YOU ═══════════════════ -->
+  <section id="you">
+    <div class="sec-head">
+      <p class="eyebrow">Blocked on the owner</p>
+      <h2>Four things engineering can't decide</h2>
+      <p>
+        Each of these is a call that belongs to you, not to an engineer. A number invented
+        here would read as policy to whoever found it next.
+      </p>
+    </div>
+
+    <div class="asks">
+      <div class="ask">
+        <div class="who">Debt&nbsp;#2</div>
+        <div>
+          <h4>A git remote</h4>
+          <p>
+            Needs your GitHub account. It's the register's own "next thing worth doing" —
+            everything lives on one disk today, and CI has never run because it has nowhere to
+            run. Unblocks #1 and #11 at the same time.
+          </p>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="who">Debt&nbsp;#20</div>
+        <div>
+          <h4>A retention policy for customer PII</h4>
+          <p>
+            How long should an untouched saved request live before it expires on its own, and
+            should closing an account purge the subcollection? Customers can delete their own
+            records now, which covers the data-rights half. The mechanism to enforce a
+            retention rule isn't built because the rule doesn't exist yet.
+          </p>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="who">Debt&nbsp;#16</div>
+        <div>
+          <h4>Turn on App Check enforcement</h4>
+          <p>
+            Wired in code, monitor-only in the console — which is Google's recommended
+            sequence. Flipping it to enforcing is a click in the Firebase console that only you
+            can make.
+          </p>
+        </div>
+      </div>
+      <div class="ask">
+        <div class="who">Data</div>
+        <div>
+          <h4>Geocode the real addresses</h4>
+          <p>
+            Map coordinates are approximate city-centre points shared by every branch in a
+            city, and 7 of 19 branches plus 3 of 5 couriers are still unverified placeholders.
+            Before launch, those need real addresses — knowing which city a branch is in is not
+            the same as having confirmed where it is.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  <p>
+    Generated from the repository itself — <code>docs/engineering-standards.md</code>,
+    <code>docs/backend.md</code>, <code>docs/auth.md</code>, <code>.claude/agents/</code>,
+    <code>prisma/schema.prisma</code> and the live test output.
+  </p>
+  <p>Every number on this page was measured, not estimated.</p>
+</footer>
