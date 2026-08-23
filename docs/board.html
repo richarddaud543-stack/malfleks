@@ -4,457 +4,300 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&family=Geist:wght@400;450;500&display=swap">
 
 <style>
-/* ─────────────────────────────────────────────────────────────
-   Soko's own tokens, lifted from src/app/globals.css so this
-   board reads as part of the product it documents.
-   ───────────────────────────────────────────────────────────── */
 :root {
-  --ground:      #ffffff;
-  --surface:     #f2faf5;
-  --surface-2:   #ffffff;
-  --mint:        #d4f5e0;
-  --ink:         #0c1e18;
-  --muted:       #5a6662;
-  --line:        #e2e6e4;
-  --line-strong: #c9d4ce;
-  --accent:      #005236;
-  --accent-soft: #e3f2ea;
-  --violet:      #4b1a9a;
-  --ember:       #c43d0d;
-  --lime:        #e6ff55;
-  --lime-ink:    #0c1e18;
-  --shadow:      0 1px 2px rgba(12,30,24,.05), 0 12px 32px -20px rgba(12,30,24,.35);
-
-  --done:      var(--accent);
-  --done-bg:   #e3f2ea;
-  --half:      #8a5a00;
-  --half-bg:   #fdf3dd;
-  --open:      var(--ember);
-  --open-bg:   #fcece5;
-  --parked:    #5a6662;
-  --parked-bg: #eef1ef;
+  --ground:#ffffff; --surface:#f2faf5; --surface-2:#ffffff; --mint:#d4f5e0;
+  --ink:#0c1e18; --muted:#5a6662; --line:#e2e6e4; --line-strong:#c9d4ce;
+  --accent:#005236; --accent-soft:#e3f2ea; --violet:#4b1a9a; --ember:#c43d0d;
+  --lime:#e6ff55; --lime-ink:#0c1e18;
+  --shadow:0 1px 2px rgba(12,30,24,.05), 0 12px 32px -20px rgba(12,30,24,.35);
+  --done:#005236; --done-bg:#e3f2ea; --half:#8a5a00; --half-bg:#fdf3dd;
+  --open:#c43d0d; --open-bg:#fcece5; --parked:#5a6662; --parked-bg:#eef1ef;
+  --idle-bg:#eef1ef; --idle-fg:#5a6662;
+  --queued-bg:#ede4ff; --queued-fg:#4b1a9a;
+  --active-bg:#e3f2ea; --active-fg:#005236;
+  --review-bg:#fdf3dd; --review-fg:#8a5a00;
+  --blocked-bg:#fcece5; --blocked-fg:#c43d0d;
 }
-
-:root:not([data-theme="light"]) {
-  color-scheme: light;
-}
-
+:root:not([data-theme="light"]) { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --ground:      #08120e;
-    --surface:     #0f1c17;
-    --surface-2:   #12211b;
-    --mint:        #1b3a2c;
-    --ink:         #e7f1ec;
-    --muted:       #93a49c;
-    --line:        #1e3129;
-    --line-strong: #2c443a;
-    --accent:      #4fd99b;
-    --accent-soft: #10291f;
-    --violet:      #b79cf0;
-    --ember:       #ff8a5c;
-    --lime:        #e6ff55;
-    --lime-ink:    #0c1e18;
-    --shadow:      0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
-
-    --done:      #4fd99b;
-    --done-bg:   #10291f;
-    --half:      #f0c04a;
-    --half-bg:   #2c2410;
-    --open:      #ff8a5c;
-    --open-bg:   #331a11;
-    --parked:    #93a49c;
-    --parked-bg: #18241f;
+    --ground:#08120e; --surface:#0f1c17; --surface-2:#12211b; --mint:#1b3a2c;
+    --ink:#e7f1ec; --muted:#93a49c; --line:#1e3129; --line-strong:#2c443a;
+    --accent:#4fd99b; --accent-soft:#10291f; --violet:#b79cf0; --ember:#ff8a5c;
+    --lime:#e6ff55; --lime-ink:#0c1e18;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
+    --done:#4fd99b; --done-bg:#10291f; --half:#f0c04a; --half-bg:#2c2410;
+    --open:#ff8a5c; --open-bg:#331a11; --parked:#93a49c; --parked-bg:#18241f;
+    --idle-bg:#18241f; --idle-fg:#93a49c;
+    --queued-bg:#241a3d; --queued-fg:#b79cf0;
+    --active-bg:#10291f; --active-fg:#4fd99b;
+    --review-bg:#2c2410; --review-fg:#f0c04a;
+    --blocked-bg:#331a11; --blocked-fg:#ff8a5c;
   }
 }
-
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --ground:      #08120e;
-  --surface:     #0f1c17;
-  --surface-2:   #12211b;
-  --mint:        #1b3a2c;
-  --ink:         #e7f1ec;
-  --muted:       #93a49c;
-  --line:        #1e3129;
-  --line-strong: #2c443a;
-  --accent:      #4fd99b;
-  --accent-soft: #10291f;
-  --violet:      #b79cf0;
-  --ember:       #ff8a5c;
-  --lime:        #e6ff55;
-  --lime-ink:    #0c1e18;
-  --shadow:      0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
-
-  --done:      #4fd99b;
-  --done-bg:   #10291f;
-  --half:      #f0c04a;
-  --half-bg:   #2c2410;
-  --open:      #ff8a5c;
-  --open-bg:   #331a11;
-  --parked:    #93a49c;
-  --parked-bg: #18241f;
+  --ground:#08120e; --surface:#0f1c17; --surface-2:#12211b; --mint:#1b3a2c;
+  --ink:#e7f1ec; --muted:#93a49c; --line:#1e3129; --line-strong:#2c443a;
+  --accent:#4fd99b; --accent-soft:#10291f; --violet:#b79cf0; --ember:#ff8a5c;
+  --lime:#e6ff55; --lime-ink:#0c1e18;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 32px -20px rgba(0,0,0,.9);
+  --done:#4fd99b; --done-bg:#10291f; --half:#f0c04a; --half-bg:#2c2410;
+  --open:#ff8a5c; --open-bg:#331a11; --parked:#93a49c; --parked-bg:#18241f;
+  --idle-bg:#18241f; --idle-fg:#93a49c;
+  --queued-bg:#241a3d; --queued-fg:#b79cf0;
+  --active-bg:#10291f; --active-fg:#4fd99b;
+  --review-bg:#2c2410; --review-fg:#f0c04a;
+  --blocked-bg:#331a11; --blocked-fg:#ff8a5c;
 }
 
 * { box-sizing: border-box; }
-
 body {
-  margin: 0;
-  background: var(--ground);
-  color: var(--ink);
-  font-family: "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  font-size: 16px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size:16px; line-height:1.6; -webkit-font-smoothing:antialiased;
 }
+h1,h2,h3,h4 { font-family:"Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif; font-weight:500; letter-spacing:-.02em; text-wrap:balance; margin:0; }
+.serif { font-family:"Instrument Serif", Georgia, serif; font-style:italic; font-weight:400; letter-spacing:0; color:var(--accent); }
+code,.mono { font-family:"Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size:.86em; }
+a { color:var(--accent); text-underline-offset:3px; }
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+.wrap { max-width:1080px; margin:0 auto; padding:0 24px; }
 
-h1, h2, h3, h4 {
-  font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  margin: 0;
-}
+.masthead { border-bottom:1px solid var(--line); background:radial-gradient(1100px 380px at 82% -12%, var(--accent-soft), transparent 62%), var(--ground); }
+.masthead-inner { padding:60px 0 38px; }
+.eyebrow { font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); font-weight:500; margin:0 0 14px; }
+h1 { font-size:clamp(2.3rem,6vw,3.8rem); line-height:1.02; }
+.thesis { margin:20px 0 0; max-width:60ch; font-size:1.06rem; color:var(--muted); }
+.thesis strong { color:var(--ink); font-weight:500; }
+.asof { margin-top:20px; font-size:13px; color:var(--muted); }
+.asof .mono { color:var(--ink); }
 
-.serif {
-  font-family: "Instrument Serif", Georgia, "Times New Roman", serif;
-  font-style: italic;
-  font-weight: 400;
-  letter-spacing: 0;
-  color: var(--accent);
-}
+.stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(128px,1fr)); gap:1px; background:var(--line); border:1px solid var(--line); border-radius:14px; overflow:hidden; margin-top:36px; }
+.stat { background:var(--surface-2); padding:15px 17px; }
+.stat b { display:block; font-family:"Bricolage Grotesque",sans-serif; font-size:1.6rem; font-weight:600; line-height:1.1; font-variant-numeric:tabular-nums; }
+.stat span { display:block; font-size:11px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-top:4px; }
 
-code, .mono, td.mono {
-  font-family: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: .86em;
-}
+.navbar { position:sticky; top:0; z-index:30; background:color-mix(in srgb, var(--ground) 88%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
+.navbar nav { display:flex; gap:4px; overflow-x:auto; padding:10px 24px; max-width:1080px; margin:0 auto; }
+.navbar a { flex:0 0 auto; font-size:13px; color:var(--muted); text-decoration:none; padding:5px 11px; border-radius:999px; white-space:nowrap; border:1px solid transparent; }
+.navbar a:hover { color:var(--ink); background:var(--surface); border-color:var(--line); }
 
-a { color: var(--accent); text-underline-offset: 3px; }
-a:focus-visible, button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 4px;
-}
+section { padding:58px 0; border-bottom:1px solid var(--line); scroll-margin-top:58px; }
+section:last-of-type { border-bottom:0; }
+.sec-head { max-width:64ch; margin-bottom:28px; }
+.sec-head h2 { font-size:clamp(1.55rem,3.4vw,2.05rem); }
+.sec-head p { color:var(--muted); margin:12px 0 0; }
+.card { background:var(--surface-2); border:1px solid var(--line); border-radius:16px; padding:22px; box-shadow:var(--shadow); }
 
-.wrap {
-  max-width: 1080px;
-  margin: 0 auto;
-  padding: 0 24px;
-}
+/* ── Live board ─────────────────────────────── */
+.livehead { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; }
+.savechip { display:inline-flex; align-items:center; gap:7px; font-family:"Geist Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:var(--surface); color:var(--muted); }
+.savechip .dot { width:7px; height:7px; border-radius:50%; background:var(--muted); flex:0 0 auto; }
+.savechip[data-s="saved"] { color:var(--done); border-color:var(--done); } .savechip[data-s="saved"] .dot { background:var(--done); }
+.savechip[data-s="saving"] .dot { background:var(--half); }
+.savechip[data-s="local"], .savechip[data-s="readonly"] { color:var(--muted); }
+.savechip[data-s="error"] { color:var(--open); border-color:var(--open); } .savechip[data-s="error"] .dot { background:var(--open); }
 
-/* ── Masthead ─────────────────────────────────────────── */
-.masthead {
-  border-bottom: 1px solid var(--line);
-  background:
-    radial-gradient(1100px 380px at 82% -12%, var(--accent-soft), transparent 62%),
-    var(--ground);
-}
-.masthead-inner { padding: 64px 0 40px; }
+.lanes { display:grid; gap:10px; }
+.lane { display:grid; grid-template-columns:auto 1fr; gap:12px 14px; align-items:center; background:var(--surface-2); border:1px solid var(--line); border-radius:13px; padding:13px 15px; }
+@media (min-width:820px) { .lane { grid-template-columns:170px 128px 1fr; } }
+.lane.on { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.lane-who { display:flex; align-items:baseline; gap:8px; min-width:0; }
+.lane-who b { font-family:"Bricolage Grotesque",sans-serif; font-size:1rem; font-weight:600; }
+.lane-who .eng-id { font-family:"Geist Mono",monospace; font-size:9.5px; letter-spacing:.08em; color:var(--muted); border:1px solid var(--line-strong); border-radius:4px; padding:1px 4px; flex:0 0 auto; }
+.lane select { width:100%; font-family:"Geist Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; padding:5px 8px; border-radius:999px; border:1px solid var(--line); background:var(--idle-bg); color:var(--idle-fg); cursor:pointer; }
+.lane select[data-v="queued"]  { background:var(--queued-bg);  color:var(--queued-fg); }
+.lane select[data-v="active"]  { background:var(--active-bg);  color:var(--active-fg); }
+.lane select[data-v="review"]  { background:var(--review-bg);  color:var(--review-fg); }
+.lane select[data-v="blocked"] { background:var(--blocked-bg); color:var(--blocked-fg); }
+.lane input { grid-column:1/-1; width:100%; font-family:inherit; font-size:13.5px; padding:7px 11px; border-radius:9px; border:1px solid var(--line); background:var(--surface); color:var(--ink); }
+@media (min-width:820px) { .lane input { grid-column:auto; } }
+.lane input::placeholder { color:var(--muted); }
 
-.eyebrow {
-  font-size: 11px;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-  color: var(--muted);
-  font-weight: 500;
-  margin: 0 0 14px;
-}
+/* ── Ship log ───────────────────────────────── */
+.filters { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; align-items:center; }
+.fbtn { font-family:"Geist Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase; padding:5px 11px; border-radius:999px; border:1px solid var(--line); background:var(--surface-2); color:var(--muted); cursor:pointer; }
+.fbtn:hover { color:var(--ink); border-color:var(--line-strong); }
+.fbtn[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--ground); }
+.fcount { font-size:12.5px; color:var(--muted); margin-left:auto; font-variant-numeric:tabular-nums; }
 
-h1 { font-size: clamp(2.4rem, 6vw, 3.9rem); line-height: 1.02; }
+.log { display:flex; flex-direction:column; gap:0; border:1px solid var(--line); border-radius:14px; overflow:hidden; }
+.entry { display:grid; grid-template-columns:1fr; gap:4px 14px; padding:13px 16px; background:var(--surface-2); border-bottom:1px solid var(--line); }
+@media (min-width:760px) { .entry { grid-template-columns:96px 1fr auto; align-items:baseline; } }
+.entry:last-child { border-bottom:0; }
+.entry .when { font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted); white-space:nowrap; }
+.entry .what { font-size:14px; }
+.entry .what .hash { font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted); margin-right:8px; }
+.entry .whom { display:flex; gap:5px; flex-wrap:wrap; }
+.who-tag { font-family:"Geist Mono",monospace; font-size:10px; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:999px; background:var(--accent-soft); color:var(--accent); border:1px solid var(--line); white-space:nowrap; }
+.who-tag[data-w="lead"] { background:var(--mint); color:var(--ink); }
+.entry .delta { font-family:"Geist Mono",monospace; font-size:10.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.entry .delta .add { color:var(--done); } .entry .delta .del { color:var(--open); }
+.empty { padding:26px; text-align:center; color:var(--muted); font-size:14px; background:var(--surface-2); }
 
-.thesis {
-  margin: 20px 0 0;
-  max-width: 60ch;
-  font-size: 1.08rem;
-  color: var(--muted);
-}
-.thesis strong { color: var(--ink); font-weight: 500; }
+/* ── Edges ──────────────────────────────────── */
+.edges { display:grid; gap:7px; }
+.edge { display:grid; grid-template-columns:1fr 2fr auto; gap:12px; align-items:center; font-size:13.5px; }
+.edge .pair { text-align:right; color:var(--muted); }
+.edge .pair b { color:var(--ink); font-weight:500; }
+.edge .bar { height:9px; background:var(--surface); border:1px solid var(--line); border-radius:999px; overflow:hidden; }
+.edge .bar i { display:block; height:100%; background:var(--accent); border-radius:999px; }
+.edge .n { font-family:"Geist Mono",monospace; font-size:11.5px; color:var(--muted); font-variant-numeric:tabular-nums; min-width:2ch; text-align:right; }
+.edge.dim { opacity:.28; }
 
-.asof {
-  margin-top: 22px;
-  font-size: 13px;
-  color: var(--muted);
-}
-.asof .mono { color: var(--ink); }
+/* ── Roster ─────────────────────────────────── */
+.roster { display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:13px; }
+.eng { background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:17px; display:flex; flex-direction:column; gap:8px; text-align:left; font:inherit; color:inherit; cursor:pointer; }
+.eng:hover { border-color:var(--line-strong); }
+.eng[aria-pressed="true"] { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent); }
+.eng.dim { opacity:.4; }
+.eng.lead { grid-column:1/-1; background:var(--mint); border-color:var(--line-strong); cursor:default; }
+.eng-top { display:flex; align-items:baseline; gap:9px; flex-wrap:wrap; }
+.eng-id { font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.08em; color:var(--muted); border:1px solid var(--line-strong); border-radius:5px; padding:1px 5px; }
+.eng h4 { font-size:1.1rem; font-weight:600; }
+.eng .role { font-size:13px; color:var(--accent); font-weight:500; }
+.eng p { margin:0; font-size:13.5px; color:var(--muted); line-height:1.5; }
+.eng .owns { font-family:"Geist Mono",monospace; font-size:11px; color:var(--muted); border-top:1px dashed var(--line); padding-top:9px; overflow-wrap:anywhere; }
+.eng .ships { font-family:"Geist Mono",monospace; font-size:11px; color:var(--accent); font-variant-numeric:tabular-nums; }
 
-/* ── Stat strip ───────────────────────────────────────── */
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: 1px;
-  background: var(--line);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  overflow: hidden;
-  margin-top: 40px;
-}
-.stat { background: var(--surface-2); padding: 16px 18px; }
-.stat b {
-  display: block;
-  font-family: "Bricolage Grotesque", sans-serif;
-  font-size: 1.65rem;
-  font-weight: 600;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-}
-.stat span {
-  display: block;
-  font-size: 11.5px;
-  color: var(--muted);
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  margin-top: 4px;
-}
+.phases { display:grid; gap:13px; grid-template-columns:1fr; }
+@media (min-width:820px) { .phases { grid-template-columns:repeat(3,1fr); } }
+.phase { padding:19px 19px 19px 21px; border-left:3px solid var(--accent); background:var(--surface); border-radius:0 14px 14px 0; }
+.phase .n { font-family:"Geist Mono",monospace; font-size:11px; color:var(--accent); letter-spacing:.1em; text-transform:uppercase; }
+.phase h4 { font-size:1.03rem; margin-top:5px; }
+.phase p { margin:8px 0 0; font-size:13.5px; color:var(--muted); }
+.gate { margin-top:17px; padding:16px 20px; border-radius:12px; background:var(--lime); color:var(--lime-ink); font-size:14.5px; }
+.gate b { font-family:"Bricolage Grotesque",sans-serif; }
 
-/* ── Section nav ──────────────────────────────────────── */
-.navbar {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  background: color-mix(in srgb, var(--ground) 88%, transparent);
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--line);
-}
-.navbar nav {
-  display: flex;
-  gap: 4px;
-  overflow-x: auto;
-  padding: 10px 24px;
-  max-width: 1080px;
-  margin: 0 auto;
-  scrollbar-width: thin;
-}
-.navbar a {
-  flex: 0 0 auto;
-  font-size: 13px;
-  color: var(--muted);
-  text-decoration: none;
-  padding: 5px 11px;
-  border-radius: 999px;
-  white-space: nowrap;
-  border: 1px solid transparent;
-}
-.navbar a:hover { color: var(--ink); background: var(--surface); border-color: var(--line); }
+.flow { overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--surface); }
+.flow pre { margin:0; padding:21px; font-family:"Geist Mono",ui-monospace,monospace; font-size:12.5px; line-height:1.65; color:var(--ink); white-space:pre; }
 
-/* ── Sections ─────────────────────────────────────────── */
-section { padding: 62px 0; border-bottom: 1px solid var(--line); scroll-margin-top: 58px; }
-section:last-of-type { border-bottom: 0; }
-.sec-head { max-width: 64ch; margin-bottom: 32px; }
-.sec-head h2 { font-size: clamp(1.6rem, 3.4vw, 2.1rem); }
-.sec-head p { color: var(--muted); margin: 12px 0 0; }
+.split { display:grid; gap:13px; grid-template-columns:1fr; }
+@media (min-width:780px) { .split { grid-template-columns:1fr 1fr; } }
+.panel { background:var(--surface-2); border:1px solid var(--line); border-radius:14px; padding:19px; }
+.panel h4 { font-size:1.01rem; display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+.panel ul { margin:12px 0 0; padding-left:18px; font-size:13.5px; color:var(--muted); }
+.panel li { margin-bottom:6px; }
+.panel li b { color:var(--ink); font-weight:500; }
+.tag { font-family:"Geist Mono",monospace; font-size:10px; letter-spacing:.07em; text-transform:uppercase; padding:2px 7px; border-radius:5px; background:var(--accent-soft); color:var(--accent); border:1px solid var(--line); }
 
-.card {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  padding: 22px;
-  box-shadow: var(--shadow);
-}
+.models { display:grid; grid-template-columns:repeat(auto-fill,minmax(208px,1fr)); gap:11px; }
+.model { border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--surface-2); }
+.model header { background:var(--surface); padding:9px 13px; font-family:"Geist Mono",monospace; font-size:12.5px; font-weight:500; border-bottom:1px solid var(--line); display:flex; justify-content:space-between; align-items:center; }
+.model header em { font-style:normal; font-size:10px; color:var(--muted); letter-spacing:.06em; }
+.model ul { margin:0; padding:10px 13px; list-style:none; }
+.model li { font-family:"Geist Mono",monospace; font-size:11.5px; color:var(--muted); padding:2.5px 0; display:flex; justify-content:space-between; gap:10px; }
+.model li b { color:var(--ink); font-weight:400; }
+.model li.key b { color:var(--accent); }
 
-/* ── Routing rule diagram ─────────────────────────────── */
-.rule {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-  align-items: stretch;
-}
-@media (min-width: 760px) { .rule { grid-template-columns: 1fr auto 1fr; } }
+.wires { display:grid; grid-template-columns:repeat(auto-fill,minmax(228px,1fr)); gap:15px; }
+.wire { border:1px solid var(--line); border-radius:14px; background:var(--surface-2); overflow:hidden; }
+.wire .frame { background:var(--surface); padding:12px; display:flex; flex-direction:column; gap:6px; border-bottom:1px solid var(--line); min-height:166px; }
+.wire .cap { padding:11px 14px; }
+.wire .cap b { font-family:"Bricolage Grotesque",sans-serif; font-size:13.5px; font-weight:600; display:block; }
+.wire .cap span { font-family:"Geist Mono",monospace; font-size:10.5px; color:var(--muted); }
+.bx { background:var(--line); border-radius:3px; }
+.bx.h { height:9px; } .bx.t { height:15px; background:var(--line-strong); }
+.bx.a { background:var(--accent); opacity:.55; } .bx.m { background:var(--mint); }
+.row { display:flex; gap:6px; } .row > * { flex:1; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+.grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.fill { flex:1; min-height:26px; }
 
-.rule-q {
-  grid-column: 1 / -1;
-  background: var(--mint);
-  border: 1px solid var(--line-strong);
-  border-radius: 14px;
-  padding: 18px 22px;
-  text-align: center;
-}
-.rule-q b { font-family: "Bricolage Grotesque", sans-serif; font-size: 1.05rem; font-weight: 600; }
-.rule-q span { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
+.swatches { display:grid; grid-template-columns:repeat(auto-fill,minmax(122px,1fr)); gap:10px; }
+.sw { border:1px solid var(--line); border-radius:11px; overflow:hidden; }
+.sw .chip { height:52px; }
+.sw .meta { padding:8px 10px; background:var(--surface-2); }
+.sw .meta b { display:block; font-size:12px; font-weight:500; }
+.sw .meta code { color:var(--muted); font-size:10.5px; }
+.specimen { margin-top:15px; display:grid; gap:11px; }
+.spec-row { background:var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:15px 18px; display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.spec-row .label { font-family:"Geist Mono",monospace; font-size:10.5px; color:var(--muted); letter-spacing:.08em; text-transform:uppercase; }
 
-.branch-box { border-radius: 14px; padding: 20px; border: 1px solid var(--line); background: var(--surface-2); }
-.branch-box.yes { border-color: var(--accent); }
-.branch-box.no  { border-color: var(--line-strong); }
-.branch-box h4 { font-size: 1rem; display: flex; align-items: center; gap: 8px; }
-.branch-box p { margin: 8px 0 0; font-size: 14px; color: var(--muted); }
-.branch-box .count {
-  display: inline-block; margin-top: 12px; font-size: 12px;
-  padding: 3px 9px; border-radius: 999px;
-  background: var(--surface); border: 1px solid var(--line); color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-.vs {
-  display: none; align-self: center; color: var(--muted);
-  font-family: "Instrument Serif", serif; font-style: italic; font-size: 1.2rem;
-}
-@media (min-width: 760px) { .vs { display: block; } }
+.tablewrap { overflow-x:auto; border:1px solid var(--line); border-radius:14px; }
+table { border-collapse:collapse; width:100%; min-width:660px; background:var(--surface-2); }
+th,td { text-align:left; padding:11px 14px; border-bottom:1px solid var(--line); font-size:13.5px; vertical-align:top; }
+th { background:var(--surface); font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:500; }
+tbody tr:last-child td { border-bottom:0; }
+tbody tr.dim { opacity:.3; }
+td.num { font-variant-numeric:tabular-nums; color:var(--muted); width:42px; }
+td p { margin:5px 0 0; color:var(--muted); font-size:12.5px; }
+.pill { display:inline-block; white-space:nowrap; font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.05em; text-transform:uppercase; padding:3px 9px; border-radius:999px; font-weight:500; }
+.pill.done{background:var(--done-bg);color:var(--done);} .pill.half{background:var(--half-bg);color:var(--half);}
+.pill.open{background:var(--open-bg);color:var(--open);} .pill.parked{background:var(--parked-bg);color:var(--parked);}
 
-/* ── Roster ───────────────────────────────────────────── */
-.roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 14px; }
-.eng {
-  background: var(--surface-2);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.eng.lead { grid-column: 1 / -1; background: var(--mint); border-color: var(--line-strong); }
-.eng-top { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-.eng-id {
-  font-family: "Geist Mono", monospace; font-size: 10.5px;
-  letter-spacing: .08em; color: var(--muted);
-  border: 1px solid var(--line-strong); border-radius: 5px; padding: 1px 5px;
-}
-.eng h4 { font-size: 1.12rem; font-weight: 600; }
-.eng .role { font-size: 13px; color: var(--accent); font-weight: 500; }
-.eng p { margin: 0; font-size: 13.5px; color: var(--muted); line-height: 1.5; }
-.eng .owns {
-  font-family: "Geist Mono", monospace; font-size: 11px;
-  color: var(--muted); border-top: 1px dashed var(--line); padding-top: 9px; margin-top: 2px;
-  overflow-wrap: anywhere;
-}
+.asks { display:grid; gap:12px; }
+.ask { display:flex; gap:16px; align-items:flex-start; border:1px solid var(--line); border-left:4px solid var(--lime); background:var(--surface-2); border-radius:0 13px 13px 0; padding:16px 19px; }
+.ask .who { font-family:"Geist Mono",monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-top:3px; flex:0 0 62px; }
+.ask h4 { font-size:1rem; } .ask p { margin:6px 0 0; font-size:13.5px; color:var(--muted); }
 
-/* ── Phases ───────────────────────────────────────────── */
-.phases { display: grid; gap: 14px; grid-template-columns: 1fr; counter-reset: phase -1; }
-@media (min-width: 820px) { .phases { grid-template-columns: repeat(3, 1fr); } }
-.phase { position: relative; padding: 20px 20px 20px 22px; border-left: 3px solid var(--accent); background: var(--surface); border-radius: 0 14px 14px 0; }
-.phase .n {
-  font-family: "Geist Mono", monospace; font-size: 11px; color: var(--accent);
-  letter-spacing: .1em; text-transform: uppercase;
+/* ── Designed-not-built marker ───────────────── */
+.planned { border-left:4px solid var(--violet); padding-left:16px; }
+.badge {
+  display:inline-flex; align-items:center; gap:6px; font-family:"Geist Mono",monospace;
+  font-size:10px; letter-spacing:.09em; text-transform:uppercase; font-weight:500;
+  padding:3px 9px; border-radius:999px; background:var(--queued-bg); color:var(--queued-fg);
+  border:1px solid var(--line); vertical-align:middle; margin-left:10px;
 }
-.phase h4 { font-size: 1.05rem; margin-top: 5px; }
-.phase p { margin: 8px 0 0; font-size: 13.5px; color: var(--muted); }
+.badge.built { background:var(--done-bg); color:var(--done); }
 
-.gate {
-  margin-top: 18px; padding: 16px 20px; border-radius: 12px;
-  background: var(--lime); color: var(--lime-ink);
-  font-size: 14.5px;
+/* ── Pipeline ────────────────────────────────── */
+.pipe { display:grid; gap:10px; grid-template-columns:1fr; counter-reset:step; }
+@media (min-width:900px) { .pipe { grid-template-columns:repeat(5,1fr); } }
+.step { background:var(--surface-2); border:1px solid var(--line); border-radius:13px; padding:15px; position:relative; }
+.step .sn {
+  font-family:"Geist Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--violet); display:block; margin-bottom:6px;
 }
-.gate b { font-family: "Bricolage Grotesque", sans-serif; }
+.step b { font-family:"Bricolage Grotesque",sans-serif; font-size:.98rem; font-weight:600; display:block; }
+.step p { margin:6px 0 0; font-size:12.5px; color:var(--muted); line-height:1.5; }
+.step.gatekeep { border-color:var(--violet); background:var(--queued-bg); }
 
-/* ── Flow diagrams ────────────────────────────────────── */
-.flow { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
-.flow pre {
-  margin: 0; padding: 22px;
-  font-family: "Geist Mono", ui-monospace, monospace;
-  font-size: 12.5px; line-height: 1.65; color: var(--ink);
-  white-space: pre;
-}
+/* ── Three phases ────────────────────────────── */
+.phases3 { display:grid; gap:12px; grid-template-columns:1fr; align-items:stretch; }
+@media (min-width:860px) { .phases3 { grid-template-columns:1fr 1.25fr 1fr; } }
+.ph { border:1px solid var(--line); border-radius:14px; padding:19px; background:var(--surface-2); }
+.ph .pn { font-family:"Geist Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); }
+.ph h4 { font-size:1.05rem; margin-top:5px; }
+.ph p { margin:8px 0 0; font-size:13px; color:var(--muted); }
+.ph.mid { background:var(--mint); border-color:var(--line-strong); }
+.forks { display:grid; gap:8px; margin-top:12px; }
+.fork { border:1px solid var(--line-strong); border-radius:10px; padding:10px 12px; background:var(--surface-2); font-size:12.5px; }
+.fork b { display:block; font-family:"Bricolage Grotesque",sans-serif; font-size:.9rem; }
+.fork span { color:var(--muted); }
 
-/* ── Split panels ─────────────────────────────────────── */
-.split { display: grid; gap: 14px; grid-template-columns: 1fr; }
-@media (min-width: 780px) { .split { grid-template-columns: 1fr 1fr; } }
-.panel { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 20px; }
-.panel h4 { font-size: 1.02rem; display: flex; align-items: center; gap: 9px; }
-.panel ul { margin: 12px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); }
-.panel li { margin-bottom: 6px; }
-.panel li b { color: var(--ink); font-weight: 500; }
-.tag {
-  font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .07em;
-  text-transform: uppercase; padding: 2px 7px; border-radius: 5px;
-  background: var(--accent-soft); color: var(--accent); border: 1px solid var(--line);
-}
+/* ── Ledger ──────────────────────────────────── */
+.ledger { width:100%; border-collapse:collapse; min-width:520px; background:var(--surface-2); }
+.ledger td, .ledger th { padding:10px 14px; font-size:13.5px; border-bottom:1px solid var(--line); }
+.ledger th { background:var(--surface); font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:500; text-align:left; }
+.ledger td.amt { text-align:right; font-family:"Geist Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.ledger td.note { color:var(--muted); font-size:12.5px; }
+.ledger tr.soko td { background:var(--accent-soft); }
+.ledger tr.total td { border-top:2px solid var(--line-strong); border-bottom:0; font-weight:500; }
+.ledger tr.total td.amt { color:var(--accent); }
+.ledger tr.check td { background:var(--mint); font-weight:500; }
 
-/* ── Schema ───────────────────────────────────────────── */
-.models { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
-.model { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface-2); }
-.model header {
-  background: var(--surface); padding: 9px 13px;
-  font-family: "Geist Mono", monospace; font-size: 12.5px; font-weight: 500;
-  border-bottom: 1px solid var(--line);
-  display: flex; justify-content: space-between; align-items: center;
-}
-.model header em { font-style: normal; font-size: 10px; color: var(--muted); letter-spacing: .06em; }
-.model ul { margin: 0; padding: 10px 13px; list-style: none; }
-.model li {
-  font-family: "Geist Mono", monospace; font-size: 11.5px; color: var(--muted);
-  padding: 2.5px 0; display: flex; justify-content: space-between; gap: 10px;
-}
-.model li b { color: var(--ink); font-weight: 400; }
-.model li.key b { color: var(--accent); }
+.rates { display:grid; gap:10px; grid-template-columns:1fr; }
+@media (min-width:760px) { .rates { grid-template-columns:repeat(3,1fr); } }
+.rate { border:1px solid var(--line); border-radius:13px; padding:17px; background:var(--surface-2); }
+.rate .pct { font-family:"Bricolage Grotesque",sans-serif; font-size:2rem; font-weight:600; line-height:1; color:var(--accent); font-variant-numeric:tabular-nums; }
+.rate b { display:block; margin-top:8px; font-size:.95rem; font-family:"Bricolage Grotesque",sans-serif; font-weight:600; }
+.rate p { margin:6px 0 0; font-size:12.5px; color:var(--muted); }
 
-/* ── Wireframes ───────────────────────────────────────── */
-.wires { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
-.wire { border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); overflow: hidden; }
-.wire .frame {
-  background: var(--surface); padding: 12px; display: flex; flex-direction: column; gap: 6px;
-  border-bottom: 1px solid var(--line); min-height: 168px;
-}
-.wire .cap { padding: 11px 14px; }
-.wire .cap b { font-family: "Bricolage Grotesque", sans-serif; font-size: 13.5px; font-weight: 600; display: block; }
-.wire .cap span { font-family: "Geist Mono", monospace; font-size: 10.5px; color: var(--muted); }
-.bx { background: var(--line); border-radius: 3px; }
-.bx.h { height: 9px; }
-.bx.t { height: 15px; background: var(--line-strong); }
-.bx.a { background: var(--accent); opacity: .55; }
-.bx.m { background: var(--mint); }
-.row { display: flex; gap: 6px; }
-.row > * { flex: 1; }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-.fill { flex: 1; min-height: 26px; }
+/* ── Roadmap ─────────────────────────────────── */
+.road { display:grid; gap:11px; }
+.stage { display:grid; grid-template-columns:auto 1fr; gap:15px; align-items:start; border:1px solid var(--line); border-radius:13px; padding:17px 19px; background:var(--surface-2); }
+.stage .sl { font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); padding-top:3px; flex:0 0 auto; min-width:62px; }
+.stage h4 { font-size:1.02rem; }
+.stage p { margin:6px 0 0; font-size:13.5px; color:var(--muted); }
+.stage.first { border-left:4px solid var(--ember); }
 
-/* ── Palette ──────────────────────────────────────────── */
-.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(124px, 1fr)); gap: 10px; }
-.sw { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; }
-.sw .chip { height: 54px; }
-.sw .meta { padding: 8px 10px; background: var(--surface-2); }
-.sw .meta b { display: block; font-size: 12px; font-weight: 500; }
-.sw .meta code { color: var(--muted); font-size: 10.5px; }
-
-.specimen { margin-top: 16px; display: grid; gap: 12px; }
-.spec-row {
-  background: var(--surface-2); border: 1px solid var(--line);
-  border-radius: 12px; padding: 16px 18px;
-  display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-}
-.spec-row .label { font-family: "Geist Mono", monospace; font-size: 10.5px; color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
-
-/* ── Table ────────────────────────────────────────────── */
-.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; }
-table { border-collapse: collapse; width: 100%; min-width: 660px; background: var(--surface-2); }
-th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); font-size: 13.5px; vertical-align: top; }
-th {
-  background: var(--surface); font-family: "Geist Mono", monospace;
-  font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 500;
-}
-tbody tr:last-child td { border-bottom: 0; }
-td.num { font-variant-numeric: tabular-nums; color: var(--muted); width: 42px; }
-td p { margin: 5px 0 0; color: var(--muted); font-size: 12.5px; }
-
-.pill {
-  display: inline-block; white-space: nowrap;
-  font-family: "Geist Mono", monospace; font-size: 10.5px; letter-spacing: .05em;
-  text-transform: uppercase; padding: 3px 9px; border-radius: 999px; font-weight: 500;
-}
-.pill.done   { background: var(--done-bg);   color: var(--done); }
-.pill.half   { background: var(--half-bg);   color: var(--half); }
-.pill.open   { background: var(--open-bg);   color: var(--open); }
-.pill.parked { background: var(--parked-bg); color: var(--parked); }
-
-/* ── Owner decisions ──────────────────────────────────── */
-.asks { display: grid; gap: 12px; }
-.ask {
-  display: flex; gap: 16px; align-items: flex-start;
-  border: 1px solid var(--line); border-left: 4px solid var(--lime);
-  background: var(--surface-2); border-radius: 0 13px 13px 0; padding: 17px 20px;
-}
-.ask .who {
-  font-family: "Geist Mono", monospace; font-size: 10px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--muted); padding-top: 3px; flex: 0 0 62px;
-}
-.ask h4 { font-size: 1rem; }
-.ask p { margin: 6px 0 0; font-size: 13.5px; color: var(--muted); }
-
-footer { padding: 40px 0 64px; color: var(--muted); font-size: 13px; }
-footer p { margin: 0 0 6px; }
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
-}
-html { scroll-behavior: smooth; }
+footer { padding:38px 0 62px; color:var(--muted); font-size:13px; }
+footer p { margin:0 0 6px; }
+@media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
+html { scroll-behavior:smooth; }
 </style>
 
 <header class="masthead">
@@ -468,14 +311,13 @@ html { scroll-behavior: smooth; }
       Everything on this page exists to serve that one rule.
     </p>
     <p class="asof">
-      State as of <span class="mono">2026-08-21</span> · branch <span class="mono">master</span> ·
-      head <span class="mono">1182952</span> · <span class="serif">no remote yet</span>
+      Repository state at <span class="mono">2026-08-23</span> · branch <span class="mono">master</span> ·
+      47 commits · <span class="serif">no remote yet</span>
     </p>
-
     <div class="stats">
       <div class="stat"><b>9</b><span>People</span></div>
+      <div class="stat"><b>47</b><span>Commits</span></div>
       <div class="stat"><b>12</b><span>Routes</span></div>
-      <div class="stat"><b>113</b><span>Pages built</span></div>
       <div class="stat"><b>366</b><span>Unit tests</span></div>
       <div class="stat"><b>57</b><span>E2E tests</span></div>
       <div class="stat"><b>42</b><span>Components</span></div>
@@ -486,15 +328,21 @@ html { scroll-behavior: smooth; }
 
 <div class="navbar">
   <nav>
-    <a href="#product">The rule</a>
+    <a href="#board">Assignment board</a>
+    <a href="#log">Ship log</a>
+    <a href="#edges">Who works with whom</a>
     <a href="#team">The team</a>
+    <a href="#product">The rule</a>
+    <a href="#phases">Three phases</a>
+    <a href="#pipeline">Getting listed</a>
+    <a href="#money">The money</a>
+    <a href="#roadmap">Build order</a>
     <a href="#process">How work flows</a>
     <a href="#architecture">Architecture</a>
     <a href="#data">Database</a>
     <a href="#auth">Auth</a>
     <a href="#design">Design system</a>
     <a href="#screens">Screens</a>
-    <a href="#quality">Quality</a>
     <a href="#debt">Debt register</a>
     <a href="#you">Needs you</a>
   </nav>
@@ -502,72 +350,84 @@ html { scroll-behavior: smooth; }
 
 <main class="wrap">
 
-  <!-- ═══════════════════ THE RULE ═══════════════════ -->
-  <section id="product">
+  <!-- ══════════ LIVE ASSIGNMENT BOARD ══════════ -->
+  <section id="board">
     <div class="sec-head">
-      <p class="eyebrow">The product</p>
-      <h2>One question, asked at every branch</h2>
+      <p class="eyebrow">Live · shared</p>
+      <h2>Who is on what</h2>
       <p>
-        <code>resolveDeliveryRoute()</code> is four lines long and everything else is
-        downstream of it. It reads one boolean on the branch and decides who carries the box.
+        This is the one part of the page that is <strong>writable</strong>. Set a status,
+        type an assignment, and it saves into the artifact itself — so it is still there when
+        you come back, and I can read it at the start of the next session and pick the work up.
       </p>
     </div>
 
-    <div class="rule">
-      <div class="rule-q">
-        <b>Does this branch run its own delivery?</b>
-        <span><code>branch.deliveryOffered</code> — src/lib/order.ts</span>
-      </div>
-
-      <div class="branch-box yes">
-        <h4>Yes → brand fleet</h4>
-        <p>
-          The brand carries it. No courier in the loop, no third-party handoff, and no
-          published ETA — brands don't quote one, so we don't invent one.
-        </p>
-        <span class="count">6 of 19 branches</span>
-      </div>
-
-      <div class="vs">or</div>
-
-      <div class="branch-box no">
-        <h4>No → local courier</h4>
-        <p>
-          We match couriers serving that branch's city. Couriers <em>do</em> publish an
-          ETA, so the estimate shown is theirs, not ours.
-        </p>
-        <span class="count">13 of 19 branches · 5 couriers</span>
-      </div>
+    <div class="livehead">
+      <p style="margin:0;font-size:13.5px;color:var(--muted);max-width:56ch">
+        Nobody is executing right now. These engineers are agent definitions in
+        <code>.claude/agents/</code> — they run only while a session is running them, so this
+        board is a <em>queue you set</em>, not a telemetry feed.
+      </p>
+      <span class="savechip" id="savechip" data-s="init"><span class="dot"></span><span id="savetext">Checking…</span></span>
     </div>
 
-    <div class="card" style="margin-top:14px">
-      <h4>Why the answer arrives before the click</h4>
+    <div class="lanes" id="lanes"></div>
+  </section>
+
+  <!-- ══════════ SHIP LOG ══════════ -->
+  <section id="log">
+    <div class="sec-head">
+      <p class="eyebrow">Activity · real</p>
+      <h2>What they have actually shipped</h2>
+      <p>
+        Every commit in the repository, attributed by <strong>which files it touched</strong>
+        against each engineer's owned paths. Not self-reported — derived. Click a name to
+        filter the log, the collaboration bars, the roster and the debt table at once.
+      </p>
+    </div>
+
+    <div class="filters" id="filters"></div>
+    <div class="log" id="loglist"></div>
+  </section>
+
+  <!-- ══════════ EDGES ══════════ -->
+  <section id="edges">
+    <div class="sec-head">
+      <p class="eyebrow">Interaction</p>
+      <h2>Whose work lands together</h2>
+      <p>
+        Two engineers share an edge when their owned files changed in the same commit. It is a
+        crude proxy for collaboration, and it says something true anyway:
+        <span class="serif">frontend never ships alone.</span>
+      </p>
+    </div>
+    <div class="edges" id="edgelist"></div>
+    <div class="card" style="margin-top:16px">
+      <h4>What the strongest edge means</h4>
       <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
-        The route used to be computed on the delivery page — one page <em>after</em> the
-        customer had already chosen. <code>previewDelivery()</code> now runs the same rule on
-        the search card and the product page, so an unorderable product says so on its own
-        page instead of after the click. Deliberate non-goal: <strong>there is no
-        delivery-speed filter.</strong> Only couriers publish an ETA, so filtering on speed
-        would silently hide every brand-fleet listing. Show the number; don't filter on one
-        we only have half of.
+        <strong>Atlas + Sentinel is the heaviest pairing in the repo</strong> — frontend work
+        and its tests arrive in the same commit, which is the standing baseline working as
+        intended rather than a coincidence. The thinnest edges are the honest ones too:
+        Vault touches almost nothing else, because auth and Security Rules are a genuinely
+        separable seam. And <strong>Beacon + Forge</strong> exists only because docs and CI
+        config live next to each other in the ownership map, not because they collaborate.
       </p>
     </div>
   </section>
 
-  <!-- ═══════════════════ TEAM ═══════════════════ -->
+  <!-- ══════════ TEAM ══════════ -->
   <section id="team">
     <div class="sec-head">
       <p class="eyebrow">The roster</p>
       <h2>Eight engineers and a lead</h2>
       <p>
-        Each is a separate agent with its own brief, its own owned directories, and its own
-        accumulated skill file. They start every assignment with <span class="serif">no memory
-        of the last one</span> — which is exactly why so much of this project is written down.
+        Each is a separate agent with its own brief, owned directories and accumulated skill
+        file. They start every assignment with <span class="serif">no memory of the last
+        one</span> — which is exactly why so much of this project is written down.
       </p>
     </div>
-
-    <div class="roster">
-      <article class="eng lead">
+    <div class="roster" id="roster">
+      <div class="eng lead">
         <div class="eng-top"><span class="eng-id">LEAD</span><h4>Engineering Lead</h4></div>
         <div class="role">Assigns · reviews · integrates</div>
         <p>
@@ -576,133 +436,321 @@ html { scroll-behavior: smooth; }
           problem in the right shape, and owns the debt register. Doesn't out-engineer the
           specialists.
         </p>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-1</span><h4>Atlas</h4></div>
-        <div class="role">Frontend &amp; Motion</div>
-        <p>Pages, components, scroll-driven work, view transitions — anything visual that moves.</p>
-        <div class="owns">components/home · motion · search · locator</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-2</span><h4>Mercury</h4></div>
-        <div class="role">Data &amp; business logic</div>
-        <p>The domain types and their invariants. Pricing, currency, faceted search, and the routing rule itself.</p>
-        <div class="owns">src/data · src/lib</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-3</span><h4>Sentinel</h4></div>
-        <div class="role">QA &amp; accessibility</div>
-        <p>Writes and audits tests, diagnoses flaky specs, and judges whether coverage is real or theatre.</p>
-        <div class="owns">e2e/ · test strategy</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-4</span><h4>Forge</h4></div>
-        <div class="role">Platform &amp; backend</div>
-        <p>Prisma, the repository layer, migrations, seeding, CI and build tooling.</p>
-        <div class="owns">src/server · prisma/ · .github/workflows</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-5</span><h4>Beacon</h4></div>
-        <div class="role">SEO, content &amp; IA</div>
-        <p>New routes, titles, sitemap entries, navigation structure, wireframes, and the order flow's honesty.</p>
-        <div class="owns">agents · delivery · order routes</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-6</span><h4>Prism</h4></div>
-        <div class="role">Visual &amp; graphic design</div>
-        <p>Palette, typography, spacing, tokens, and every colour or contrast decision.</p>
-        <div class="owns">globals.css · brand/product components</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-7</span><h4>Vault</h4></div>
-        <div class="role">Cloud platform &amp; security</div>
-        <p>Firebase config, authentication, Security Rules, App Check, sessions, credentials and quotas.</p>
-        <div class="owns">firestore.rules · server/auth · server/firebase</div>
-      </article>
-
-      <article class="eng">
-        <div class="eng-top"><span class="eng-id">ENG-8</span><h4>Ledger</h4></div>
-        <div class="role">Commerce &amp; payments</div>
-        <p>Money, the order record, mobile money, pricing strategy, and who bears delivery risk.</p>
-        <div class="owns">src/lib/order.ts</div>
-      </article>
+      </div>
     </div>
-
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:15px">
       <h4>Why the roster grew</h4>
       <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
         <strong>Prism</strong> was split off Beacon on 14 Aug — "design system" alongside SEO,
         content and IA is two jobs, so the visual half got its own seat. <strong>Vault</strong>
         and <strong>Ledger</strong> arrived on 15 Aug, each because the project acquired a real
         problem nobody owned: Firebase landed with no Security Rules and no App Check, and
-        "whoever touches it next" is not an owner. Soko takes no money yet, in a market whose
-        payment rails are mobile money rather than cards — that's a speciality, not a ticket.
+        "whoever touches it next" is not an owner.
       </p>
     </div>
   </section>
 
-  <!-- ═══════════════════ PROCESS ═══════════════════ -->
+  <!-- ══════════ THE RULE ══════════ -->
+  <section id="product">
+    <div class="sec-head">
+      <p class="eyebrow">The product</p>
+      <h2>One question, asked at every branch</h2>
+      <p><code>resolveDeliveryRoute()</code> is four lines long and everything else is downstream of it.</p>
+    </div>
+    <div class="split">
+      <div class="panel" style="border-color:var(--accent)">
+        <h4>Yes → brand fleet <span class="tag">6 of 19</span></h4>
+        <ul>
+          <li>The brand carries it. No courier, no third-party handoff.</li>
+          <li><b>No published ETA</b> — brands don't quote one, so we don't invent one.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>No → local courier <span class="tag">13 of 19</span></h4>
+        <ul>
+          <li>Couriers serving that branch's city are matched in.</li>
+          <li>Couriers <b>do</b> publish an ETA, so the estimate shown is theirs.</li>
+          <li>5 couriers across Dar es Salaam, Arusha, Mwanza and Dodoma.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h4>Why the answer arrives before the click</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        The route used to be computed one page <em>after</em> the customer had chosen.
+        <code>previewDelivery()</code> now runs the same rule on the search card and the product
+        page. Deliberate non-goal: <strong>no delivery-speed filter.</strong> Only couriers
+        publish an ETA, so filtering on speed would silently hide every brand-fleet listing.
+        Show the number; don't filter on one we only have half of.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════ THREE PHASES ══════════ -->
+  <section id="phases">
+    <div class="sec-head planned">
+      <p class="eyebrow">The business · designed, not built</p>
+      <h2>Brand → carrier → customer <span class="badge">design</span></h2>
+      <p>
+        Everything from here to the roadmap is <strong>a decision, not code</strong>. It is
+        written up in <code>docs/marketplace-model.md</code>. Phase 2 is the only one Soko
+        actually operates — and that is exactly where the money comes from.
+      </p>
+    </div>
+
+    <div class="phases3">
+      <div class="ph">
+        <div class="pn">Phase 1</div>
+        <h4>The brand branch</h4>
+        <p>
+          Owns the goods. Receives the order for the product <em>it</em> listed, and confirms
+          it is available at that price. Gets paid at the door, less Soko's 6%.
+        </p>
+      </div>
+      <div class="ph mid">
+        <div class="pn">Phase 2 · the product</div>
+        <h4>Whoever carries it</h4>
+        <p><code>resolveDeliveryRoute()</code> decides, from one boolean on the branch:</p>
+        <div class="forks">
+          <div class="fork"><b>The brand's own fleet</b><span><code>deliveryOffered = true</code> · 6 of 19 branches · no courier, no ETA published</span></div>
+          <div class="fork"><b>A local courier</b><span>13 of 19 branches · matched by city · the courier's own ETA is shown</span></div>
+        </div>
+      </div>
+      <div class="ph">
+        <div class="pn">Phase 3</div>
+        <h4>The customer</h4>
+        <p>
+          Pays a deposit at order time by mobile money, then the rest in cash at the door.
+          Never pays Soko twice, and never pays Soko for the goods.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ PIPELINE ══════════ -->
+  <section id="pipeline">
+    <div class="sec-head planned">
+      <p class="eyebrow">Supply · designed, not built</p>
+      <h2>Nobody signs up on the website <span class="badge">design</span></h2>
+      <p>
+        Branches and couriers are <strong>real partners</strong> — the signup desk just lives
+        off the site. That distinction is what makes the commission collectable: a pure
+        directory could never charge for a sale it cannot see.
+      </p>
+    </div>
+
+    <div class="pipe">
+      <div class="step"><span class="sn">Step 1</span><b>Apply externally</b><p>A branch or courier applies off-site. No self-serve form on the customer-facing website.</p></div>
+      <div class="step gatekeep"><span class="sn">Step 2</span><b>Admin approves</b><p>Soko's admin vets them and <em>creates their account</em>. They never register themselves.</p></div>
+      <div class="step"><span class="sn">Step 3</span><b>Branch submits</b><p>The branch sends products from its own partner page.</p></div>
+      <div class="step gatekeep"><span class="sn">Step 4</span><b>Admin reviews</b><p>Submissions land in a queue and are monitored before anyone sees them.</p></div>
+      <div class="step"><span class="sn">Step 5</span><b>Published</b><p>Only now does the product appear to customers — and orders route back to that exact branch.</p></div>
+    </div>
+
+    <div class="card" style="margin-top:15px">
+      <h4>This closes debt #8 as a side effect</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        The register says <code>src/data</code> and the database are two sources of one truth,
+        "fully resolved when Phase 2 reverses the direction and retires the seed's prune".
+        <strong>The admin publish flow is that reversal.</strong> Once branches submit and
+        admin publishes, the database becomes the source of truth and <code>src/data</code>
+        drops to seed and demo fixtures.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════ MONEY ══════════ -->
+  <section id="money">
+    <div class="sec-head planned">
+      <p class="eyebrow">Revenue · designed, not built</p>
+      <h2>The deposit is exactly Soko's cut <span class="badge">design</span></h2>
+      <p>
+        This is the load-bearing decision. The customer's upfront deposit equals Soko's total
+        commission — <strong>nothing more</strong>. Everything else settles at the door between
+        the customer, the branch and the courier, and <span class="serif">Soko never touches
+        it.</span>
+      </p>
+    </div>
+
+    <div class="rates">
+      <div class="rate">
+        <div class="pct">6%</div>
+        <b>On the goods</b>
+        <p>Of the item total. Paid by the customer inside the deposit, at order time.</p>
+      </div>
+      <div class="rate">
+        <div class="pct">5%</div>
+        <b>On the delivery</b>
+        <p>Only when the delivery is paid through Soko. Also inside the deposit.</p>
+      </div>
+      <div class="rate">
+        <div class="pct" style="font-size:1.5rem">1,000<span style="font-size:.85rem"> TZS</span></div>
+        <b>Off-platform delivery</b>
+        <p>Flat, per delivery, owed by the courier when they take payment outside Soko. Settled on their own partner page.</p>
+      </div>
+    </div>
+
+    <h3 style="margin:26px 0 12px;font-size:1.1rem">A fridge at TZS 1,000,000, delivered by a Soko courier for 20,000</h3>
+    <div class="tablewrap">
+      <table class="ledger">
+        <thead><tr><th>Movement</th><th style="text-align:right">TZS</th><th>What it is</th></tr></thead>
+        <tbody>
+          <tr class="soko"><td><b>Customer pays now — deposit</b></td><td class="amt">61,000</td><td class="note">6% of goods (60,000) + 5% of delivery (1,000). This is Soko's entire revenue on the order.</td></tr>
+          <tr><td>Customer pays at the door</td><td class="amt">959,000</td><td class="note">Cash or direct mobile money. Soko never handles it.</td></tr>
+          <tr class="total"><td>Order total to the customer</td><td class="amt">1,020,000</td><td class="note">1,000,000 goods + 20,000 delivery.</td></tr>
+          <tr><td style="padding-top:20px">Of the 959,000 at the door — courier keeps</td><td class="amt" style="padding-top:20px">19,000</td><td class="note" style="padding-top:20px">Their 20,000 less Soko's 5%.</td></tr>
+          <tr><td>— branch keeps</td><td class="amt">940,000</td><td class="note">Their 1,000,000 less Soko's 6%.</td></tr>
+          <tr class="check"><td>19,000 + 940,000</td><td class="amt">959,000 ✓</td><td class="note">Exactly the cash collected at the door. Nothing left over, nothing to chase.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="split" style="margin-top:16px">
+      <div class="panel">
+        <h4>Why this and not escrow <span class="tag">load-bearing</span></h4>
+        <ul>
+          <li>Soko is <b>paid before it does anything</b>, and never chases a branch or courier.</li>
+          <li><b>No Bank of Tanzania licence.</b> Soko is a merchant of an aggregator (Selcom, Azampay) — they hold the licence. The Act licenses whoever <em>operates</em> the payment system.</li>
+          <li>Cash on delivery, which still dominates the market, keeps working untouched.</li>
+          <li>The deposit doubles as the <b>low-intent filter</b> the research says the industry uses: someone who won't send 61,000 was never going to accept the fridge.</li>
+        </ul>
+      </div>
+      <div class="panel">
+        <h4>The 1,000 TZS, and the real lever</h4>
+        <ul>
+          <li>When a courier takes payment outside Soko there is no 5% to take, so a flat <b>1,000 TZS per delivery</b> accrues to their account.</li>
+          <li>They settle it on the page they registered on.</li>
+          <li><b>The enforcement lever is job allocation, not invoicing</b> — an overdue courier stops being offered by <code>resolveDeliveryRoute()</code>.</li>
+          <li>That has to be a stated rule with a grace period, visible on their page, or it reads as arbitrary.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:15px">
+      <h4>Refunds — the deposit is taken before anyone has done anything</h4>
+      <div class="tablewrap" style="margin-top:11px;border:0">
+        <table class="ledger" style="min-width:480px">
+          <tbody>
+            <tr><td><b>Branch declines</b> — out of stock, wrong price</td><td class="note">Full refund. Soko did not deliver a customer; keeping it would be indefensible.</td></tr>
+            <tr><td><b>Customer cancels before dispatch</b></td><td class="note">Full refund inside a short window, then non-refundable.</td></tr>
+            <tr><td><b>Customer refuses at the door</b></td><td class="note">Non-refundable — this is exactly the behaviour the deposit exists to discourage, and a driver has already made the trip.</td></tr>
+            <tr><td><b>Courier fails to deliver</b></td><td class="note">Full refund, and it counts against the courier.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ ROADMAP ══════════ -->
+  <section id="roadmap">
+    <div class="sec-head planned">
+      <p class="eyebrow">Build order · designed, not built</p>
+      <h2>Nothing is honest until the order is real <span class="badge">design</span></h2>
+      <p>
+        Each stage ships on its own. Do not start a later one early — every stage after the
+        first is dishonest without a durable order record behind it.
+      </p>
+    </div>
+
+    <div class="road">
+      <div class="stage first">
+        <div class="sl">Stage 1</div>
+        <div>
+          <h4>Make the order real <span class="badge" style="background:var(--open-bg);color:var(--open)">prerequisite</span></h4>
+          <p>
+            Today <code>createOrderRequest()</code> builds the order <b>in the browser</b>, puts
+            it in <code>sessionStorage</code> and sends it nowhere — the confirmation screen says
+            so in plain words. Needs <code>Order</code> and <code>OrderEvent</code> in Prisma, a
+            tested status machine (<code>requested → confirmed → deposit_paid → dispatched →
+            delivered → completed</code>, plus declined/cancelled/refunded), and the server
+            re-deriving every number from the catalogue.
+          </p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="sl">Stage 2</div>
+        <div>
+          <h4>Partners and admin <span class="tag">stated first priority</span></h4>
+          <p>
+            <code>Partner</code> (branch or agent; applied / approved / suspended),
+            <code>PartnerUser</code> mapping a Firebase uid to a partner, an <code>admin</code>
+            role as a custom claim checked in the DAL, <code>ProductSubmission</code> plus
+            <code>/admin</code> to review and publish, and <code>/partner</code> where a branch
+            sees its orders and a courier sees its balance.
+          </p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="sl">Stage 3</div>
+        <div>
+          <h4>Money</h4>
+          <p>
+            An aggregator merchant account (your action, not code). A <b>pure fee module</b> —
+            goods, delivery and route in; deposit, payouts and Soko's cut out — tested the way
+            <code>buildListings</code> is, because money bugs are the worst kind. Integer TZS
+            throughout with an explicit rounding rule. Deposit collected by mobile-money push to
+            the phone already on the order.
+          </p>
+        </div>
+      </div>
+      <div class="stage">
+        <div class="sl">Stage 4</div>
+        <div>
+          <h4>Settlement and trust</h4>
+          <p>
+            Per-partner statements, delivery confirmation by PIN against the reference — which is
+            also the evidence a dispute is judged on — and refund handling against the policy above.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:15px">
+      <h4>One recorded decision has to change</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        <code>docs/backend.md</code> scopes Firestore to user-scoped data with no joins, which is
+        why saved order requests went there. <strong>A real order is the opposite</strong> — it
+        joins a product, a branch, a courier, a customer and a payment, and admin must query
+        across customers. So orders go in Prisma and <strong>the Firestore saved-requests
+        feature is superseded</strong>. That is a change to decision #14 and belongs in
+        <code>backend.md</code> with its reasoning, not done quietly. Debts #20 and #21 move with
+        it — the PII retention question doesn't disappear, it relocates.
+      </p>
+    </div>
+  </section>
+
+  <!-- ══════════ PROCESS ══════════ -->
   <section id="process">
     <div class="sec-head">
       <p class="eyebrow">Working agreement</p>
       <h2>No assignment begins cold</h2>
-      <p>
-        Every engineer runs the same three phases. The numbering is the actual sequence, and
-        skipping the first one is what the gate exists to prevent.
-      </p>
+      <p>Three phases, in sequence. Skipping the first is what the gate exists to prevent.</p>
     </div>
-
     <div class="phases">
       <div class="phase">
-        <div class="n">Phase 0</div>
-        <h4>Onboard</h4>
-        <p>
-          Research current professional standards for your domain on the live web before
-          writing any code. Record findings with real sources. Prefer primary sources and
-          recent material — the stack moves and training data goes stale.
-        </p>
+        <div class="n">Phase 0</div><h4>Onboard</h4>
+        <p>Research current professional standards for your domain on the live web before writing code. Record findings with real sources. Prefer primary and recent — the stack moves and training data goes stale.</p>
       </div>
       <div class="phase">
-        <div class="n">Phase 1</div>
-        <h4>Build</h4>
-        <p>
-          Implement, explicitly applying what Phase 0 established. Where the research
-          <em>changed</em> your approach, say so in the report. Research that contradicts the
-          brief is the most valuable kind.
-        </p>
+        <div class="n">Phase 1</div><h4>Build</h4>
+        <p>Implement, explicitly applying what Phase 0 established. Where research <em>changed</em> your approach, say so. Research that contradicts the brief is the most valuable kind.</p>
       </div>
       <div class="phase">
-        <div class="n">Phase 2</div>
-        <h4>Record</h4>
-        <p>
-          Write what you learned into your own skill file — a technique that failed, a
-          constraint that wasn't obvious, a number you actually measured. Delete anything
-          that stopped being true.
-        </p>
+        <div class="n">Phase 2</div><h4>Record</h4>
+        <p>Write what you learned into your own skill file — a technique that failed, a constraint that wasn't obvious, a number you measured. Delete anything that stopped being true.</p>
       </div>
     </div>
-
     <div class="gate">
       <b>The gate.</b> Nothing merges to <code>master</code> without its Phase 0 research
-      recorded in the handbook. Ten research reports currently live in
-      <code>docs/research/</code> — one per discipline, each auditing the real code rather
-      than summarising the web.
+      recorded in the handbook. Ten research reports live in <code>docs/research/</code> — one
+      per discipline, each auditing the real code rather than summarising the web.
     </div>
-
-    <div class="split" style="margin-top:16px">
+    <div class="split" style="margin-top:15px">
       <div class="panel">
         <h4>Why the skill files exist <span class="tag">durable</span></h4>
         <ul>
           <li>Every engineer starts each assignment with <b>no memory of the last one</b>.</li>
           <li>Knowledge that lives only in a finished conversation is knowledge the company buys twice.</li>
-          <li>Long-form reasoning goes in <code>docs/research/</code>; the sharp load-bearing specifics go in the skill file.</li>
           <li>Written for someone competent who has never seen this repo — <b>a measured ratio beats "check contrast"</b>.</li>
         </ul>
       </div>
@@ -711,25 +759,19 @@ html { scroll-behavior: smooth; }
         <ul>
           <li>Branches land <b>one at a time, on arrival</b> — never batched.</li>
           <li>Every branch in the 14 Aug round needed Lead work to be shippable, and none of it showed up inside the branch. <b>It was all seam damage.</b></li>
-          <li>That's the argument for smaller batches, not for more review.</li>
           <li>CI runs E2E against a production build, because <code>next dev</code> compiles per request and times specs out under parallel workers.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════ ARCHITECTURE ═══════════════════ -->
+  <!-- ══════════ ARCHITECTURE ══════════ -->
   <section id="architecture">
     <div class="sec-head">
       <p class="eyebrow">Architecture</p>
       <h2>Two stores, one owner each</h2>
-      <p>
-        The most expensive ambiguity this project had was two persistence stacks that both
-        looked live. It was settled by decision, written down, and restated in the agent
-        briefs so no one re-opens it by accident.
-      </p>
+      <p>The most expensive ambiguity this project had was two persistence stacks that both looked live. Settled by decision, written down, restated in the agent briefs.</p>
     </div>
-
     <div class="flow">
 <pre>
   browser                        Next.js 16 · App Router                data
@@ -741,10 +783,8 @@ html { scroll-behavior: smooth; }
                                                                       6 models
 
   order form  ─────────────────▶  Server Action
-  (client-side only until                                             ─────────
-   the customer signs in)         "use server"
-                                    ├─ verifySession()  ───────────▶  Firebase
-                                    │    session cookie                 Auth
+  (client-side only until           ├─ verifySession()  ───────────▶  Firebase
+   the customer signs in)           │    session cookie                 Auth
                                     ├─ buildOrderRequest()
                                     │    re-derives price from the
                                     │    catalogue, never the payload
@@ -757,126 +797,82 @@ html { scroll-behavior: smooth; }
                                                                        default)
 </pre>
     </div>
-
-    <div class="split" style="margin-top:16px">
+    <div class="split" style="margin-top:15px">
       <div class="panel">
         <h4>Prisma owns the catalogue <span class="tag">settled</span></h4>
         <ul>
-          <li>The schema is <b>genuinely relational</b> and Firestore has no joins — today's tested invariants would become manually-synced fields.</li>
-          <li>Pages read the database, not the bundled arrays. That cutover landed 17 Aug.</li>
-          <li><code>src/data</code> is still the <b>editorial source</b> and the seed mirrors it, so the two can drift. <code>parity.test.ts</code> is the interim guard.</li>
+          <li>The schema is <b>genuinely relational</b> and Firestore has no joins — tested invariants would become manually-synced fields.</li>
+          <li>Pages read the database, not the bundled arrays, since 17 Aug.</li>
+          <li><code>src/data</code> is still the <b>editorial source</b> and the seed mirrors it. <code>parity.test.ts</code> guards the seam.</li>
         </ul>
       </div>
       <div class="panel">
-        <h4>Firebase is scoped to Auth, Analytics and saved requests <span class="tag">settled</span></h4>
+        <h4>Firebase is scoped <span class="tag">settled</span></h4>
         <ul>
-          <li>No Firestore reads or writes for catalogue data. No second source of truth.</li>
-          <li>Saved order requests are the one exception: <b>user-scoped, not relational, nothing joins them</b>, and the identity that owns them already lives in Firebase.</li>
+          <li>Auth, Analytics and saved order requests. <b>No catalogue reads or writes.</b></li>
+          <li>Saved requests are the one exception: <b>user-scoped, not relational, nothing joins them</b>.</li>
           <li>Putting them in SQL would mean mirroring Firebase uids into a second store for no gain.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════ DATABASE ═══════════════════ -->
+  <!-- ══════════ DATABASE ══════════ -->
   <section id="data">
     <div class="sec-head">
       <p class="eyebrow">Database</p>
       <h2>Six tables, and the reasons behind them</h2>
-      <p>
-        Prisma 7 on SQLite via <code>better-sqlite3</code>. Every top-level model carries a
-        <code>sortOrder</code>, and text columns are used instead of enums.
-      </p>
+      <p>Prisma 7 on SQLite via <code>better-sqlite3</code>. Every top-level model carries a <code>sortOrder</code>; text columns instead of enums.</p>
     </div>
-
     <div class="models">
-      <div class="model">
-        <header><span>Brand</span><em>6 rows</em></header>
-        <ul>
-          <li class="key"><b>id</b><span>@id</span></li>
-          <li class="key"><b>slug</b><span>@unique</span></li>
-          <li><b>name</b><span>String</span></li>
-          <li><b>accentColor</b><span>hex</span></li>
-        </ul>
-      </div>
-      <div class="model">
-        <header><span>Branch</span><em>19 rows</em></header>
-        <ul>
-          <li class="key"><b>brandId</b><span>→ Brand</span></li>
-          <li><b>city</b><span>String</span></li>
-          <li><b>deliveryOffered</b><span>Boolean</span></li>
-          <li><b>verified</b><span>12 true</span></li>
-          <li><b>coords</b><span>city centre</span></li>
-        </ul>
-      </div>
-      <div class="model">
-        <header><span>Product</span><em>38 rows</em></header>
-        <ul>
-          <li class="key"><b>branchId</b><span>→ Branch</span></li>
-          <li class="key"><b>brandId</b><span>denormalised</span></li>
-          <li><b>priceTZS</b><span>Int</span></li>
-          <li><b>slug</b><span>@unique</span></li>
-        </ul>
-      </div>
-      <div class="model">
-        <header><span>ProductSpec</span><em>table, not JSON</em></header>
-        <ul>
-          <li class="key"><b>productId</b><span>→ Product</span></li>
-          <li><b>label</b><span>String</span></li>
-          <li><b>value</b><span>String</span></li>
-        </ul>
-      </div>
-      <div class="model">
-        <header><span>DeliveryAgent</span><em>5 rows</em></header>
-        <ul>
-          <li class="key"><b>id</b><span>@id</span></li>
-          <li><b>name</b><span>String</span></li>
-          <li><b>verified</b><span>2 true</span></li>
-        </ul>
-      </div>
-      <div class="model">
-        <header><span>AgentRegion</span><em>join</em></header>
-        <ul>
-          <li class="key"><b>agentId</b><span>→ Agent</span></li>
-          <li><b>city</b><span>String</span></li>
-        </ul>
-      </div>
+      <div class="model"><header><span>Brand</span><em>6 rows</em></header><ul>
+        <li class="key"><b>id</b><span>@id</span></li><li class="key"><b>slug</b><span>@unique</span></li>
+        <li><b>name</b><span>String</span></li><li><b>accentColor</b><span>hex</span></li></ul></div>
+      <div class="model"><header><span>Branch</span><em>19 rows</em></header><ul>
+        <li class="key"><b>brandId</b><span>→ Brand</span></li><li><b>city</b><span>String</span></li>
+        <li><b>deliveryOffered</b><span>Boolean</span></li><li><b>verified</b><span>12 true</span></li>
+        <li><b>coords</b><span>city centre</span></li></ul></div>
+      <div class="model"><header><span>Product</span><em>38 rows</em></header><ul>
+        <li class="key"><b>branchId</b><span>→ Branch</span></li><li class="key"><b>brandId</b><span>denormalised</span></li>
+        <li><b>priceTZS</b><span>Int</span></li><li><b>slug</b><span>@unique</span></li></ul></div>
+      <div class="model"><header><span>ProductSpec</span><em>table, not JSON</em></header><ul>
+        <li class="key"><b>productId</b><span>→ Product</span></li><li><b>label</b><span>String</span></li>
+        <li><b>value</b><span>String</span></li></ul></div>
+      <div class="model"><header><span>DeliveryAgent</span><em>5 rows</em></header><ul>
+        <li class="key"><b>id</b><span>@id</span></li><li><b>name</b><span>String</span></li>
+        <li><b>verified</b><span>2 true</span></li></ul></div>
+      <div class="model"><header><span>AgentRegion</span><em>join</em></header><ul>
+        <li class="key"><b>agentId</b><span>→ Agent</span></li><li><b>city</b><span>String</span></li></ul></div>
     </div>
-
-    <div class="split" style="margin-top:16px">
+    <div class="split" style="margin-top:15px">
       <div class="panel">
         <h4><code>verified</code> is a first-class column</h4>
         <ul>
-          <li>Every branch and courier record says whether it's <b>researched fact or illustrative placeholder</b>.</li>
-          <li>Invented data must never claim <code>verified: true</code>. Provenance is logged in <code>src/data/SOURCES.md</code>.</li>
-          <li>Map coordinates are approximate <b>city-centre</b> points shared by every branch in a city — so adding them deliberately did <em>not</em> flip anyone's flag.</li>
-          <li>Currently 12 of 19 branches and 2 of 5 couriers are verified.</li>
+          <li>Every branch and courier says whether it's <b>researched fact or illustrative placeholder</b>.</li>
+          <li>Invented data must never claim <code>verified: true</code>.</li>
+          <li>Map coordinates are approximate <b>city-centre</b> points, so adding them deliberately did <em>not</em> flip anyone's flag.</li>
+          <li>12 of 19 branches and 2 of 5 couriers are verified today.</li>
         </ul>
       </div>
       <div class="panel">
         <h4>Shape decisions worth knowing</h4>
         <ul>
-          <li><code>priceTZS</code> is an <b>Int</b> — the catalogue spans TZS 32K earbuds to TZS 245M SUVs and floats have no business here.</li>
-          <li><code>specs</code> and <code>regionsServed</code> became <b>tables, not JSON columns</b>, so they can be queried and constrained.</li>
-          <li><code>Product.brandId</code> stays <b>denormalised</b> alongside <code>branchId</code>; the seed asserts they agree.</li>
+          <li><code>priceTZS</code> is an <b>Int</b> — the catalogue spans TZS 32K earbuds to TZS 245M SUVs.</li>
+          <li><code>specs</code> and <code>regionsServed</code> became <b>tables, not JSON columns</b>.</li>
+          <li><code>Product.brandId</code> stays <b>denormalised</b>; the seed asserts it agrees with the branch.</li>
           <li>Search prices are <b>bucketed into bands, not a slider</b> — a slider across that range is unusable.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════ AUTH ═══════════════════ -->
+  <!-- ══════════ AUTH ══════════ -->
   <section id="auth">
     <div class="sec-head">
       <p class="eyebrow">Authentication</p>
       <h2>Client proves identity, server holds the session</h2>
-      <p>
-        Google sign-in only. <code>onAuthStateChanged</code> doesn't exist during SSR, so the
-        client SDK's notion of "signed in" is invisible to a Server Component — the cookie is
-        the only thing a server-rendered page can check.
-      </p>
+      <p>Google sign-in only. <code>onAuthStateChanged</code> doesn't exist during SSR, so the cookie is the only thing a server-rendered page can check.</p>
     </div>
-
     <div class="flow">
 <pre>
   browser                                    server
@@ -896,45 +892,39 @@ html { scroll-behavior: smooth; }
 
   client SDK signs itself out                       ┊
   (inMemoryPersistence — one                        ┊
-   session, one authority)                          ┊
-                                                    ▼
+   session, one authority)                          ▼
   every later request ─────────────────────▶ verifySession()      [DAL, React cache()]
                                                 └─ verifySessionCookie(cookie, true)
 </pre>
     </div>
-
-    <div class="split" style="margin-top:16px">
+    <div class="split" style="margin-top:15px">
       <div class="panel">
         <h4>A Data Access Layer, not a proxy</h4>
         <ul>
-          <li>There is <b>no <code>proxy.ts</code></b> in this repo. The DAL isn't a second layer behind one — it is the only layer, which is why it's authoritative rather than optimistic.</li>
-          <li>Next's own guidance: proxy "should not be your only line of defense" — it runs on prefetches, and a matcher edit can silently drop a route out of coverage.</li>
-          <li><code>verifySessionCookie(cookie, true)</code> is the revocation-checking form. It costs a round trip per render pass, which is what <code>cache()</code> is for.</li>
+          <li>There is <b>no <code>proxy.ts</code></b>. The DAL isn't a second layer behind one — it is the only layer, which is why it's authoritative rather than optimistic.</li>
+          <li>Next's own guidance: proxy "should not be your only line of defense" — it runs on prefetches, and a matcher edit can silently drop a route.</li>
+          <li><code>verifySessionCookie(cookie, true)</code> is the revocation-checking form; <code>cache()</code> pays for the round trip once per render pass.</li>
         </ul>
       </div>
       <div class="panel">
         <h4>Security Rules <span class="tag">emulator-tested</span></h4>
         <ul>
-          <li>Default-deny, owner-only reads, and <b>no client writes at all</b>. Every write goes through the Admin SDK, which bypasses rules by design.</li>
+          <li>Default-deny, owner-only reads, <b>no client writes at all</b>. Every write goes through the Admin SDK, which bypasses rules by design.</li>
           <li>Ownership is keyed by the <b>path</b>, not a field — a field can be spoofed on the write that creates it; a path segment compared against <code>request.auth.uid</code> cannot.</li>
-          <li>13 assertions run against the real emulator on their own CI job. Both directions were checked by injecting the two classic mistakes and watching the suite fail.</li>
+          <li>13 assertions against the real emulator, on their own CI job. Both directions checked by injecting the two classic mistakes and watching the suite fail.</li>
           <li>App Check is wired (reCAPTCHA v3) but <b>enforcement is still an unclicked console action</b>.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════ DESIGN ═══════════════════ -->
+  <!-- ══════════ DESIGN ══════════ -->
   <section id="design">
     <div class="sec-head">
       <p class="eyebrow">Design system</p>
       <h2>Forest, mint and one loud chartreuse</h2>
-      <p>
-        Tokens live in <code>src/app/globals.css</code> and Prism owns them. This page is
-        painted in the same palette, so what you're reading is the system itself.
-      </p>
+      <p>Tokens live in <code>src/app/globals.css</code> and Prism owns them. This page is painted in the same palette, so what you're reading is the system itself.</p>
     </div>
-
     <div class="swatches">
       <div class="sw"><div class="chip" style="background:#0c1e18"></div><div class="meta"><b>Forest ink</b><code>#0c1e18</code></div></div>
       <div class="sw"><div class="chip" style="background:#005236"></div><div class="meta"><b>Accent</b><code>#005236</code></div></div>
@@ -945,365 +935,442 @@ html { scroll-behavior: smooth; }
       <div class="sw"><div class="chip" style="background:#5a6662"></div><div class="meta"><b>Muted</b><code>#5a6662</code></div></div>
       <div class="sw"><div class="chip" style="background:#e2e6e4"></div><div class="meta"><b>Border</b><code>#e2e6e4</code></div></div>
     </div>
-
     <div class="specimen">
-      <div class="spec-row">
-        <span style="font-family:'Bricolage Grotesque',sans-serif;font-size:1.7rem;font-weight:600">Bricolage Grotesque</span>
-        <span class="label">Display · headings</span>
-      </div>
-      <div class="spec-row">
-        <span class="serif" style="font-size:1.7rem">Instrument Serif italic</span>
-        <span class="label">Accent · one phrase at a time</span>
-      </div>
-      <div class="spec-row">
-        <span style="font-size:1.05rem">Geist — body copy, forms and everything you actually read</span>
-        <span class="label">Body</span>
-      </div>
-      <div class="spec-row">
-        <span class="mono" style="font-size:1.05rem">TOY-DAR-K7M4</span>
-        <span class="label">Mono · references, read down the phone</span>
-      </div>
+      <div class="spec-row"><span style="font-family:'Bricolage Grotesque',sans-serif;font-size:1.65rem;font-weight:600">Bricolage Grotesque</span><span class="label">Display · headings</span></div>
+      <div class="spec-row"><span class="serif" style="font-size:1.65rem">Instrument Serif italic</span><span class="label">Accent · one phrase at a time</span></div>
+      <div class="spec-row"><span style="font-size:1.03rem">Geist — body copy, forms and everything you actually read</span><span class="label">Body</span></div>
+      <div class="spec-row"><span class="mono" style="font-size:1.03rem">TOY-DAR-K7M4</span><span class="label">Mono · references, read down the phone</span></div>
     </div>
-
-    <div class="split" style="margin-top:16px">
+    <div class="split" style="margin-top:15px">
       <div class="panel">
         <h4>Contrast is computed, not eyeballed</h4>
         <ul>
-          <li><code>src/lib/accent.ts</code> searches <b>outward from a brand's own colour in both directions</b> and takes the first variant clearing 3:1 — so the correction is the smallest one that works.</li>
-          <li>Not directional by assumption: on the light ground, bright accents fail and <b>lightening them makes it worse</b>. Oraimo tops out at 2.21:1 even at pure white.</li>
+          <li><code>src/lib/accent.ts</code> searches <b>outward from a brand's colour in both directions</b> and takes the first variant clearing 3:1 — the smallest correction that works.</li>
+          <li>Not directional by assumption: on a light ground, bright accents fail and <b>lightening makes it worse</b>. Oraimo tops out at 2.21:1 even at pure white.</li>
           <li>A border has <b>two neighbours</b>, so it's checked against both. Halotel passes on the page at 3.19:1 and fails inside its own chip at 2.75:1.</li>
-          <li>Brand colours are identity, so four of six brands are returned untouched.</li>
+          <li>Brand colours are identity, so four of six brands come back untouched.</li>
         </ul>
       </div>
       <div class="panel">
         <h4>Imagery, and what we won't do</h4>
         <ul>
           <li>Brand logos are <b>real, from Wikimedia Commons</b>, attributed in <code>SOURCES.md</code>.</li>
-          <li>Product imagery is a <b>custom SVG icon set</b>, tinted per brand. Commons searches for generic categories kept surfacing vintage or competitor-branded photos.</li>
-          <li>No scraped product photography. If real photos ever land, they go through <code>next/image</code> with a provenance entry.</li>
-          <li>Motion respects <code>prefers-reduced-motion</code> — including view transitions, which run outside React where <code>useReducedMotion()</code> can't see them.</li>
+          <li>Product imagery is a <b>custom SVG icon set</b> — Commons searches for generic categories kept surfacing vintage or competitor-branded photos.</li>
+          <li>No scraped product photography, ever.</li>
+          <li>Motion respects <code>prefers-reduced-motion</code>, view transitions included — they run outside React where <code>useReducedMotion()</code> can't see them.</li>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- ═══════════════════ SCREENS ═══════════════════ -->
+  <!-- ══════════ SCREENS ══════════ -->
   <section id="screens">
     <div class="sec-head">
       <p class="eyebrow">Screens</p>
       <h2>Twelve routes, 113 pages</h2>
-      <p>
-        Every route ships page-specific metadata and a sitemap entry — except the two private
-        ones, which are <code>noindex</code> and deliberately absent from the sitemap.
-      </p>
+      <p>Every route ships page-specific metadata and a sitemap entry — except the two private ones, which are <code>noindex</code> and deliberately absent from the sitemap.</p>
     </div>
-
     <div class="wires">
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="bx a" style="height:34px"></div>
-          <div class="grid3"><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div></div>
-          <div class="grid3"><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div></div>
-          <div class="bx h" style="width:50%"></div>
-          <div class="fill bx"></div>
-        </div>
-        <div class="cap"><b>Home</b><span>/</span></div>
-      </div>
-
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="row"><div class="bx h" style="flex:0 0 30%"></div><div class="bx h"></div></div>
-          <div class="row" style="flex:1">
-            <div style="flex:0 0 32%;display:flex;flex-direction:column;gap:6px">
-              <div class="bx h"></div><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div>
-            </div>
-            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-              <div class="bx m" style="height:32px"></div>
-              <div class="bx m" style="height:32px"></div>
-              <div class="bx m" style="height:32px"></div>
-            </div>
-          </div>
-        </div>
-        <div class="cap"><b>Search</b><span>/search · URL-as-state</span></div>
-      </div>
-
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="row" style="flex:1">
-            <div style="flex:0 0 44%;display:flex;flex-direction:column;gap:6px">
-              <div class="bx a" style="flex:1;opacity:.3"></div>
-              <div class="bx h"></div>
-            </div>
-            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-              <div class="bx m" style="height:28px"></div>
-              <div class="bx m" style="height:28px"></div>
-              <div class="bx m" style="height:28px"></div>
-            </div>
-          </div>
-        </div>
-        <div class="cap"><b>Locator</b><span>/locator · map + branches</span></div>
-      </div>
-
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="row" style="flex:1">
-            <div class="bx a" style="flex:0 0 46%;opacity:.35"></div>
-            <div style="flex:1;display:flex;flex-direction:column;gap:6px">
-              <div class="bx h" style="width:70%"></div>
-              <div class="bx h" style="width:40%"></div>
-              <div class="bx m" style="height:22px"></div>
-              <div class="bx h"></div>
-              <div class="bx" style="height:24px;background:#e6ff55"></div>
-            </div>
-          </div>
-        </div>
-        <div class="cap"><b>Product</b><span>/products/[id] · morph target</span></div>
-      </div>
-
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="bx h" style="width:55%"></div>
-          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-            <div class="bx m" style="height:26px"></div>
-            <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
-            <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
-            <div class="bx h"></div>
-            <div class="bx" style="height:22px;background:#e6ff55"></div>
-          </div>
-        </div>
-        <div class="cap"><b>Order request</b><span>/delivery/[productId]</span></div>
-      </div>
-
-      <div class="wire">
-        <div class="frame">
-          <div class="bx t"></div>
-          <div class="bx h" style="width:45%"></div>
-          <div style="display:flex;flex-direction:column;gap:6px;flex:1">
-            <div class="bx m" style="height:44px"></div>
-            <div class="bx m" style="height:44px"></div>
-            <div class="row" style="justify-content:flex-end">
-              <div class="bx" style="height:16px;flex:0 0 34%;background:#c43d0d;opacity:.5"></div>
-            </div>
-          </div>
-        </div>
-        <div class="cap"><b>Account</b><span>/account · noindex · ƒ dynamic</span></div>
-      </div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div><div class="bx a" style="height:34px"></div>
+        <div class="grid3"><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div></div>
+        <div class="grid3"><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div><div class="bx m" style="height:30px"></div></div>
+        <div class="fill bx"></div></div>
+        <div class="cap"><b>Home</b><span>/</span></div></div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div>
+        <div class="row"><div class="bx h" style="flex:0 0 30%"></div><div class="bx h"></div></div>
+        <div class="row" style="flex:1">
+          <div style="flex:0 0 32%;display:flex;flex-direction:column;gap:6px"><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div><div class="bx h"></div></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="bx m" style="height:32px"></div><div class="bx m" style="height:32px"></div><div class="bx m" style="height:32px"></div></div>
+        </div></div>
+        <div class="cap"><b>Search</b><span>/search · URL-as-state</span></div></div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div>
+        <div class="row" style="flex:1">
+          <div style="flex:0 0 44%;display:flex;flex-direction:column;gap:6px"><div class="bx a" style="flex:1;opacity:.3"></div><div class="bx h"></div></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px"><div class="bx m" style="height:28px"></div><div class="bx m" style="height:28px"></div><div class="bx m" style="height:28px"></div></div>
+        </div></div>
+        <div class="cap"><b>Locator</b><span>/locator · map + branches</span></div></div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div>
+        <div class="row" style="flex:1">
+          <div class="bx a" style="flex:0 0 46%;opacity:.35"></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+            <div class="bx h" style="width:70%"></div><div class="bx h" style="width:40%"></div>
+            <div class="bx m" style="height:22px"></div><div class="bx h"></div>
+            <div class="bx" style="height:24px;background:#e6ff55"></div></div>
+        </div></div>
+        <div class="cap"><b>Product</b><span>/products/[id] · morph target</span></div></div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div><div class="bx h" style="width:55%"></div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+          <div class="bx m" style="height:26px"></div>
+          <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
+          <div class="grid2"><div class="bx h"></div><div class="bx h"></div></div>
+          <div class="bx h"></div><div class="bx" style="height:22px;background:#e6ff55"></div></div></div>
+        <div class="cap"><b>Order request</b><span>/delivery/[productId]</span></div></div>
+      <div class="wire"><div class="frame">
+        <div class="bx t"></div><div class="bx h" style="width:45%"></div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex:1">
+          <div class="bx m" style="height:44px"></div><div class="bx m" style="height:44px"></div>
+          <div class="row" style="justify-content:flex-end"><div class="bx" style="height:16px;flex:0 0 34%;background:#c43d0d;opacity:.5"></div></div></div></div>
+        <div class="cap"><b>Account</b><span>/account · noindex · ƒ dynamic</span></div></div>
     </div>
-
-    <div class="card" style="margin-top:16px">
+    <div class="card" style="margin-top:15px">
       <h4>The one page-to-page relationship worth building</h4>
       <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
-        A product's icon tile on a search card and the same product's showcase on its own page
-        are the same object, so they <strong>morph across the navigation</strong> rather than
-        swapping. React's <code>&lt;ViewTransition&gt;</code> with a shared
-        <code>product-${id}</code> name, scoped to a <code>product-view</code> transition type
-        so an unrelated same-page filter change can't fire it. Native browser API, no new
-        dependency.
+        A product's icon tile on a search card and its showcase on the product page are the same
+        object, so they <strong>morph across the navigation</strong> rather than swapping.
+        React's <code>&lt;ViewTransition&gt;</code> with a shared <code>product-${id}</code> name,
+        scoped to a <code>product-view</code> transition type so an unrelated same-page filter
+        change can't fire it. Native browser API, no new dependency.
       </p>
     </div>
   </section>
 
-  <!-- ═══════════════════ QUALITY ═══════════════════ -->
-  <section id="quality">
-    <div class="sec-head">
-      <p class="eyebrow">Quality</p>
-      <h2>What "done" has to mean</h2>
-      <p>The standing baseline is non-negotiable and predates any individual assignment.</p>
-    </div>
-
-    <div class="split">
-      <div class="panel">
-        <h4>Before any hand-off</h4>
-        <ul>
-          <li><code>npx tsc --noEmit</code>, <code>npm run lint</code>, <code>npm test</code> — all clean.</li>
-          <li>Every new page ships <b>page-specific metadata and a sitemap entry</b>.</li>
-          <li>Every new feature ships <b>at least one real behavioural test</b>.</li>
-          <li>Accessibility is part of done: real labels, keyboard operation, announced errors, the global <code>:focus-visible</code> ring left intact.</li>
-          <li>Data provenance via the <code>verified</code> flag.</li>
-        </ul>
-      </div>
-      <div class="panel">
-        <h4>The lesson that cost the most <span class="tag">durable</span></h4>
-        <ul>
-          <li>Two bugs escaped the <b>entire</b> test suite and were caught by a human using the page: a skip link that moved scroll but not focus, and a doubled <code>&lt;title&gt;</code>.</li>
-          <li>Both are now guarded across every affected route.</li>
-          <li><b>Open the page and use it — passing tests are not the same as looking.</b></li>
-          <li>Mutation testing is on the register precisely because an agent can write a test that trivially passes against the code it just wrote.</li>
-        </ul>
-      </div>
-    </div>
-
-    <div class="stats" style="margin-top:16px">
-      <div class="stat"><b>366</b><span>Unit tests</span></div>
-      <div class="stat"><b>33</b><span>Test files</span></div>
-      <div class="stat"><b>57</b><span>E2E specs run</span></div>
-      <div class="stat"><b>13</b><span>Rules assertions</span></div>
-      <div class="stat"><b>10</b><span>Research reports</span></div>
-      <div class="stat"><b>0</b><span>CI runs, ever</span></div>
-    </div>
-  </section>
-
-  <!-- ═══════════════════ DEBT ═══════════════════ -->
+  <!-- ══════════ DEBT ══════════ -->
   <section id="debt">
     <div class="sec-head">
       <p class="eyebrow">Technical debt register</p>
       <h2>Kept current, or it isn't a register</h2>
       <p>
-        Debt that is only mentioned in passing is debt nobody ever pays down. Two rows were
-        found <span class="serif">stale or simply wrong</span> on 21 Aug and corrected in
-        place — a wrong entry costs more than an open one, because someone will go hunting.
+        Debt only mentioned in passing is debt nobody pays down. Two rows were found
+        <span class="serif">stale or simply wrong</span> on 22 Aug and corrected in place — a
+        wrong entry costs more than an open one, because someone will go hunting.
       </p>
     </div>
-
     <div class="tablewrap">
       <table>
-        <thead>
-          <tr><th class="num">#</th><th>Item</th><th>Status</th></tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="num">2</td>
-            <td><b>No git remote, no deployment</b><p>All work exists on one disk. Also blocks CI from ever running.</p></td>
-            <td><span class="pill open">Open</span></td>
-          </tr>
-          <tr>
-            <td class="num">1</td>
-            <td><b>CI pipeline</b><p>Workflow runs types, lint, unit and E2E — inert until #2 closes.</p></td>
-            <td><span class="pill done">Built</span></td>
-          </tr>
-          <tr>
-            <td class="num">8</td>
-            <td><b>Database and <code>src/data</code> are two sources of one truth</b><p>Site reads the DB now; the arrays remain editorial. <code>parity.test.ts</code> guards the seam.</p></td>
-            <td><span class="pill half">Half</span></td>
-          </tr>
-          <tr>
-            <td class="num">9</td>
-            <td><b>R3F constructs a deprecated <code>THREE.Clock</code></b><p>Cosmetic, and not ours — our own <code>useFrame</code> callbacks never touch <code>state.clock</code>.</p></td>
-            <td><span class="pill parked">Upstream</span></td>
-          </tr>
-          <tr>
-            <td class="num">10</td>
-            <td><b>Accent colours used as borders with no contrast guard</b><p>Computed 21 Aug. Two real failures fixed; the row's own file references were wrong and were corrected.</p></td>
-            <td><span class="pill done">Done</span></td>
-          </tr>
-          <tr>
-            <td class="num">11</td>
-            <td><b>No mutation testing</b><p>Nothing checks whether the tests would catch a deliberately wrong implementation. Sequenced after #2.</p></td>
-            <td><span class="pill open">Open</span></td>
-          </tr>
-          <tr>
-            <td class="num">12</td>
-            <td><b>Cross-route view transitions</b><p>Shipped 15 Aug; the row was never updated and sat "open" for six days.</p></td>
-            <td><span class="pill done">Done</span></td>
-          </tr>
-          <tr>
-            <td class="num">14</td>
-            <td><b>Two persistence stacks, neither read by a page</b><p>Decided by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.</p></td>
-            <td><span class="pill done">Decided</span></td>
-          </tr>
-          <tr>
-            <td class="num">15</td>
-            <td><b>Analytics ran with no consent gate</b><p>Gate is "never call <code>initAnalytics</code>", not Google's consent mode — <code>denied</code> still sends cookieless pings.</p></td>
-            <td><span class="pill done">Done</span></td>
-          </tr>
-          <tr>
-            <td class="num">16</td>
-            <td><b>No Security Rules or App Check</b><p>Rules shipped and emulator-tested. App Check wired; <b>enforcement is an operator action, not yet taken.</b></p></td>
-            <td><span class="pill half">Half</span></td>
-          </tr>
-          <tr>
-            <td class="num">20</td>
-            <td><b>Customer PII at rest with no delete path</b><p>Delete path built 21 Aug — hard delete via the Admin SDK, rules unchanged. <b>Retention policy still unmade.</b></p></td>
-            <td><span class="pill half">Half</span></td>
-          </tr>
-          <tr>
-            <td class="num">21</td>
-            <td><b>Save action has a ceiling but no rate limit</b><p>200 per customer bounds total damage, not burst rate. Honest fix needs App Check enforcement too.</p></td>
-            <td><span class="pill open">Open</span></td>
-          </tr>
-          <tr>
-            <td class="num">5</td>
-            <td><b>Product imagery is an icon set, not photography</b><p>Deliberate. Revisit before launch.</p></td>
-            <td><span class="pill parked">Accepted</span></td>
-          </tr>
+        <thead><tr><th class="num">#</th><th>Item</th><th>Owner</th><th>Status</th></tr></thead>
+        <tbody id="debtbody">
+          <tr data-own="forge"><td class="num">2</td><td><b>No git remote, no deployment</b><p>All work exists on one disk. Also blocks CI from ever running.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill open">Open</span></td></tr>
+          <tr data-own="forge"><td class="num">1</td><td><b>CI pipeline</b><p>Runs types, lint, unit and E2E — inert until #2 closes.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill done">Built</span></td></tr>
+          <tr data-own="forge"><td class="num">8</td><td><b>Database and <code>src/data</code> are two sources of one truth</b><p>Site reads the DB; the arrays remain editorial. <code>parity.test.ts</code> guards the seam.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill half">Half</span></td></tr>
+          <tr data-own="atlas"><td class="num">9</td><td><b>R3F constructs a deprecated <code>THREE.Clock</code></b><p>Cosmetic, and not ours — our <code>useFrame</code> callbacks never touch <code>state.clock</code>.</p></td><td><span class="who-tag">atlas</span></td><td><span class="pill parked">Upstream</span></td></tr>
+          <tr data-own="prism"><td class="num">10</td><td><b>Accent colours used as borders with no contrast guard</b><p>Computed 22 Aug. Two real failures fixed; the row's own file references were wrong and were corrected.</p></td><td><span class="who-tag">prism</span></td><td><span class="pill done">Done</span></td></tr>
+          <tr data-own="sentinel"><td class="num">11</td><td><b>No mutation testing</b><p>Nothing checks whether the tests would catch a deliberately wrong implementation. Sequenced after #2.</p></td><td><span class="who-tag">sentinel</span></td><td><span class="pill open">Open</span></td></tr>
+          <tr data-own="atlas"><td class="num">12</td><td><b>Cross-route view transitions</b><p>Shipped 15 Aug; the row was never updated and sat "open" for six days.</p></td><td><span class="who-tag">atlas</span></td><td><span class="pill done">Done</span></td></tr>
+          <tr data-own="forge"><td class="num">14</td><td><b>Two persistence stacks, neither read by a page</b><p>Decided by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill done">Decided</span></td></tr>
+          <tr data-own="vault"><td class="num">15</td><td><b>Analytics ran with no consent gate</b><p>The gate is "never call <code>initAnalytics</code>", not Google's consent mode — <code>denied</code> still sends cookieless pings.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill done">Done</span></td></tr>
+          <tr data-own="vault"><td class="num">16</td><td><b>No Security Rules or App Check</b><p>Rules shipped and emulator-tested. App Check wired; <b>enforcement is an operator action, not yet taken.</b></p></td><td><span class="who-tag">vault</span></td><td><span class="pill half">Half</span></td></tr>
+          <tr data-own="vault"><td class="num">20</td><td><b>Customer PII at rest with no delete path</b><p>Delete path built 22 Aug — hard delete via the Admin SDK, rules unchanged. <b>Retention policy still unmade.</b></p></td><td><span class="who-tag">vault</span></td><td><span class="pill half">Half</span></td></tr>
+          <tr data-own="vault"><td class="num">21</td><td><b>Save action has a ceiling but no rate limit</b><p>200 per customer bounds total damage, not burst rate.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill open">Open</span></td></tr>
+          <tr data-own="prism"><td class="num">5</td><td><b>Product imagery is an icon set, not photography</b><p>Deliberate. Revisit before launch.</p></td><td><span class="who-tag">prism</span></td><td><span class="pill parked">Accepted</span></td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- ═══════════════════ NEEDS YOU ═══════════════════ -->
+  <!-- ══════════ NEEDS YOU ══════════ -->
   <section id="you">
     <div class="sec-head">
       <p class="eyebrow">Blocked on the owner</p>
-      <h2>Four things engineering can't decide</h2>
-      <p>
-        Each of these is a call that belongs to you, not to an engineer. A number invented
-        here would read as policy to whoever found it next.
-      </p>
+      <h2>Nine things engineering can't decide</h2>
+      <p>Each belongs to you, not an engineer. A number invented here would read as policy to whoever found it next.</p>
     </div>
-
     <div class="asks">
-      <div class="ask">
-        <div class="who">Debt&nbsp;#2</div>
-        <div>
-          <h4>A git remote</h4>
-          <p>
-            Needs your GitHub account. It's the register's own "next thing worth doing" —
-            everything lives on one disk today, and CI has never run because it has nowhere to
-            run. Unblocks #1 and #11 at the same time.
-          </p>
-        </div>
-      </div>
-      <div class="ask">
-        <div class="who">Debt&nbsp;#20</div>
-        <div>
-          <h4>A retention policy for customer PII</h4>
-          <p>
-            How long should an untouched saved request live before it expires on its own, and
-            should closing an account purge the subcollection? Customers can delete their own
-            records now, which covers the data-rights half. The mechanism to enforce a
-            retention rule isn't built because the rule doesn't exist yet.
-          </p>
-        </div>
-      </div>
-      <div class="ask">
-        <div class="who">Debt&nbsp;#16</div>
-        <div>
-          <h4>Turn on App Check enforcement</h4>
-          <p>
-            Wired in code, monitor-only in the console — which is Google's recommended
-            sequence. Flipping it to enforcing is a click in the Firebase console that only you
-            can make.
-          </p>
-        </div>
-      </div>
-      <div class="ask">
-        <div class="who">Data</div>
-        <div>
-          <h4>Geocode the real addresses</h4>
-          <p>
-            Map coordinates are approximate city-centre points shared by every branch in a
-            city, and 7 of 19 branches plus 3 of 5 couriers are still unverified placeholders.
-            Before launch, those need real addresses — knowing which city a branch is in is not
-            the same as having confirmed where it is.
-          </p>
-        </div>
-      </div>
+      <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
+        <h4>Who sets the delivery fee?</h4>
+        <p><b>The biggest hole in the revenue model.</b> Soko takes 5% of the delivery — but nobody has defined who sets that number. The courier, Soko, or a per-city table? Until this is answered, 5% is a share of an undefined quantity. This is the one I'd answer next.</p></div></div>
+      <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
+        <h4>Who verifies a branch really is that brand?</h4>
+        <p>Nothing stops someone applying as "Toyota Arusha". The catalogue already separates researched fact from placeholder with the <code>verified</code> flag; partner approval needs the same discipline. This is an ops process, not a code change.</p></div></div>
+      <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
+        <h4>Refund window, and who eats a refused delivery</h4>
+        <p>How long can a customer cancel and still get the deposit back? And when someone refuses at the door, does the wasted trip get billed to them, absorbed by Soko, or borne by the courier?</p></div></div>
+      <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
+        <h4>How long can a courier owe before losing jobs?</h4>
+        <p>The 1,000 TZS is enforced by withholding work, which only works if the grace period is stated up front and visible on their page. And do already-accepted jobs still complete?</p></div></div>
+      <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
+        <h4>Does the deposit apply to brand-fleet orders?</h4>
+        <p>No courier means no delivery fee and no 5%, so the deposit would be 6% of goods alone. Confirm that's intended — it's 6 of 19 branches today.</p></div></div>
+
+      <div class="ask"><div class="who">Debt&nbsp;#2</div><div>
+        <h4>A git remote</h4>
+        <p>Needs your GitHub account. Everything lives on one disk, and CI has never run because it has nowhere to run. Unblocks #1 and #11 together — and none of the work above should start on an unbacked-up disk.</p></div></div>
+      <div class="ask"><div class="who">Debt&nbsp;#20</div><div>
+        <h4>A retention policy for customer PII</h4>
+        <p>How long should an untouched saved request live, and should closing an account purge the subcollection? Customers can delete their own records now. The enforcement mechanism isn't built because the rule doesn't exist yet.</p></div></div>
+      <div class="ask"><div class="who">Debt&nbsp;#16</div><div>
+        <h4>Turn on App Check enforcement</h4>
+        <p>Wired in code, monitor-only in the console — Google's recommended sequence. Flipping it to enforcing is a click only you can make.</p></div></div>
+      <div class="ask"><div class="who">Data</div><div>
+        <h4>Geocode the real addresses</h4>
+        <p>Coordinates are approximate city-centre points, and 7 of 19 branches plus 3 of 5 couriers are unverified placeholders. Knowing which city a branch is in is not the same as having confirmed where it is.</p></div></div>
     </div>
   </section>
-
 </main>
 
 <footer class="wrap">
-  <p>
-    Generated from the repository itself — <code>docs/engineering-standards.md</code>,
-    <code>docs/backend.md</code>, <code>docs/auth.md</code>, <code>.claude/agents/</code>,
-    <code>prisma/schema.prisma</code> and the live test output.
-  </p>
-  <p>Every number on this page was measured, not estimated.</p>
+  <p>Generated from the repository itself — <code>.claude/agents/</code>, <code>docs/</code>, <code>prisma/schema.prisma</code>, <code>git log</code> and live test output.</p>
+  <p>Every number here was measured. The ship log is attribution by file ownership, not self-report.</p>
 </footer>
+
+<script>
+const DATA = {"commits":[{"h":"d2946d7","d":"2026-08-23 12:17","s":"Put the whole project on one page","o":["beacon"],"a":1309,"r":0,"f":1},{"h":"1182952","d":"2026-08-22 10:10","s":"Let a customer take their own address back out","o":["vault","forge","beacon"],"a":447,"r":7,"f":8},{"h":"3ef8cd2","d":"2026-08-22 09:49","s":"Guard the two locator borders that actually fail contrast","o":["prism","sentinel","atlas"],"a":173,"r":31,"f":5},{"h":"a27989f","d":"2026-08-18 05:06","s":"Drop the two type imports the cutover left behind","o":["atlas"],"a":0,"r":1,"f":1},{"h":"0476bbf","d":"2026-08-17 21:06","s":"Mark debts 6 and 7 closed, and 8 half closed","o":["beacon"],"a":3,"r":3,"f":1},{"h":"3ee8077","d":"2026-08-17 21:05","s":"Read the catalogue from the database, not the bundle","o":["atlas","sentinel","forge"],"a":602,"r":248,"f":29},{"h":"84e246a","d":"2026-08-17 18:35","s":"Count no visit that has not said yes","o":["atlas","sentinel","vault"],"a":766,"r":10,"f":14},{"h":"22cc017","d":"2026-08-17 08:42","s":"Answer who delivers and how soon, before the click","o":["ledger","sentinel","prism"],"a":746,"r":50,"f":25},{"h":"d7998e5","d":"2026-08-16 22:32","s":"Integrate Vault: Firebase Auth, saved order requests, Security Rules","o":["lead"],"a":0,"r":0,"f":0},{"h":"92e7e34","d":"2026-08-16 22:22","s":"Add Firebase Auth, saved order requests, Security Rules and App Check","o":["vault","beacon","forge"],"a":5308,"r":52,"f":49},{"h":"5646de7","d":"2026-08-16 20:24","s":"Never tell a customer to call a number we don't have","o":["atlas","sentinel","ledger"],"a":77,"r":12,"f":3},{"h":"03db6a3","d":"2026-08-16 19:32","s":"Fix two locator search defects only visible on the page","o":["atlas"],"a":14,"r":2,"f":1},{"h":"bb362c8","d":"2026-08-16 19:03","s":"Make hover states work for keyboards, and search the locator map","o":["atlas","beacon","prism"],"a":1220,"r":100,"f":19},{"h":"437423a","d":"2026-08-16 19:03","s":"Stop linting Playwright's own HTML report","o":["lead"],"a":7,"r":0,"f":1},{"h":"725badc","d":"2026-08-16 13:58","s":"Make the roster real: eight agent definitions","o":["lead"],"a":374,"r":1,"f":9},{"h":"6e96741","d":"2026-08-16 09:40","s":"Bring Spline interaction vocabulary to the homepage","o":["atlas","sentinel"],"a":820,"r":60,"f":7},{"h":"bb8e6cd","d":"2026-08-16 09:40","s":"Convert search and the locator map to the light system","o":["atlas"],"a":27,"r":20,"f":5},{"h":"7066f1d","d":"2026-08-16 09:32","s":"Actually commit the skill files","o":["lead"],"a":487,"r":5,"f":9},{"h":"82ff0ef","d":"2026-08-16 09:31","s":"Give every engineer a skill file that compounds","o":["beacon"],"a":22,"r":0,"f":2},{"h":"4fd0a36","d":"2026-08-16 09:11","s":"Convert the order flow, agents and branch views to the light system","o":["prism","beacon","atlas"],"a":165,"r":90,"f":13},{"h":"e53d155","d":"2026-08-16 00:04","s":"Delete the WebGL blobs, and design the hero and showcase instead","o":["atlas","sentinel","prism"],"a":461,"r":990,"f":15},{"h":"5a38520","d":"2026-08-16 00:03","s":"Turn the palette light: white ground, mint panels, floating pill nav","o":["prism","atlas"],"a":202,"r":51,"f":5},{"h":"a7d2563","d":"2026-08-15 21:45","s":"Add GSAP and the official React hook package","o":["lead"],"a":20,"r":0,"f":2},{"h":"89e25aa","d":"2026-08-15 21:10","s":"Carry the serif-italic voice onto the last three routes","o":["atlas","beacon"],"a":34,"r":8,"f":3},{"h":"c4f0249","d":"2026-08-15 21:10","s":"Show how each brand delivers, before the click","o":["sentinel","prism"],"a":208,"r":1,"f":2},{"h":"7d79c19","d":"2026-08-15 21:09","s":"Morph a product card into its 3D showcase across the navigation","o":["sentinel","atlas","prism"],"a":242,"r":26,"f":5},{"h":"4d7696f","d":"2026-08-15 19:27","s":"Decide it: Prisma owns the catalogue, Firebase is Auth and Analytics","o":["beacon"],"a":40,"r":2,"f":2},{"h":"6d67651","d":"2026-08-15 19:08","s":"Hold the 3D showcase in view while the product details scroll","o":["atlas"],"a":6,"r":1,"f":1},{"h":"6ea4884","d":"2026-08-15 18:53","s":"Second learning round: five more Phase 0 reports, and two gaps closed","o":["beacon","sentinel"],"a":1478,"r":12,"f":8},{"h":"3eebd58","d":"2026-08-15 17:54","s":"Wire the Firebase client for project v-mall-f37c6","o":["mercury","sentinel","atlas"],"a":1178,"r":9,"f":8},{"h":"a72395d","d":"2026-08-15 17:15","s":"Integrate four Phase 0 research assignments, and fix the defect one found","o":["beacon","prism","sentinel"],"a":1209,"r":13,"f":10},{"h":"984cc43","d":"2026-08-14 22:23","s":"Make the skip link actually skip, and stop doubling page titles","o":["beacon","sentinel","atlas"],"a":137,"r":4,"f":5},{"h":"4a2cc5d","d":"2026-08-14 21:33","s":"Add CI, and stop the E2E suite racing itself","o":["forge","beacon","sentinel"],"a":125,"r":6,"f":5},{"h":"cabe532","d":"2026-08-14 21:25","s":"Carry branch coordinates through the persistence layer","o":["forge"],"a":21,"r":0,"f":4},{"h":"62e0633","d":"2026-08-14 21:13","s":"Integrate the persistence layer from ENG-4 . Forge","o":["lead"],"a":0,"r":0,"f":0},{"h":"a121e90","d":"2026-08-14 21:12","s":"Scope the order form's alert assertion to the form","o":["sentinel"],"a":5,"r":1,"f":1},{"h":"ff07b2a","d":"2026-08-14 21:03","s":"Integrate the order request flow from ENG-2 . Mercury","o":["lead"],"a":0,"r":0,"f":0},{"h":"7b06550","d":"2026-08-14 21:00","s":"Wire the locator into the site and fix its marker labels","o":["atlas","beacon"],"a":17,"r":4,"f":5},{"h":"f7a09cd","d":"2026-08-14 20:46","s":"Integrate the cross-brand branch locator from ENG-1 . Atlas","o":["lead"],"a":0,"r":0,"f":0},{"h":"46e7c73","d":"2026-08-14 16:53","s":"Register the client-bundle findings from Forge's review","o":["beacon"],"a":2,"r":0,"f":1},{"h":"e93d9fa","d":"2026-08-14 16:51","s":"Add Prisma schema, SQLite persistence, seed and repository layer","o":["forge","beacon"],"a":3994,"r":111,"f":16},{"h":"c659d78","d":"2026-08-14 16:50","s":"Add the order request flow, from delivery page to confirmation","o":["ledger","atlas","sentinel"],"a":2065,"r":19,"f":11},{"h":"cfe9e69","d":"2026-08-14 16:43","s":"Record the Lead's onboarding research and open a debt register","o":["beacon"],"a":55,"r":0,"f":1},{"h":"632c42a","d":"2026-08-14 16:42","s":"Add cross-brand branch locator at /locator","o":["atlas","sentinel","mercury"],"a":1304,"r":0,"f":14},{"h":"e9a6642","d":"2026-08-14 16:38","s":"Add the engineering standards handbook","o":["beacon"],"a":76,"r":0,"f":1},{"h":"31b6cdb","d":"2026-08-14 16:18","s":"Add faceted search across the whole catalogue","o":["atlas","sentinel","mercury"],"a":1385,"r":3,"f":13},{"h":"56dcd23","d":"2026-08-14 16:00","s":"Initial commit: Soko brand marketplace prototype","o":["atlas","mercury","prism"],"a":14384,"r":0,"f":73}],"edges":[{"a":"atlas","b":"sentinel","n":12},{"a":"atlas","b":"prism","n":7},{"a":"prism","b":"sentinel","n":6},{"a":"atlas","b":"beacon","n":5},{"a":"atlas","b":"mercury","n":4},{"a":"beacon","b":"forge","n":4},{"a":"beacon","b":"sentinel","n":4},{"a":"mercury","b":"sentinel","n":3},{"a":"ledger","b":"sentinel","n":3},{"a":"beacon","b":"prism","n":3},{"a":"atlas","b":"ledger","n":2},{"a":"forge","b":"sentinel","n":2},{"a":"beacon","b":"vault","n":2},{"a":"forge","b":"vault","n":2},{"a":"mercury","b":"prism","n":1},{"a":"ledger","b":"prism","n":1},{"a":"atlas","b":"vault","n":1},{"a":"sentinel","b":"vault","n":1},{"a":"atlas","b":"forge","n":1}],"totals":{"atlas":22,"mercury":4,"prism":10,"sentinel":18,"beacon":18,"ledger":3,"forge":6,"vault":3}};
+
+const ENGINEERS = [
+  { id:"atlas",    n:"Atlas",    eid:"ENG-1", role:"Frontend & Motion",       owns:"components/home · motion · search · locator",   d:"Pages, components, scroll-driven work, view transitions — anything visual that moves." },
+  { id:"mercury",  n:"Mercury",  eid:"ENG-2", role:"Data & business logic",   owns:"src/data · src/lib",                            d:"The domain types and their invariants. Pricing, currency, faceted search, the routing rule." },
+  { id:"sentinel", n:"Sentinel", eid:"ENG-3", role:"QA & accessibility",      owns:"e2e/ · test strategy",                          d:"Writes and audits tests, diagnoses flaky specs, judges whether coverage is real or theatre." },
+  { id:"forge",    n:"Forge",    eid:"ENG-4", role:"Platform & backend",      owns:"src/server · prisma/ · .github/workflows",      d:"Prisma, the repository layer, migrations, seeding, CI and build tooling." },
+  { id:"beacon",   n:"Beacon",   eid:"ENG-5", role:"SEO, content & IA",       owns:"agents · delivery · order routes · docs",       d:"Routes, titles, sitemap entries, navigation, wireframes, and the order flow's honesty." },
+  { id:"prism",    n:"Prism",    eid:"ENG-6", role:"Visual & graphic design", owns:"globals.css · brand/product components",        d:"Palette, typography, spacing, tokens, and every colour or contrast decision." },
+  { id:"vault",    n:"Vault",    eid:"ENG-7", role:"Cloud platform & security", owns:"firestore.rules · server/auth · server/firebase", d:"Firebase config, auth, Security Rules, App Check, sessions, credentials and quotas." },
+  { id:"ledger",   n:"Ledger",   eid:"ENG-8", role:"Commerce & payments",     owns:"src/lib/order.ts",                              d:"Money, the order record, mobile money, pricing strategy, who bears delivery risk." },
+];
+const STATUSES = ["idle","queued","active","review","blocked"];
+
+let state = { v:1, lanes:{} };
+for (const e of ENGINEERS) state.lanes[e.id] = { status:"idle", note:"" };
+
+let filter = null;
+let api = null;
+let saveTimer = null;
+
+/* ---------- save plumbing ---------- */
+function chip(s, text) {
+  const el = document.getElementById("savechip");
+  el.dataset.s = s;
+  document.getElementById("savetext").textContent = text;
+}
+
+async function initCapability() {
+  try {
+    api = (window.claude && typeof window.claude.use === "function")
+      ? await window.claude.use("artifact")
+      : null;
+  } catch { api = null; }
+  chip(api ? "ready" : "local", api ? "Ready to save" : "Not saved in this view");
+}
+
+async function hydrate() {
+  try {
+    const r = await fetch("board-state.json", { cache:"no-store" });
+    if (!r.ok) return;
+    const saved = await r.json();
+    if (saved && saved.lanes) {
+      for (const e of ENGINEERS) if (saved.lanes[e.id]) state.lanes[e.id] = saved.lanes[e.id];
+    }
+  } catch { /* first run: no state file yet, defaults stand */ }
+}
+
+function queueSave() {
+  if (!api) { chip("local", "Not saved in this view"); return; }
+  chip("saving", "Saving…");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(doSave, 1500);
+}
+
+async function doSave() {
+  if (!api) return;
+  try {
+    state.updated = new Date().toISOString();
+    await api.publish({ "board-state.json": JSON.stringify(state) });
+    chip("saved", "Saved");
+  } catch (err) {
+    const code = err && err.code;
+    if (code === "not_writer" || code === "not_granted" || code === "capability_disabled" || code === "not_declared") {
+      api = null;
+      chip("readonly", "Read-only view");
+    } else if (code === "conflict") {
+      chip("saving", "Someone else saved — reloading");
+    } else if (code === "rate_limited") {
+      chip("saving", "Slowing down…");
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(doSave, 8000);
+    } else {
+      chip("error", "Save failed — your change is still here");
+    }
+  }
+}
+
+/* ---------- rendering ---------- */
+function renderLanes() {
+  const host = document.getElementById("lanes");
+  host.textContent = "";
+  for (const e of ENGINEERS) {
+    const st = state.lanes[e.id];
+    const lane = document.createElement("div");
+    lane.className = "lane" + (st.status !== "idle" ? " on" : "");
+    lane.dataset.eng = e.id;
+
+    const who = document.createElement("div");
+    who.className = "lane-who";
+    who.innerHTML = '<span class="eng-id"></span><b></b>';
+    who.querySelector(".eng-id").textContent = e.eid;
+    who.querySelector("b").textContent = e.n;
+
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Status for " + e.n);
+    for (const s of STATUSES) {
+      const o = document.createElement("option");
+      o.value = s; o.textContent = s;
+      if (s === st.status) o.selected = true;
+      sel.appendChild(o);
+    }
+    sel.dataset.v = st.status;
+    sel.addEventListener("change", () => {
+      st.status = sel.value; sel.dataset.v = sel.value;
+      lane.classList.toggle("on", sel.value !== "idle");
+      queueSave();
+    });
+
+    const note = document.createElement("input");
+    note.type = "text";
+    note.value = st.note || "";
+    note.placeholder = "Assignment for " + e.n + "…";
+    note.setAttribute("aria-label", "Assignment note for " + e.n);
+    note.addEventListener("input", () => { st.note = note.value; queueSave(); });
+
+    lane.append(who, sel, note);
+    host.appendChild(lane);
+  }
+}
+
+function ago(dateStr) {
+  const t = new Date(dateStr.replace(" ", "T"));
+  const mins = Math.round((Date.now() - t.getTime()) / 60000);
+  if (!isFinite(mins)) return dateStr;
+  if (mins < 60) return mins + "m ago";
+  const h = Math.round(mins / 60);
+  if (h < 24) return h + "h ago";
+  const d = Math.round(h / 24);
+  return d + "d ago";
+}
+
+function renderFilters() {
+  const host = document.getElementById("filters");
+  host.textContent = "";
+  const mk = (id, label) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "fbtn"; b.textContent = label;
+    b.setAttribute("aria-pressed", String(filter === id));
+    b.addEventListener("click", () => { filter = (filter === id ? null : id); renderAll(); });
+    return b;
+  };
+  host.appendChild(mk(null, "everyone"));
+  for (const e of ENGINEERS) host.appendChild(mk(e.id, e.n));
+  host.appendChild(mk("lead", "Lead"));
+  const c = document.createElement("span");
+  c.className = "fcount"; c.id = "fcount";
+  host.appendChild(c);
+}
+
+function renderLog() {
+  const host = document.getElementById("loglist");
+  host.textContent = "";
+  const rows = DATA.commits.filter(c => !filter || c.o.includes(filter));
+  document.getElementById("fcount").textContent =
+    rows.length + " of " + DATA.commits.length + " commits";
+
+  if (!rows.length) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.textContent = "No commits touched that engineer's files.";
+    host.appendChild(e);
+    return;
+  }
+  for (const c of rows) {
+    const row = document.createElement("div");
+    row.className = "entry";
+
+    const when = document.createElement("div");
+    when.className = "when"; when.textContent = ago(c.d);
+    when.title = c.d;
+
+    const what = document.createElement("div");
+    what.className = "what";
+    const hash = document.createElement("span");
+    hash.className = "hash"; hash.textContent = c.h;
+    what.appendChild(hash);
+    what.appendChild(document.createTextNode(c.s));
+
+    const whom = document.createElement("div");
+    whom.className = "whom";
+    for (const o of c.o) {
+      const t = document.createElement("span");
+      t.className = "who-tag"; t.dataset.w = o; t.textContent = o;
+      whom.appendChild(t);
+    }
+    const d = document.createElement("span");
+    d.className = "delta";
+    d.innerHTML = '<span class="add">+' + c.a + '</span> <span class="del">−' + c.r + '</span>';
+    whom.appendChild(d);
+
+    row.append(when, what, whom);
+    host.appendChild(row);
+  }
+}
+
+function renderEdges() {
+  const host = document.getElementById("edgelist");
+  host.textContent = "";
+  const max = DATA.edges.length ? DATA.edges[0].n : 1;
+  for (const e of DATA.edges) {
+    const row = document.createElement("div");
+    row.className = "edge" + (filter && filter !== "lead" && e.a !== filter && e.b !== filter ? " dim" : "");
+    const pair = document.createElement("div");
+    pair.className = "pair";
+    pair.innerHTML = "<b></b> + <b></b>";
+    const bs = pair.querySelectorAll("b");
+    bs[0].textContent = e.a; bs[1].textContent = e.b;
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    const i = document.createElement("i");
+    i.style.width = Math.round((e.n / max) * 100) + "%";
+    bar.appendChild(i);
+    const n = document.createElement("div");
+    n.className = "n"; n.textContent = e.n;
+    row.append(pair, bar, n);
+    host.appendChild(row);
+  }
+}
+
+function renderRoster() {
+  const host = document.getElementById("roster");
+  for (const el of [...host.querySelectorAll(".eng:not(.lead)")]) el.remove();
+  for (const e of ENGINEERS) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "eng" + (filter && filter !== e.id ? " dim" : "");
+    b.setAttribute("aria-pressed", String(filter === e.id));
+    b.addEventListener("click", () => { filter = (filter === e.id ? null : e.id); renderAll(); });
+
+    const top = document.createElement("div");
+    top.className = "eng-top";
+    top.innerHTML = '<span class="eng-id"></span><h4></h4>';
+    top.querySelector(".eng-id").textContent = e.eid;
+    top.querySelector("h4").textContent = e.n;
+
+    const role = document.createElement("div");
+    role.className = "role"; role.textContent = e.role;
+    const p = document.createElement("p"); p.textContent = e.d;
+    const ships = document.createElement("div");
+    ships.className = "ships";
+    ships.textContent = (DATA.totals[e.id] || 0) + " commits touched";
+    const owns = document.createElement("div");
+    owns.className = "owns"; owns.textContent = e.owns;
+
+    b.append(top, role, p, ships, owns);
+    host.appendChild(b);
+  }
+}
+
+function renderDebt() {
+  for (const tr of document.querySelectorAll("#debtbody tr")) {
+    const own = tr.dataset.own;
+    tr.classList.toggle("dim", Boolean(filter) && filter !== "lead" && own !== filter);
+  }
+}
+
+function renderAll() { renderFilters(); renderLog(); renderEdges(); renderRoster(); renderDebt(); }
+
+(async function boot() {
+  renderAll();
+  await initCapability();
+  await hydrate();
+  renderLanes();
+})();
+</script>
