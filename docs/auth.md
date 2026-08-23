@@ -328,7 +328,7 @@ verification.
   writes/day for the whole project. A signed-in customer can still burn writes
   faster than is reasonable. The honest fix is App Check enforcement plus a
   per-uid rate limit, and only the first of those is built.
-- **Deleting a saved request is implemented** (2026-08-21). `deleteOrderRequest`
+- **Deleting a saved request is implemented** (2026-08-22). `deleteOrderRequest`
   in `src/app/actions/order-requests.ts` goes through the Admin SDK exactly as
   the write does, so `firestore.rules` keeps denying client deletes — the rules
   did not change and did not need to. The control is `DeleteSavedRequest`, an
