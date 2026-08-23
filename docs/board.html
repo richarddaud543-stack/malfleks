@@ -577,7 +577,7 @@ html { scroll-behavior:smooth; }
       The catalogue runs from a <b>TZS 2,000 item to a TZS 245,000,000 SUV — 122,500× apart</b>.
       At a flat 6% the small item yields 120 TZS (less than it costs to process) and the SUV
       yields 14,700,000 (no dealer would accept it). Both ends are real: 12 products sit under
-      100K, 18 sit above 10M. So one ladder applies to <em>any</em> payment through Soko.
+      100K, 18 sit above 10M. So the ladder applies to the <em>goods</em> payment, and the customer pays it as the deposit.
     </p>
 
     <div class="tablewrap">
@@ -589,13 +589,13 @@ html { scroll-behavior:smooth; }
           <tr><td>10,100 – 25,000</td><td class="amt">2,000</td><td class="amt">8.0%</td></tr>
           <tr><td>25,100 – 50,000</td><td class="amt">3,500</td><td class="amt">7.0%</td></tr>
           <tr><td>50,100 – 100,000</td><td class="amt">6,000</td><td class="amt">6.0%</td></tr>
-          <tr><td>100,100 – 250,000</td><td class="amt">12,000</td><td class="amt">4.8%</td></tr>
-          <tr><td>250,100 – 500,000</td><td class="amt">20,000</td><td class="amt">4.0%</td></tr>
-          <tr><td>500,100 – 1,000,000</td><td class="amt">32,000</td><td class="amt">3.2%</td></tr>
-          <tr><td>1,000,100 – 5,000,000</td><td class="amt">90,000</td><td class="amt">1.8%</td></tr>
-          <tr><td>5,000,100 – 20,000,000</td><td class="amt">250,000</td><td class="amt">1.3%</td></tr>
-          <tr><td>20,000,100 – 100,000,000</td><td class="amt">650,000</td><td class="amt">0.7%</td></tr>
-          <tr class="check"><td>above 100,000,000</td><td class="amt">1,200,000</td><td class="amt">cap</td></tr>
+          <tr><td>100,100 – 250,000</td><td class="amt">9,000</td><td class="amt">3.60%</td></tr>
+          <tr><td>250,100 – 500,000</td><td class="amt">14,000</td><td class="amt">2.80%</td></tr>
+          <tr><td>500,100 – 1,000,000</td><td class="amt">19,000</td><td class="amt">1.90%</td></tr>
+          <tr><td>1,000,100 – 5,000,000</td><td class="amt">26,000</td><td class="amt">0.52%</td></tr>
+          <tr><td>5,000,100 – 20,000,000</td><td class="amt">32,000</td><td class="amt">0.16%</td></tr>
+          <tr><td>20,000,100 – 100,000,000</td><td class="amt">36,000</td><td class="amt">0.04%</td></tr>
+          <tr class="check"><td>above 100,000,000</td><td class="amt">40,000</td><td class="amt">cap · 0.016% at 245M</td></tr>
         </tbody>
       </table>
     </div>
@@ -605,6 +605,19 @@ html { scroll-behavior:smooth; }
       a staircase costume: extending 500-per-5,000 all the way up is a constant 10% and a
       <b>24,500,000 TZS fee on the SUV</b>, worse than the 6% it replaces.
     </p>
+    <div class="card" style="margin-top:14px;border-left:4px solid var(--ember)">
+      <h4>What the 40,000 cap does to the business — read before changing it</h4>
+      <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
+        On this catalogue the cap cuts fee revenue by <b>95%</b>: if all 38 products sold once,
+        a 1,200,000 ceiling earns 17,701,500 TZS and this one earns 898,500. That is not a
+        mistake, it is a change of business model. Soko stops being a <b>commission</b> business
+        (revenue scales with order value) and becomes a <b>transaction-fee</b> business (revenue
+        scales with order <em>count</em>). A car sale earns 40,000 TZS — about seven earbud
+        sales. The upside is the reason to do it: at 0.016%, Toyota and BMW have no commercial
+        reason to refuse to list, where a 14,700,000 commission would have ended the
+        conversation. It is land-grab pricing, and it makes <b>volume the whole game</b>.
+      </p>
+    </div>
 
     <div class="rates" style="margin-top:20px">
       <div class="rate">
@@ -613,9 +626,9 @@ html { scroll-behavior:smooth; }
         <p>Not the courier, not the branch. Four numbers — Dar, Arusha, Mwanza, Dodoma. It's all the current data supports: branch coordinates are approximate city-centre points.</p>
       </div>
       <div class="rate">
-        <div class="pct" style="font-size:1.5rem">1,000<span style="font-size:.85rem"> TZS</span></div>
-        <b>Off-platform delivery</b>
-        <p>When a courier takes payment outside Soko, no rung is charged and Soko earns nothing from the leg it arranged. A flat fee accrues instead, settled on their partner page.</p>
+        <div class="pct" style="font-size:1.35rem">500 · 1,500 · 2,500</div>
+        <b>Billed to the courier</b>
+        <p>Per delivery, by what the delivery costs: 500 up to 3,000 (settled 5,000 per 10), 1,500 to 25,000, 2,500 above. Accrues on their partner page. <b>This supersedes the flat 1,000 TZS off-platform fee.</b></p>
       </div>
       <div class="rate">
         <div class="pct" style="font-size:1.5rem;color:var(--ember)">25%</div>
@@ -629,24 +642,24 @@ html { scroll-behavior:smooth; }
       <table class="ledger">
         <thead><tr><th>Movement</th><th style="text-align:right">TZS</th><th>What it is</th></tr></thead>
         <tbody>
-          <tr class="soko"><td><b>Customer pays now — deposit</b></td><td class="amt">34,000</td><td class="note">32,000 goods rung + 2,000 delivery rung. Soko's entire revenue on the order.</td></tr>
-          <tr><td>Customer pays at the door</td><td class="amt">981,000</td><td class="note">Cash or direct mobile money. Soko never handles it.</td></tr>
+          <tr class="soko"><td><b>Customer pays now — deposit</b></td><td class="amt">19,000</td><td class="note">The 500,100–1,000,000 goods rung. Nothing else.</td></tr>
+          <tr><td>Customer pays at the door</td><td class="amt">996,000</td><td class="note">Cash or direct mobile money. Soko never handles it.</td></tr>
           <tr class="total"><td>Order total to the customer</td><td class="amt">1,015,000</td><td class="note">1,000,000 goods + 15,000 delivery.</td></tr>
-          <tr><td style="padding-top:20px">Of the 981,000 at the door — courier keeps</td><td class="amt" style="padding-top:20px">13,000</td><td class="note" style="padding-top:20px">Their 15,000 less the 2,000 rung.</td></tr>
-          <tr><td>— branch keeps</td><td class="amt">968,000</td><td class="note">Their 1,000,000 less the 32,000 rung.</td></tr>
-          <tr class="check"><td>13,000 + 968,000</td><td class="amt">981,000 ✓</td><td class="note">Exactly the cash collected at the door. Nothing left over, nothing to chase.</td></tr>
+          <tr><td style="padding-top:20px">Of the 996,000 at the door — courier collects</td><td class="amt" style="padding-top:20px">15,000</td><td class="note" style="padding-top:20px">The full delivery fee, straight from the customer.</td></tr>
+          <tr><td>— branch keeps</td><td class="amt">981,000</td><td class="note">Their 1,000,000 less the 19,000 rung.</td></tr>
+          <tr class="check"><td>15,000 + 981,000</td><td class="amt">996,000 ✓</td><td class="note">Exactly the cash at the door. Afterwards the courier owes Soko 1,500 on their page, netting 13,500 — so Soko earns 20,500, 93% of it secured before anyone moved.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <h3 style="margin:26px 0 12px;font-size:1.1rem">Soko's share falls as the order grows — the ladder doing its job</h3>
+    <h3 style="margin:26px 0 12px;font-size:1.1rem">Goods revenue is secured upfront; delivery revenue is credit</h3>
     <div class="tablewrap">
       <table class="ledger">
-        <thead><tr><th>Order</th><th style="text-align:right">Soko earns</th><th style="text-align:right">At the door</th><th style="text-align:right">Soko's share</th></tr></thead>
+        <thead><tr><th>Order</th><th style="text-align:right">Deposit (secured)</th><th style="text-align:right">Courier owes</th><th style="text-align:right">Soko earns</th><th style="text-align:right">Secured</th></tr></thead>
         <tbody>
-          <tr><td>Earbuds 65,000 + 8,000 delivery</td><td class="amt">7,000</td><td class="amt">66,000</td><td class="amt">9.59%</td></tr>
-          <tr><td>Fridge 1,000,000 + 15,000</td><td class="amt">34,000</td><td class="amt">981,000</td><td class="amt">3.35%</td></tr>
-          <tr><td>SUV 245,000,000 + 15,000</td><td class="amt">1,202,000</td><td class="amt">243,813,000</td><td class="amt">0.49%</td></tr>
+          <tr><td>Earbuds 65,000 + 2,500 delivery</td><td class="amt">6,000</td><td class="amt">500</td><td class="amt">6,500</td><td class="amt">92%</td></tr>
+          <tr><td>Fridge 1,000,000 + 15,000</td><td class="amt">19,000</td><td class="amt">1,500</td><td class="amt">20,500</td><td class="amt">93%</td></tr>
+          <tr><td>SUV 245,000,000 + 40,000</td><td class="amt">40,000</td><td class="amt">2,500</td><td class="amt">42,500</td><td class="amt">94%</td></tr>
         </tbody>
       </table>
     </div>
@@ -658,14 +671,14 @@ html { scroll-behavior:smooth; }
           <li>Soko is <b>paid before it does anything</b>, and never chases a branch or courier.</li>
           <li><b>No Bank of Tanzania licence.</b> Soko is a merchant of an aggregator (Selcom, Azampay) — they hold the licence. The Act licenses whoever <em>operates</em> the payment system.</li>
           <li>Cash on delivery, which still dominates the market, keeps working untouched.</li>
-          <li>The deposit doubles as the <b>low-intent filter</b> the research says the industry uses: someone who won't send 34,000 was never going to accept the fridge.</li>
+          <li>The deposit doubles as the <b>low-intent filter</b> the research says the industry uses: someone who won't send 19,000 was never going to accept the fridge.</li>
         </ul>
       </div>
       <div class="panel">
-        <h4>The 1,000 TZS, and the real lever</h4>
+        <h4>The courier ledger, and the real lever</h4>
         <ul>
-          <li>When a courier takes payment outside Soko, no payment passes through it — so no rung is charged and Soko earns nothing from the leg it arranged. A flat <b>1,000 TZS per delivery</b> accrues to their account instead.</li>
-          <li>They settle it on the page they registered on.</li>
+          <li>Delivery money never passes through Soko at all — the customer pays the courier at the door, and the courier owes Soko its rung afterwards.</li>
+          <li>They settle it on the page they registered on. <b>Goods revenue is secured; delivery revenue is a receivable</b> — small, 6–8% per order, but it is credit.</li>
           <li><b>The enforcement lever is job allocation, not invoicing</b> — an overdue courier stops being offered by <code>resolveDeliveryRoute()</code>.</li>
           <li>That has to be a stated rule with a grace period, visible on their page, or it reads as arbitrary.</li>
         </ul>

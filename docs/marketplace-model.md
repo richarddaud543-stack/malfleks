@@ -52,116 +52,139 @@ it, and it is four lines long.
 
 ## 2. The money loop
 
-### The platform fee is a ladder, not a percentage
+### The platform fee is a ladder on the goods, not a percentage
 
 **Superseded 2026-08-23**: the original 6% on goods / 5% on delivery is gone. A single
 percentage cannot serve this catalogue — it runs from a **TZS 2,000 item to a TZS
 245,000,000 SUV, a spread of 122,500×**. At 6%, the small item yields 120 TZS (less than
 it costs to process) and the SUV yields 14,700,000 TZS (no dealer in Dar would accept
-that). Twelve products sit under 100K and eighteen sit above 10M, so both ends are real.
+that). Twelve products sit under 100K and eighteen above 10M, so both ends are real.
 
-Instead: **one ladder, applied to any payment that passes through Soko** — the goods
-payment and the delivery payment alike.
+The ladder applies to the **goods payment only**, and the customer pays it as the deposit.
 
-| Payment amount (TZS) | Platform fee | Rate at top of band |
+| Goods payment (TZS) | Platform fee | Rate at top of band |
 |---|---|---|
-| 1,000 – 5,000 | **500** | 10.0% |
-| 5,100 – 10,000 | **1,000** | 10.0% |
-| 10,100 – 25,000 | **2,000** | 8.0% |
-| 25,100 – 50,000 | **3,500** | 7.0% |
-| 50,100 – 100,000 | **6,000** | 6.0% |
-| 100,100 – 250,000 | **12,000** | 4.8% |
-| 250,100 – 500,000 | **20,000** | 4.0% |
-| 500,100 – 1,000,000 | **32,000** | 3.2% |
-| 1,000,100 – 5,000,000 | **90,000** | 1.8% |
-| 5,000,100 – 20,000,000 | **250,000** | 1.3% |
-| 20,000,100 – 100,000,000 | **650,000** | 0.7% |
-| above 100,000,000 | **1,200,000** (cap) | — |
+| 1,000 – 5,000 | **500** | 10.00% |
+| 5,100 – 10,000 | **1,000** | 10.00% |
+| 10,100 – 25,000 | **2,000** | 8.00% |
+| 25,100 – 50,000 | **3,500** | 7.00% |
+| 50,100 – 100,000 | **6,000** | 6.00% |
+| 100,100 – 250,000 | **9,000** | 3.60% |
+| 250,100 – 500,000 | **14,000** | 2.80% |
+| 500,100 – 1,000,000 | **19,000** | 1.90% |
+| 1,000,100 – 5,000,000 | **26,000** | 0.52% |
+| 5,000,100 – 20,000,000 | **32,000** | 0.16% |
+| 20,000,100 – 100,000,000 | **36,000** | 0.04% |
+| above 100,000,000 | **40,000** (cap) | 0.016% at 245M |
 
-The first two rungs are the founder's own, unchanged. **The rest deliberately flatten.**
-That is the whole point: a ladder whose steps keep the same slope is just a flat
-percentage wearing a staircase costume — extending 500-per-5,000 all the way up gives a
-constant 10% and a 24,500,000 TZS fee on the SUV, which is worse than the 6% it replaces.
+The first two rungs are the founder's own, unchanged. **The rest deliberately flatten to
+a 40,000 ceiling.** A ladder whose steps keep the same slope is just a flat percentage
+wearing a staircase costume — extending 500-per-5,000 all the way up gives a constant 10%
+and a 24,500,000 TZS fee on the SUV, worse than the 6% it replaces.
 
-Plus, unchanged: **1,000 TZS flat per delivery**, owed by a courier who takes payment
-outside Soko, settled on their own partner page.
+> **What the 40,000 cap means for the business — read this before changing it.**
+> On this catalogue the cap cuts fee revenue by **95%**: if all 38 products sold once, a
+> 1,200,000 ceiling earns 17,701,500 TZS and this one earns 898,500. That is not a
+> mistake, it is a change of business model. Soko stops being a **commission** business
+> (revenue scales with order value) and becomes a **transaction-fee** business (revenue
+> scales with order *count*). A car sale earns 40,000 TZS — about seven earbud sales.
+> The upside is the reason to do it: at 0.016%, Toyota and BMW have no commercial reason
+> to refuse to list, where a 14,700,000 commission would have ended the conversation.
+> It is land-grab pricing, and it makes **volume the whole game**.
 
 > **Watch the bottom rung.** The cheapest product in the catalogue is TZS 2,000, and a
 > 500 TZS fee on it is **25%**. Either accept that small items are disproportionately
 > taxed, add a narrower first rung, or set a minimum order value. Owner's call.
 
-### Delivery is priced by Soko, per city
+### Delivery is priced by Soko per city, and billed to the courier
 
 **Decided 2026-08-23.** Soko sets the delivery fee — not the courier, not the branch — as
 a flat number per city: Dar es Salaam, Arusha, Mwanza, Dodoma. Four numbers Soko controls,
-quotable upfront and honest, and it is all the current data can support (branch
-coordinates are approximate city-centre points, so nothing finer than city is real yet).
+quotable upfront, and it is all the current data can support (branch coordinates are
+approximate city-centre points, so nothing finer than city is real yet).
 
-This closes the hole flagged in the previous draft, where Soko took a percentage of a
-number nobody had defined.
+The customer pays the delivery fee to the courier at the door. **Soko's cut comes from the
+courier afterwards**, accruing on their partner page:
 
-> **Open — later, not now.** A size or weight surcharge. A TZS 245M SUV and a pair of
-> earbuds are currently quoted the same delivery, which is obviously wrong; fixing it
-> needs a weight or size field on `Product` that does not exist.
+| Delivery fee charged | Soko takes, per delivery | Note |
+|---|---|---|
+| Up to 3,000 (in-city hops) | **500** | Billed as **5,000 per 10 deliveries** — a settlement cadence, not a different rate |
+| 3,001 – 25,000 | **1,500** | |
+| Above 25,000 | **2,500** | |
 
-### The deposit is exactly Soko's cut
+**This supersedes the flat 1,000 TZS off-platform fee.** That fee existed to answer "what
+does Soko earn when the delivery money never passes through it" — and under this scheme
+delivery money never passes through Soko for anyone, so the distinction has no work left
+to do. Charging both would mean a courier owing 1,500 on a 3,000 shilling job. If the
+intent was a penalty for taking payment outside Soko, it needs restating as one.
 
-This is the load-bearing decision. The customer pays a deposit at order time by mobile
-money, and that deposit **equals Soko's total commission — nothing more**. Everything
-after that is settled at the door, in cash or direct mobile money, between the customer,
-the branch and the courier. Soko never touches it.
+> **The structural cost of this choice.** Goods revenue is secured before anything
+> happens; **delivery revenue is now a receivable.** On the worked examples below it is
+> 6–8% of what Soko earns per order, so the exposure is small — but it is credit, and it
+> makes the enforcement lever load-bearing rather than theoretical.
+
+### The deposit is the goods rung, and nothing else
+
+The customer pays a deposit at order time by mobile money equal to **the goods rung —
+nothing more**. Everything after that is settled at the door, in cash or direct mobile
+money, between the customer, the branch and the courier. Soko never touches it.
 
 Worked example — a fridge at TZS 1,000,000, delivered in Dar es Salaam for TZS 15,000:
 
 ```
-  Customer pays now (deposit)     34,000   = 32,000 goods rung + 2,000 delivery rung
-  Customer pays at the door      981,000
+  Customer pays now (deposit)     19,000   the 500,100–1,000,000 goods rung
+  Customer pays at the door      996,000
                                ─────────
   Order total                  1,015,000
 
-  Of the 981,000 at the door:
-    courier keeps                13,000   (15,000 less its 2,000 rung)
-    branch keeps                968,000   (1,000,000 less its 32,000 rung)
+  Of the 996,000 at the door:
+    branch keeps                981,000   (1,000,000 less its 19,000 rung)
+    courier collects             15,000   (the full delivery fee)
                                ─────────
-                                981,000   ✓ exact
+                                996,000   ✓ exact
+
+  Afterwards, on the courier's partner page:
+    courier owes Soko             1,500   (the 3,001–25,000 rung), netting 13,500
+
+  Soko earns 20,500 — 93% of it secured before anyone moved.
 ```
 
-The same arithmetic across the catalogue's real range — note that Soko's share of the
-order **falls as the order grows**, which is the ladder doing its job:
+The same arithmetic across the catalogue's real range:
 
-| Order | Deposit (Soko earns) | At the door | Soko's share |
-|---|---|---|---|
-| Earbuds 65,000 + 8,000 delivery | 7,000 | 66,000 | 9.59% |
-| Fridge 1,000,000 + 15,000 | 34,000 | 981,000 | 3.35% |
-| SUV 245,000,000 + 15,000 | 1,202,000 | 243,813,000 | 0.49% |
+| Order | Deposit (secured) | Courier owes | Soko earns | Share secured |
+|---|---|---|---|---|
+| Earbuds 65,000 + 2,500 delivery | 6,000 | 500 | 6,500 | 92% |
+| Fridge 1,000,000 + 15,000 | 19,000 | 1,500 | 20,500 | 93% |
+| SUV 245,000,000 + 40,000 | 40,000 | 2,500 | 42,500 | 94% |
 
-Every row reconciles exactly: what the branch and courier keep always sums to the cash
-collected at the door, with nothing left over and nothing to chase.
+Every row reconciles exactly: what the branch keeps plus what the courier collects always
+sums to the cash taken at the door, with nothing left over.
 
 **Why this shape and not escrow.** If Soko collected the full 1,015,000 and paid the
 others out later, Soko would be holding other people's money — which brings refunds,
 disputes, reconciliation, float, and a much heavier regulatory posture. Taking only the
-commission upfront means:
+goods rung upfront means:
 
-- Soko is **paid before it does anything**, and never has to chase a branch or a courier.
+- Soko is **paid before it does anything**, and never has to chase a branch.
 - Soko is a **merchant of an aggregator** (Selcom / Azampay), not a payment operator —
   no BOT licence, per the National Payment Systems Act reading in the research.
 - Cash on delivery, which still dominates the market, keeps working untouched.
 - The deposit doubles as the **low-intent filter** the research says the industry uses:
-  someone who will not send 34,000 was never going to accept the fridge.
+  someone who will not send 19,000 was never going to accept the fridge.
 
-### The 1,000 TZS, and how it is actually collected
+### The courier ledger, and the real lever
 
-When a courier takes payment **outside** Soko, no delivery payment passes through it, so
-no rung is charged and Soko earns nothing from the leg it arranged. A flat **1,000 TZS per
-delivery** accrues to that courier's account instead, settled on their own partner page.
+Every delivery accrues its rung to the courier's account, and they settle it on the page
+they registered on.
 
 The enforcement lever is not invoicing, it is **job allocation**: a courier with an
 overdue balance stops being offered by `resolveDeliveryRoute()`. That has to be a stated
 rule with a grace period, visible on their page, or it will read as arbitrary.
 
 > **Open — owner's call.** The grace period (how many deliveries or days before
-> suspension), and whether a suspended courier's existing accepted jobs still complete.
+> suspension), whether a suspended courier's accepted jobs still complete, and whether a
+> courier who stops at 7 in-city deliveries owes 3,500 or nothing. This document assumes
+> **accrual** — they owe 3,500, and "per 10" is only when Soko asks for it.
 
 ### Refunds
 
@@ -172,7 +195,7 @@ cases need a stated policy:
 |---|---|
 | Branch declines — out of stock, price wrong | **Full refund.** Soko did not deliver a customer; keeping it would be indefensible. |
 | Customer cancels before dispatch | **Full refund** within a short window, then non-refundable. |
-| Customer refuses at the door | **Non-refundable.** This is the exact behaviour the deposit exists to discourage, and a driver has already been paid for the trip. |
+| Customer refuses at the door | **Non-refundable.** This is the exact behaviour the deposit exists to discourage, and a driver has already made the trip. |
 | Courier fails to deliver | **Full refund**, and it counts against the courier. |
 
 > **Open — owner's call.** The cancellation window, and whether a refused delivery also
@@ -245,17 +268,19 @@ Nothing below is honest until this changes.
 - **Owner action, not code:** a merchant account with one aggregator (Selcom or Azampay
   are the concrete Tanzania-headquartered candidates). Soko is their merchant; they hold
   the licence.
-- A **pure fee module** — goods total, delivery fee and route kind in; deposit, branch
-  payout, courier payout and Soko's cut out. Pure and heavily tested, in the shape of
+- A **pure fee module** — goods total and delivery fee in; goods rung, delivery rung,
+  deposit, branch payout and courier payout out. Pure and heavily tested, in the shape of
   `buildListings` / `previewDelivery`. Money bugs are the worst kind, and a pure function
-  is the only part worth trusting.
-- Integer TZS throughout — the schema already uses `priceTZS Int`. **Define the rounding
-  rule explicitly** (proposal: round Soko's cut down to the nearest TZS, so the customer
-  is never overcharged by rounding).
+  is the only part worth trusting. **Both ladders are data, not code** — a fee table a
+  non-engineer can change without a deploy, because these numbers have already changed
+  twice in one conversation.
+- Integer TZS throughout — the schema already uses `priceTZS Int`. Band edges are exact,
+  so there is no rounding in the fee itself; the only rounding question is inside the
+  aggregator's own charge.
 - Deposit collection: a mobile-money push to the phone already captured in
   `customer.phone`, reconciled against the aggregator's own transaction id — which is
   *not* the same thing as `reference`.
-- `AgentLedger`: accrue 1,000 TZS per off-platform delivery, settle on the partner page,
+- `AgentLedger`: accrue the delivery rung per delivery, settle on the partner page,
   suspend from routing when overdue.
 
 ### Phase 4 — Settlement and trust
@@ -270,26 +295,32 @@ Nothing below is honest until this changes.
 ## 5. Open questions the owner still has to answer
 
 1. **Refund policy** — the cancellation window, and who bears a refused delivery.
-2. **Courier suspension** — grace period before an overdue balance stops job allocation.
+2. **Courier suspension** — grace period before an overdue balance stops job allocation,
+   and whether a partial batch of in-city deliveries is owed pro-rata.
 3. **Who verifies a branch is really that brand?** Nothing stops someone applying as
    "Toyota Arusha". The `verified` flag already separates researched fact from
    placeholder; partner approval needs the same discipline, and it is an ops process,
    not a code change.
 4. **The bottom rung.** A 500 TZS fee on the TZS 2,000 item is 25%. Accept it, add a
    narrower first rung, or set a minimum order value.
-5. **Does the deposit apply to brand-fleet orders?** No courier means no delivery payment
-   through Soko and no delivery rung, so the deposit would be the goods rung alone —
-   confirm that is intended.
+5. **Does the deposit apply to brand-fleet orders?** No courier means no delivery rung,
+   so the deposit is the goods rung alone and Soko earns nothing from the delivery leg —
+   confirm that is intended for 6 of 19 branches.
 6. **Weight or size surcharge on delivery**, once `Product` can carry it. Today an SUV and
    a pair of earbuds are quoted the same delivery fee.
+7. **Was the 1,000 TZS meant as a penalty?** It is superseded here. If the intent was to
+   discourage taking payment outside Soko, it needs restating as a surcharge on top of
+   the delivery rung rather than an alternative to it.
 
 ---
 
 ## 6. Verification, when this gets built
 
-- **Fee module**: unit tests over the real catalogue's price range — TZS 32,000 earbuds
-  to TZS 245,000,000 SUVs — asserting that deposit + door payment reconciles to the
-  order total exactly, with no rounding leak, for both route kinds.
+- **Fee module**: unit tests over the real catalogue's price range — TZS 2,000 to TZS
+  245,000,000 — asserting that the deposit plus the door payment reconciles to the order
+  total exactly, and that what the branch keeps plus what the courier collects equals the
+  door payment, for both route kinds. Test the band edges specifically: 5,000 and 5,100
+  must differ, 100,000,000 and 100,000,001 must not.
 - **Status machine**: tests that illegal transitions are rejected, not just that legal
   ones work.
 - **Authorization**: E2E proving a branch cannot see another branch's orders, and a
