@@ -222,10 +222,74 @@ model PartnerApplication {
   address    String?
   notes      String?
 
-  createdAt  DateTime  @default(now())
-  reviewedAt DateTime?
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+  /// The admin uid that decided. Null while pending.
+  reviewedBy   String?
+  /// Why it was rejected, so the decision is not folklore.
+  decisionNote String?
 
   // The admin queue reads pending-first, oldest-first.
   @@index([status, createdAt])
   @@index([uid])
+}
+
+// An approved partner: a brand branch that may list products, or a courier
+// that may be offered delivery jobs.
+//
+// Created only by an admin approving a `PartnerApplication`, never by signup.
+//
+// **Approval does not publish anything to customers.** `branchId` and `agentId`
+// stay null until someone deliberately wires this partner into the catalogue,
+// because a `Branch` row is customer-facing data and the `verified` flag rule
+// says invented records must never claim to be real. Letting an approval create
+// a live branch would put an unverified address on the locator map the moment a
+// stranger filled in a form.
+model Partner {
+  id String @id @default(cuid())
+
+  // "brand" | "courier", and "active" | "suspended". Text, not enums — see the
+  // note on PartnerApplication.
+  kind   String
+  status String @default("active")
+
+  displayName String
+  contactName String
+  phone       String
+  city        String
+
+  brandId String?
+  address String?
+
+  /// The catalogue rows this partner maps to, once wired up. Null until then.
+  branchId String?
+  agentId  String?
+
+  /// The application this came from. Unique: approving twice is a bug, and the
+  /// database is a better place to find that out than a code review.
+  applicationId String   @unique
+  approvedAt    DateTime @default(now())
+  approvedBy    String
+
+  users PartnerUser[]
+
+  @@index([kind, status])
+}
+
+// The Firebase account that manages a partner.
+//
+// `uid` is the primary key, so one account belongs to at most one partner. That
+// is a real constraint rather than an oversight: today a person running two
+// branches would need two Google accounts. Revisit when someone actually does —
+// it becomes a composite key and a partner switcher, not a schema rewrite.
+model PartnerUser {
+  uid String @id
+
+  partnerId String
+  partner   Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+
+  role      String   @default("owner")
+  createdAt DateTime @default(now())
+
+  @@index([partnerId])
 }

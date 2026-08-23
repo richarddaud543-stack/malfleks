@@ -304,6 +304,60 @@ verification.
    `NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY`, and leave enforcement **off**.
    Watch the metrics, then enforce Auth and Firestore.
 
+### Admin access — granting and, more importantly, revoking
+
+`/admin` is guarded by `isAdminUser()` in `src/server/auth/admin.ts`, which admits
+two kinds of person: someone carrying the `admin: true` Firebase custom claim, or
+someone whose verified email is listed in `SOKO_ADMIN_EMAILS`.
+
+**The allowlist exists because nothing in the app can grant the first custom claim,
+and nothing should be able to.** An application that can promote its own users to
+admin is one bug away from letting a stranger do it. So the first admin is named in
+config, outside the system they administer. Set it to the owner's Google address:
+
+```
+SOKO_ADMIN_EMAILS=owner@example.com
+```
+
+It is read per request, so adding or removing an address takes effect on the next
+page load — which also makes it the fastest way to lock someone out in a hurry.
+
+**Granting the claim** to anyone else, from a script or the console:
+
+```ts
+await getAdminAuth().setCustomUserClaims(uid, { admin: true });
+```
+
+They must **sign out and back in**. The claim travels inside the session cookie and
+a cookie minted before the grant does not carry it.
+
+**Revoking the claim is the part that surprises people, and it is a two-step
+operation.** Clearing the claim alone does *not* end an existing session:
+
+```ts
+// NOT sufficient on its own — the current cookie still says admin: true.
+await getAdminAuth().setCustomUserClaims(uid, { admin: false });
+```
+
+A session cookie lives **five days** and carries whatever the claims said when it
+was minted. `verifySessionCookie(cookie, true)` does check for revocation, but
+"revoked" means *issued before `tokensValidAfterTime`* — and only
+`revokeRefreshTokens()` moves that timestamp. `setCustomUserClaims()` does not
+touch it. So a demoted admin keeps working approve/reject access for the remainder
+of their cookie's life.
+
+Demote with both calls, the same pairing `destroySession()` already uses at
+sign-out (`src/server/auth/session.ts:157`):
+
+```ts
+await getAdminAuth().setCustomUserClaims(uid, { admin: false });
+await getAdminAuth().revokeRefreshTokens(uid);   // <- the one that ends the session
+```
+
+This is documented behaviour of the Admin SDK rather than something verified here —
+no service-account key exists in this environment, which is the same gap the section
+below records for the rest of the server half.
+
 ---
 
 ## Known gaps and things not verified

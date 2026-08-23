@@ -1,6 +1,6 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { isAdminConfigured } from "@/server/firebase/admin-config";
 import { SESSION_COOKIE_NAME } from "./session";
 
@@ -28,6 +28,16 @@ export interface Session {
   email: string | null;
   emailVerified: boolean;
   picture: string | null;
+  /**
+   * The `admin: true` custom claim, if this cookie carries one.
+   *
+   * Read here rather than looked up per page, because it rides inside the
+   * cookie already. The cost is staleness: a claim granted after sign-in does
+   * not reach a cookie minted before it, so a newly promoted admin has to sign
+   * in again. `isAdminUser()` in `./admin` is the thing to call — it also
+   * honours the bootstrap allowlist, which has no such delay.
+   */
+  admin: boolean;
 }
 
 /**
@@ -61,6 +71,7 @@ export const verifySession = cache(async (): Promise<Session | null> => {
       email: decoded.email ?? null,
       emailVerified: decoded.email_verified === true,
       picture: typeof decoded.picture === "string" ? decoded.picture : null,
+      admin: decoded.admin === true,
     };
   } catch {
     // Expired, revoked, tampered with, or minted for another project. All of
@@ -86,5 +97,27 @@ export const verifySession = cache(async (): Promise<Session | null> => {
 export async function requireSession(next: string = "/account"): Promise<Session> {
   const session = await verifySession();
   if (!session) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
+  return session;
+}
+
+/**
+ * The session, or gone — for admin-only routes and actions.
+ *
+ * A signed-out visitor is sent to sign in, because that is recoverable. A
+ * signed-in non-admin gets `notFound()` rather than a redirect or a 403: a
+ * "you are not allowed here" page confirms the route exists, and an admin
+ * console is worth strictly less to an attacker who cannot tell it is there.
+ * The same reasoning is why /admin is `noindex` and absent from the sitemap.
+ *
+ * Authorization lives here, in the DAL, next to the data — not in a proxy that
+ * a matcher edit could quietly stop covering.
+ */
+export async function requireAdmin(next: string = "/admin"): Promise<Session> {
+  const session = await verifySession();
+  if (!session) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
+
+  const { isAdminUser } = await import("./admin");
+  if (!isAdminUser(session)) notFound();
+
   return session;
 }

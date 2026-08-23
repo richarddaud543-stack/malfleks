@@ -6,6 +6,27 @@ and not written down is paid for again. This file is where that knowledge lands.
 
 ## Working agreement
 
+**Every task is assigned to a named engineer.** Established 2026-08-23 by the owner:
+work is not done by an unnamed hand. If a job does not fit a seat on the roster, open
+one for it rather than absorbing it into the Lead's own hands. The Lead assigns,
+reviews, integrates and is the sole writer to `master` — but the Lead is not the one
+typing the implementation.
+
+This is not ceremony. Work with no owner leaves no paper trail, which is the whole
+reason the roster exists; and it loses the second pair of eyes. The audit that *was*
+delegated on 2026-08-23 found a real approve/reject race in code the Lead had written
+minutes earlier and was satisfied with.
+
+Two constraints that follow from it, both learned the hard way:
+
+- **Subagents share the account's session budget.** Two parallel agents were killed
+  mid-assignment by a session limit that day; one had reported and its work survived,
+  the other left half-finished files on disk. Prefer fewer, larger, well-briefed
+  assignments over many small ones, and expect to pick up partial work.
+- **A brief must carry everything.** Each engineer starts cold with no memory of the
+  last assignment and no conversation context. Name the files they own, say which
+  files teammates hold, and order the steps.
+
 **Two-phase assignments.** No assignment begins implementation cold.
 
 - **Phase 0 — Onboarding.** Research the current professional standards for your
