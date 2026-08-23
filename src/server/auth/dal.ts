@@ -75,9 +75,16 @@ export const verifySession = cache(async (): Promise<Session | null> => {
  *
  * `redirect()` throws, so this never returns `null` and callers do not need a
  * null check — that is the point of having it separate from `verifySession`.
+ *
+ * `next` is where sign-in returns the visitor. It used to be hardcoded to
+ * `/account`, which was correct only because `/account` was the sole caller:
+ * the second gated route to use this would have silently sent its visitors to
+ * somebody else's page after signing in. `SignInPanel` validates the value
+ * against open redirects, so a caller cannot use this to bounce anyone
+ * off-site.
  */
-export async function requireSession(): Promise<Session> {
+export async function requireSession(next: string = "/account"): Promise<Session> {
   const session = await verifySession();
-  if (!session) redirect("/sign-in?next=/account");
+  if (!session) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
   return session;
 }

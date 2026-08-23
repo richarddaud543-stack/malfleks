@@ -22,6 +22,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/search`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${siteUrl}/locator`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${siteUrl}/agents`, changeFrequency: "weekly", priority: 0.6 },
+    // Indexable on purpose, unlike /account: a brand that cannot find this page
+    // cannot apply, which is why /apply stays a static route.
+    { url: `${siteUrl}/apply`, changeFrequency: "monthly", priority: 0.5 },
     // /account is deliberately absent: it is `noindex` and one person's
     // private page, same as /order/confirmation. Listing a noindex URL in a
     // sitemap tells crawlers two opposite things.

@@ -147,7 +147,7 @@ model DeliveryAgent {
   name String
   city String
 
-  phone   String
+  phone    String
   verified Boolean
 
   // Days from pickup, `0` meaning same day; `etaMaxDays` is inclusive. This
@@ -176,4 +176,56 @@ model AgentRegion {
 
   @@id([agentId, region])
   @@index([region])
+}
+
+// A brand branch or a courier asking to join Soko.
+//
+// The intake half of the partner pipeline in `docs/marketplace-model.md`:
+// they apply here, an admin approves, and only then does a `Partner` exist and
+// products can be submitted. Nothing reads this table yet — applications sit at
+// `status = "pending"` until the admin queue is built, which is why the page
+// says so rather than promising a reply.
+//
+// `Brand` is deliberately NOT a relation. A courier has no brand at all, and a
+// branch may name a brand the catalogue has never heard of, so `brandId` is a
+// loose reference the admin resolves at approval rather than a foreign key that
+// would reject the applicant at submit time.
+//
+// `uid` and `email` come from the verified session, never the form. Same trust
+// boundary as `buildOrderRequest` — the browser says what it wants, not who it
+// is. On approval the uid becomes the `PartnerUser`, so the account the partner
+// signs in with already exists and nobody has to create one.
+model PartnerApplication {
+  id String @id @default(cuid())
+
+  // "brand" | "courier", and "pending" | "approved" | "rejected". Text rather
+  // than enums, matching the rest of this schema: enums are not portable to
+  // the SQLite dev provider.
+  kind   String
+  status String @default("pending")
+
+  uid   String
+  email String
+
+  businessName String
+  contactName  String
+  // Stored +255-normalised by `normalizePhone()`, so two applicants who typed
+  // 0754… and +255754… are the same number here.
+  phone        String
+  city         String
+
+  /// Set when the applicant claims a brand already in the catalogue.
+  brandId    String?
+  /// Set instead when they name one that is not.
+  brandOther String?
+  /// Branch applications only. A courier serves a city, not an address.
+  address    String?
+  notes      String?
+
+  createdAt  DateTime  @default(now())
+  reviewedAt DateTime?
+
+  // The admin queue reads pending-first, oldest-first.
+  @@index([status, createdAt])
+  @@index([uid])
 }
