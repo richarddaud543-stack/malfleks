@@ -56,6 +56,35 @@ API key is a **public identifier**, not a secret; Security Rules are the protect
 **Next 16 Proxy (renamed from Middleware) defaults to the Node.js runtime**, which
 removes the usual reason to reach for Edge-workaround auth libraries.
 
+**Multi-level `onDelete` cascades actually work transitively through the
+better-sqlite3 adapter** — deleting a `Branch` that cascades to `Product`
+(`onDelete: Cascade`) also fires that now-deleted `Product`'s own
+`onDelete: SetNull` on `Order.productId`, in one statement, no app-level
+fan-out needed. Don't assume this without a test, though — I wrote one
+(`create-order.test.ts`'s cascade describe block) that deletes a real seeded
+branch and agent and asserts the referencing `Order` row survives with the
+columns nulled and the snapshot fields untouched. That test is the actual
+proof the "loose reference, `onDelete: SetNull`" design decision holds; the
+schema comment is not enough on its own.
+
+**Catching a Prisma unique-constraint violation**: `error instanceof
+Prisma.PrismaClientKnownRequestError && error.code === "P2002"`, importing
+`Prisma` (the namespace, not just `PrismaClient`) from `@prisma/client`. Used
+this for `Order.reference`'s regenerate-and-retry-once — checking `code`
+alone was enough here since `reference` is the only column in the table a
+normal write could plausibly collide on (the cuid `id` isn't).
+
+**A pure trust-boundary function used by two persistence backends should not
+live inside either backend's module.** `buildOrderRequest` (re-derives an
+order from the catalogue, used by both the Firestore saved-copy path and the
+new Prisma `Order` table) started out in `saved-requests.ts`, which imports
+`firebase-admin` at module scope. Pulling it into the Prisma-only
+`create-order.ts` would have made an anonymous-checkout write path depend on
+Firebase Admin being importable at all. Moved it to
+`src/server/orders/build-order-request.ts` with zero Firestore/Prisma
+imports; `saved-requests.ts` now re-exports it so nothing that imported it
+from there before had to change.
+
 ## Delivery
 
 CI (`.github/workflows/ci.yml`) runs types, lint, unit tests, then E2E **against a

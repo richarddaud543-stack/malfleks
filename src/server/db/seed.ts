@@ -9,10 +9,17 @@ import { brands, branches, products, deliveryAgents } from "@/data";
  * exact mirror of them. It is convergent, not additive: running it twice leaves
  * the same rows, and a record deleted from `src/data` is deleted here too.
  *
- * That pruning is safe *today* because nothing else writes to these tables. Once
- * orders reference branches and products, replace the prune with a soft-delete
- * or drop it entirely; deleting a branch an order points at is not a seed's
- * decision to make.
+ * That pruning used to be safe only because nothing else wrote to these
+ * tables. Orders now do (`src/server/orders/create-order.ts`), and the prune
+ * below is unchanged anyway: every one of `Order`'s catalogue references
+ * (`productId`, `brandId`, `branchId`, `agentId`) is `onDelete: SetNull` in
+ * the schema, not a required FK. Deleting a branch or product here — exactly
+ * what this prune does for a record removed from `src/data` — nulls the
+ * matching column on any order that pointed at it and leaves the order row,
+ * its snapshot fields, and its history intact. A soft delete was the
+ * alternative on the table; it turned out not to be needed, because the
+ * schema already makes "the row is gone" and "the order is gone" two
+ * different, and only one, of the two true outcomes.
  */
 export interface SeedCounts {
   brands: number;

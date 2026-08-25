@@ -20,6 +20,7 @@ import {
 } from "@/lib/order";
 import { formatEta } from "@/lib/format";
 import { saveOrderRequest } from "@/app/actions/order-requests";
+import { submitOrder } from "@/app/actions/orders";
 import { useSessionState } from "@/components/auth/session-state";
 import AgentChoice from "./AgentChoice";
 import OrderSummary from "./OrderSummary";
@@ -109,9 +110,35 @@ export default function OrderRequestForm({
     store(request);
     setSubmitting(true);
 
-    // The signed-out path ends here, exactly as it always has: the request is
-    // in this tab and has been transmitted nowhere. The check is deliberately
-    // on the *client* so that is literally true — not "sent and then ignored".
+    // Persisted unconditionally, signed in or not — every order request now
+    // gets a real backend record. This runs regardless of whether `session`
+    // has resolved yet: unlike the account-save path below, it does not need
+    // to know who is signed in on the client, only that a request was made.
+    // `submitOrder` reads identity from the verified session cookie on the
+    // server, and writes `customerId: null` for a signed-out customer rather
+    // than skipping the write.
+    try {
+      await submitOrder({
+        // Ids and the customer's own words only. Price, product name,
+        // carrier and total are re-derived on the server from the catalogue,
+        // so nothing here can misstate what was ordered.
+        productId: product.id,
+        quantity: input.quantity,
+        fullName: result.value.fullName,
+        phone: result.value.phone,
+        address: result.value.address,
+        agentId: result.value.agent?.id ?? null,
+        reference: request.reference,
+        requestedAt: request.requestedAt,
+      });
+    } catch {
+      // A failed persist costs the customer nothing they had a moment ago:
+      // the browser copy is already written and the confirmation screen does
+      // not depend on the backend write having succeeded.
+    }
+
+    // Saving to an account is a separate, additional convenience — the
+    // customer's own deletable copy — and stays gated on being signed in.
     if (session?.signedIn) {
       try {
         const outcome = await saveOrderRequest({

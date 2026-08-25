@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { getBranchById, getBrandById, getProductById } from "@/data";
 import type { Branch, Brand, Product } from "@/data";
 import { formatEta, formatTZS } from "@/lib/format";
@@ -13,6 +13,13 @@ import OrderRequestForm from "./OrderRequestForm";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+}));
+
+// Every submission now persists via this action. Not under test here — that
+// belongs to OrderRequestForm.auth.test.tsx — but it must be mocked so a
+// jsdom render never reaches the real server action's `next/headers` call.
+vi.mock("@/app/actions/orders", () => ({
+  submitOrder: vi.fn().mockResolvedValue({ ok: true, reference: "TOY-DAR-K7M4" }),
 }));
 
 function fixture(productId: string) {
@@ -142,7 +149,7 @@ describe("OrderRequestForm", () => {
     );
   });
 
-  it("refuses to send an agent-routed order until an agent is chosen", () => {
+  it("refuses to send an agent-routed order until an agent is chosen", async () => {
     renderForm(agentDelivered);
 
     fillDetails();
@@ -154,7 +161,8 @@ describe("OrderRequestForm", () => {
     fireEvent.click(screen.getAllByRole("radio")[0]);
     submit("Confirm agent delivery");
 
-    expect(push).toHaveBeenCalledWith("/order/confirmation");
+    // Submission now awaits the persist call before navigating.
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
   });
 
   it("stores a request carrying the chosen agent through to confirmation", () => {

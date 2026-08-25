@@ -45,6 +45,7 @@ model Brand {
 
   branches Branch[]
   products Product[]
+  orders   Order[]
 
   @@index([category])
 }
@@ -84,6 +85,7 @@ model Branch {
   sortOrder Int
 
   products Product[]
+  orders   Order[]
 
   @@index([brandId])
   @@index([city])
@@ -115,7 +117,8 @@ model Product {
 
   sortOrder Int
 
-  specs ProductSpec[]
+  specs  ProductSpec[]
+  orders Order[]
 
   @@index([branchId])
   @@index([brandId])
@@ -160,6 +163,7 @@ model DeliveryAgent {
   sortOrder Int
 
   regionsServed AgentRegion[]
+  orders        Order[]
 
   @@index([city])
 }
@@ -176,6 +180,107 @@ model AgentRegion {
 
   @@id([agentId, region])
   @@index([region])
+}
+
+// A customer's order request, signed in or anonymous — persisted the moment
+// `OrderRequestForm` is submitted. See `docs/backend.md`'s third Decision
+// block for why this is Prisma and not Firestore: it is squarely relational
+// (joins to product/branch/brand/agent, needs admin/business querying), the
+// same shape as the catalogue rather than the saved-order-requests exception.
+//
+// This resolves the two flags carried before an order existed to test them
+// against — see the "Cascades" section and the pruning note in
+// `docs/backend.md`, and the matching comment in `src/server/db/seed.ts`.
+//
+// `status` starts and stays "pending" until an admin queue exists to move it;
+// text rather than an enum, matching `PartnerApplication`/`Partner` — SQLite
+// has none, and an order is not a paid/confirmed transaction yet, which is
+// exactly why this is *not* named after the customer-facing lib type
+// (`OrderRequest` in src/lib/order.ts) despite mirroring its fields: that
+// type is a receipt shown to the browser, this is the durable record.
+model Order {
+  id String @id @default(cuid())
+
+  // Firebase uid, or null for a signed-out customer. Deliberately not a FK:
+  // the identity lives in Firebase, not this database — same reasoning
+  // `docs/backend.md` already gives for keeping saved order requests out of
+  // Postgres. Present so a future "my orders" view can filter by it.
+  customerId String?
+
+  status String @default("pending")
+
+  // ---- Loose catalogue references --------------------------------------
+  //
+  // Every one of these is nullable with `onDelete: SetNull`, never Cascade
+  // and never a required FK. An order is evidence of what a customer was
+  // shown at request time; a later catalogue edit — or a branch, product or
+  // agent being removed outright — must never delete, rewrite or silently
+  // reinterpret that evidence. Losing the *link* to a since-deleted branch
+  // is an acceptable outcome; losing the *order* because a branch was
+  // deleted is not. `Branch`, `Product` and `AgentRegion` keep cascading
+  // from their own catalogue parents unchanged — a brand delete still
+  // cannot orphan a product — but nothing cascades *into* `Order`. The
+  // snapshot columns further down are what every page actually renders
+  // from; these four are for admin joins and filters only.
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  brandId   String?
+  brand     Brand?   @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  branchId  String?
+  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  // The chosen courier on an agent route. Always null on a brand route,
+  // where no third party is involved at all.
+  agentId       String?
+  deliveryAgent DeliveryAgent? @relation(fields: [agentId], references: [id], onDelete: SetNull)
+
+  // ---- Snapshot: what the customer actually saw -------------------------
+  // Mirrors `OrderRequest` (src/lib/order.ts) field for field. Never
+  // recomputed from the current catalogue after the fact — see above.
+  productName  String
+  unitPriceTZS Int
+  brandName    String
+  brandSlug    String
+  branchName   String
+  branchCity   String
+  branchPhone  String?
+
+  routeKind        String
+  routeCarrier     String
+  routeAgentPhone  String?
+  routeEtaEstimate String?
+
+  customerFullName String
+  customerPhone    String
+  customerAddress  String
+
+  quantity     Int
+  lineTotalTZS Int
+
+  // Read aloud to a branch on the phone (see `generateOrderReference` in
+  // src/lib/order.ts), so it has to be unambiguous — and now that it
+  // outlives a browser tab, it also has to be unique. The alphabet is 28
+  // characters over 4 slots: 614,656 codes per brand+city pair, small enough
+  // that a collision is reachable once orders accumulate for one branch
+  // (~925 orders for 50% odds by the birthday bound). `@unique` catches it
+  // at the database; `createOrder` (src/server/orders/create-order.ts)
+  // regenerates and retries once rather than failing the request over it —
+  // the reference is cosmetic, the order is not.
+  reference String @unique
+
+  // What the customer saw on screen when they submitted, distinct from
+  // `createdAt` for the same reason Firestore's saved copy splits
+  // `requestedAt`/`savedAt`: one is customer-supplied (and sanitized to a
+  // 24h window around now, see `sanitizeRequestedAt`), the other is this
+  // server's own clock.
+  requestedAt DateTime
+  createdAt   DateTime @default(now())
+
+  // What an admin or branch view would query by: orders waiting on a
+  // decision, a branch's own orders, newest first.
+  @@index([status])
+  @@index([branchId])
+  @@index([createdAt])
+  @@index([customerId])
 }
 
 // A brand branch or a courier asking to join Soko.

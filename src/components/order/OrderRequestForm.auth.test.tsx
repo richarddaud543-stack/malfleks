@@ -7,14 +7,17 @@ import { invalidateSessionState } from "@/components/auth/session-state";
 import OrderRequestForm from "./OrderRequestForm";
 
 /**
- * The rule this file exists to hold: **a signed-out customer's order request is
- * not transmitted anywhere.**
+ * The rules this file exists to hold — one of them reversed by the owner's
+ * decision to persist every order request, and this file changed with it:
  *
- * Saving to an account is an addition. It must never become a gate, and it must
- * never quietly start sending a signed-out customer's name, phone number and
- * home address to a server. That is a promise the confirmation screen makes in
- * so many words ("Nothing was sent anywhere"), so it needs a test that fails
- * the day someone moves the check.
+ * - **Every order request is persisted, signed in or not.** `submitOrder`
+ *   fires on every successful submission regardless of session state. This
+ *   file used to prove the opposite ("a signed-out customer's request is
+ *   transmitted nowhere"); it now proves persistence happens for everyone.
+ * - **Saving a copy to the customer's account stays gated on being signed
+ *   in.** That is `saveOrderRequest` — a separate, additional convenience
+ *   (Firestore) — and it must never fire for a signed-out customer. The
+ *   confirmation screen still promises that one specifically.
  */
 
 const push = vi.fn();
@@ -25,6 +28,11 @@ vi.mock("next/navigation", () => ({
 const saveOrderRequest = vi.fn();
 vi.mock("@/app/actions/order-requests", () => ({
   saveOrderRequest: (...args: unknown[]) => saveOrderRequest(...args),
+}));
+
+const submitOrder = vi.fn();
+vi.mock("@/app/actions/orders", () => ({
+  submitOrder: (...args: unknown[]) => submitOrder(...args),
 }));
 
 function fixture(productId: string) {
@@ -66,6 +74,8 @@ describe("OrderRequestForm and the customer's session", () => {
   beforeEach(() => {
     push.mockClear();
     saveOrderRequest.mockReset();
+    submitOrder.mockReset();
+    submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-K7M4" });
     sessionStorage.clear();
     invalidateSessionState();
   });
@@ -74,7 +84,7 @@ describe("OrderRequestForm and the customer's session", () => {
     vi.unstubAllGlobals();
   });
 
-  it("transmits nothing at all when the customer is signed out", async () => {
+  it("persists the order via submitOrder even when signed out", async () => {
     mockSession(false);
     render(<OrderRequestForm {...brandDelivered} />);
     // Let the session answer land, so this is a real signed-out state rather
@@ -84,28 +94,42 @@ describe("OrderRequestForm and the customer's session", () => {
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
 
+    await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
+    const payload = submitOrder.mock.calls[0][0];
+    expect(payload.productId).toBe("toyota-corolla");
+    // Normalised by the shared validator before it leaves the browser.
+    expect(payload.phone).toBe("+255754123456");
+    // Nothing with a price on it: the server re-derives all of that.
+    expect(payload).not.toHaveProperty("lineTotalTZS");
+    expect(payload).not.toHaveProperty("unitPriceTZS");
+    expect(payload).not.toHaveProperty("product");
+
     await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
+    // The account-save path stays gated: a signed-out customer's name, phone
+    // and address are never sent there.
     expect(saveOrderRequest).not.toHaveBeenCalled();
 
-    // And the request is still there for the confirmation screen.
     const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
     expect(stored?.customer.fullName).toBe("Neema Mushi");
     expect(stored?.savedToAccount).toBeUndefined();
   });
 
-  it("does not transmit while the session answer is still in flight", async () => {
-    // A submit that races the session check must fall back to the safe side.
+  it("persists the order without waiting on the session answer", async () => {
+    // A submit that races the session check must still reach the backend:
+    // persistence does not depend on the client's own read of who is signed
+    // in — only the account-save path below does.
     vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
     render(<OrderRequestForm {...brandDelivered} />);
 
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
 
+    await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(push).toHaveBeenCalled());
     expect(saveOrderRequest).not.toHaveBeenCalled();
   });
 
-  it("saves for a signed-in customer, sending ids rather than prices", async () => {
+  it("persists the order and also saves to account for a signed-in customer", async () => {
     mockSession(true);
     saveOrderRequest.mockResolvedValue({ saved: true, reference: "TOY-DAR-K7M4" });
 
@@ -115,13 +139,12 @@ describe("OrderRequestForm and the customer's session", () => {
     fill();
     fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
 
+    await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(saveOrderRequest).toHaveBeenCalledTimes(1));
 
     const payload = saveOrderRequest.mock.calls[0][0];
     expect(payload.productId).toBe("toyota-corolla");
-    // Normalised by the shared validator before it leaves the browser.
     expect(payload.phone).toBe("+255754123456");
-    // Nothing with a price on it: the server re-derives all of that.
     expect(payload).not.toHaveProperty("lineTotalTZS");
     expect(payload).not.toHaveProperty("unitPriceTZS");
     expect(payload).not.toHaveProperty("product");
@@ -142,7 +165,7 @@ describe("OrderRequestForm and the customer's session", () => {
     expect(stored?.savedToAccount).toBe(true);
   });
 
-  it("still completes the order when saving fails", async () => {
+  it("still completes the order when the account save fails", async () => {
     mockSession(true);
     saveOrderRequest.mockRejectedValue(new Error("Firestore unavailable"));
 
@@ -158,5 +181,23 @@ describe("OrderRequestForm and the customer's session", () => {
     const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
     expect(stored?.reference).toBeTruthy();
     expect(stored?.savedToAccount).toBeUndefined();
+  });
+
+  it("still completes the order when persistence itself fails", async () => {
+    mockSession(false);
+    submitOrder.mockRejectedValue(new Error("Prisma unavailable"));
+
+    render(<OrderRequestForm {...brandDelivered} />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+
+    // A failed write costs the customer nothing they had a moment ago: the
+    // browser copy is already there, and they still reach the confirmation
+    // screen with a reference to quote.
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
+    const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
+    expect(stored?.reference).toBeTruthy();
   });
 });

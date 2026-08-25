@@ -87,6 +87,76 @@ first thing in the system that remembers a catalogue row, and the next one may.
 
 ---
 
+## Decision: Orders are persisted in Prisma, as a real `Order` table
+
+**Built 2026-08-25 by ENG-4 · Forge, on the owner's decision to remove the
+"signed-out customers transmit nothing" property in favour of every order
+request getting a real, queryable backend record.** This is the "next one"
+the note above was waiting for, and it resolves both flags it left open.
+
+Every submission of `OrderRequestForm` — signed in or anonymous — now writes
+an `Order` row via `src/server/orders/create-order.ts`, called from the
+server action `submitOrder` in `src/app/actions/orders.ts`. `customerId` is
+the Firebase uid from the verified session, or `null` for a signed-out
+customer; either way the write happens, which is the entire point of this
+change.
+
+**Why Prisma, not the Firestore exception above.** An order is not the
+narrowly-scoped, user-only slice that decision carved out — it joins to
+product, branch, brand and delivery agent, and the whole reason to persist it
+at all is so an admin or a branch can query it later ("orders waiting on us",
+"this branch's orders today"). That is the catalogue's own shape, the one
+Firestore has no joins for. The saved-order-requests decision above is
+unchanged and stays exactly what it was: a signed-in customer's own,
+separately-deletable convenience copy. Both now exist side by side for a
+signed-in customer's order — a durable business record in Prisma, and a copy
+they can delete themselves in Firestore — and that duplication is deliberate,
+not an oversight: deleting the Firestore copy removes *their* copy, not the
+order that exists whether or not they keep a copy of it.
+
+**No second copy of the trust boundary.** `buildOrderRequest` — the pure
+function that re-derives price, carrier and route from the catalogue so a
+client can never say what an order cost — moved from `saved-requests.ts` to
+`src/server/orders/build-order-request.ts`, with no Firestore dependency, so
+the Prisma path does not have to import `firebase-admin` to reuse it.
+`saved-requests.ts` re-exports everything from there, so nothing that
+imported the old location has to change.
+
+**The `Order` model's references are loose on purpose.** `productId`,
+`brandId`, `branchId` and `agentId` are all nullable with
+`onDelete: SetNull`, never a required FK and never `Cascade`. Every field a
+page would actually render is also snapshotted as plain text/int columns
+(`productName`, `unitPriceTZS`, `branchCity`, `routeCarrier`, …), mirroring
+`OrderRequest` in `src/lib/order.ts` field for field. This is exactly the
+"an order pointing at a deleted branch is a worse outcome than a failed
+delete" reasoning the Cascades section below used to flag as future work —
+now built, and covered by a test (`create-order.test.ts`) that deletes a
+branch and an agent an order points at and asserts the order survives with
+those two columns nulled and every snapshot field untouched.
+
+**`reference` is `@unique`, with a regenerate-and-retry-once on collision.**
+The reference alphabet is 28 characters over 4 slots — 614,656 codes per
+brand+city pair — which is small enough that a saved Firestore copy never had
+to worry about it (a customer deletes those; nobody has 900 outstanding
+requests to one branch) but an indefinitely-retained `Order` table does. The
+retry does not duplicate `generateOrderReference`: it hands `buildOrderRequest`
+a reference that fails sanitisation, the same path a tampered client
+reference already takes, and lets it regenerate on its own.
+
+Both flags this closes:
+
+- **Cascades** (below): "once orders reference branches and products, revisit
+  it" — done. `Branch`, `Product` and `AgentRegion` still cascade from their
+  own catalogue parents unchanged; nothing cascades *into* `Order`.
+- **Seeding**: "when orders arrive, replace the prune with a soft delete or
+  drop it" — neither was needed. The prune still hard-deletes a branch or
+  product removed from `src/data`, and that is fine now: `onDelete: SetNull`
+  on every `Order` reference column means the prune nulls the link on any
+  order that pointed at the deleted row rather than deleting the order. See
+  the updated comment in `src/server/db/seed.ts`.
+
+---
+
 ## Quick start
 
 From a fresh clone:
@@ -219,10 +289,17 @@ cannot drift unnoticed.
 ### Cascades
 
 `Branch`, `Product`, `ProductSpec` and `AgentRegion` all cascade from their
-parent. Deleting a brand cannot leave orphaned products. This is right *today*,
-when the catalogue is the only thing in the database. Once orders reference
-branches and products, revisit it — an order pointing at a deleted branch is a
-worse outcome than a failed delete.
+parent. Deleting a brand cannot leave orphaned products.
+
+**Revisited, as flagged: `Order`'s references are the opposite.** Now that
+orders reference branches and products (see the third Decision block above),
+`Order.productId`/`brandId`/`branchId`/`agentId` are all `onDelete: SetNull`,
+not `Cascade` and not required. The catalogue's own cascades are right
+precisely because a brand is expected to own its branches; an order is not
+owned by the branch that fulfilled it in the same sense — it is evidence of
+what a customer was shown, and deleting the branch later must not delete that
+evidence. An order pointing at a deleted branch is a worse outcome than a
+failed delete, so the schema makes it the only possible outcome.
 
 ---
 
@@ -243,10 +320,15 @@ It is **convergent, not additive**:
 - the whole thing runs in one transaction (60s budget), so a failure leaves the
   previous state rather than a half-seeded database.
 
-That pruning is safe only because nothing else writes to these tables yet. **When
-orders arrive, replace the prune with a soft delete or drop it** — deleting a
-branch an order points at is not a seed script's decision to make. This is
-flagged in the code as well.
+**Revisited, as flagged: orders now write to these tables, and the prune is
+unchanged.** It still hard-deletes a branch or product removed from
+`src/data`. That is fine, not a gap that was missed — see the Cascades
+section above: every `Order` reference column is `onDelete: SetNull`, so a
+pruned branch or product nulls the matching column on any order that pointed
+at it and leaves the order, its snapshot fields and its history alone. The
+soft-delete alternative this note used to propose turned out not to be
+necessary; the schema already makes the destructive read of "prune" — delete
+the order too — unreachable.
 
 Before touching the database the seed validates invariants the TypeScript types
 cannot express: unique ids and slugs, every `branch.brandId` and

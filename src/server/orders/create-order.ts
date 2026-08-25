@@ -1,0 +1,140 @@
+import { Prisma } from "@prisma/client";
+import { getPrisma } from "@/server/db/client";
+import type { OrderRequest } from "@/lib/order";
+import {
+  buildOrderRequest,
+  type SaveOrderRequestFailure,
+  type SaveOrderRequestInput,
+} from "./build-order-request";
+
+/**
+ * Persisting an order request as a real, queryable backend record.
+ *
+ * Every order request now gets one of these — signed in or anonymous — per
+ * the owner's decision recorded in `docs/backend.md`'s third Decision block.
+ * This lives in Prisma, not Firestore: an order joins to product, branch,
+ * brand and agent, and needs admin/business querying, which is the same
+ * relational shape as the catalogue rather than the saved-order-requests
+ * exception (`saved-requests.ts`, which stays as-is alongside this — a
+ * signed-in customer's own deletable copy is a different, still-valid
+ * feature).
+ *
+ * `buildOrderRequest` does the actual trust-boundary work — re-deriving
+ * price, carrier and route from the catalogue so the browser cannot say what
+ * it wants to be true. This module's only job is turning that validated
+ * result into a durable row.
+ */
+
+/**
+ * `"quota"` is inherited from `SaveOrderRequestFailure` but unreachable here:
+ * it is a Firestore write-ceiling concern (`saved-requests.ts`), and
+ * `buildOrderRequest` never produces it. `"persist-failed"` is the one new
+ * case — the database itself refused the write, including a reference
+ * collision that survived the retry below.
+ */
+export type CreateOrderFailure = SaveOrderRequestFailure | "persist-failed";
+
+export interface CreatedOrder {
+  id: string;
+  reference: string;
+  status: string;
+  createdAt: Date;
+}
+
+export type CreateOrderOutcome =
+  | { ok: true; value: CreatedOrder }
+  | { ok: false; reason: CreateOrderFailure };
+
+/**
+ * Writes one order.
+ *
+ * `customerId` is the Firebase uid from the verified session, or `null` for
+ * a signed-out customer — the caller (`src/app/actions/orders.ts`) decides
+ * that from the session cookie, never from the payload, same trust boundary
+ * as everywhere else in this codebase that touches identity.
+ *
+ * `reference` is `@unique` in the schema (see the schema comment for the
+ * birthday-bound math). A collision is retried exactly once: the retry asks
+ * `buildOrderRequest` to regenerate rather than duplicating
+ * `generateOrderReference`'s logic here — passing a reference that fails
+ * sanitisation makes `createOrderRequest` fall back to its own generator,
+ * the same path a tampered client reference already takes.
+ */
+export async function createOrder(
+  input: SaveOrderRequestInput,
+  customerId: string | null
+): Promise<CreateOrderOutcome> {
+  const built = buildOrderRequest(input);
+  if (!built.ok) return { ok: false, reason: built.reason };
+
+  try {
+    return { ok: true, value: await insertOrder(built.value, customerId) };
+  } catch (error) {
+    if (!isUniqueConstraintViolation(error)) {
+      return { ok: false, reason: "persist-failed" };
+    }
+
+    // Force a fresh reference the same way a tampered client reference does:
+    // an empty string fails `sanitizeReference`, so `createOrderRequest`'s
+    // default parameter regenerates one from the brand and branch.
+    const retried = buildOrderRequest({ ...input, reference: "" });
+    if (!retried.ok) return { ok: false, reason: retried.reason };
+
+    try {
+      return { ok: true, value: await insertOrder(retried.value, customerId) };
+    } catch {
+      // Two collisions in a row against a 614,656-code space is not worth a
+      // second retry — something else is wrong, and the customer still has
+      // their reference from the browser copy either way.
+      return { ok: false, reason: "persist-failed" };
+    }
+  }
+}
+
+async function insertOrder(
+  order: OrderRequest,
+  customerId: string | null
+): Promise<CreatedOrder> {
+  const row = await getPrisma().order.create({
+    data: {
+      customerId,
+      productId: order.product.id,
+      productName: order.product.name,
+      unitPriceTZS: order.product.unitPriceTZS,
+      brandId: order.brand.id,
+      brandName: order.brand.name,
+      // `brand.slug` is optional only so `parseOrderRequest` can still read a
+      // record written before the field existed; `buildOrderRequest` always
+      // goes through `createOrderRequest` with a real `Brand`, which always
+      // sets it. The fallback is defensive, not expected to fire.
+      brandSlug: order.brand.slug ?? order.brand.id,
+      branchId: order.branch.id,
+      branchName: order.branch.name,
+      branchCity: order.branch.city,
+      branchPhone: order.branch.phone ?? null,
+      routeKind: order.route.kind,
+      routeCarrier: order.route.carrier,
+      agentId: order.route.agentId ?? null,
+      routeAgentPhone: order.route.agentPhone ?? null,
+      routeEtaEstimate: order.route.etaEstimate ?? null,
+      customerFullName: order.customer.fullName,
+      customerPhone: order.customer.phone,
+      customerAddress: order.customer.address,
+      quantity: order.quantity,
+      lineTotalTZS: order.lineTotalTZS,
+      reference: order.reference,
+      requestedAt: new Date(order.requestedAt),
+    },
+  });
+
+  return {
+    id: row.id,
+    reference: row.reference,
+    status: row.status,
+    createdAt: row.createdAt,
+  };
+}
+
+function isUniqueConstraintViolation(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
+}
