@@ -155,6 +155,43 @@ Both flags this closes:
   order that pointed at the deleted row rather than deleting the order. See
   the updated comment in `src/server/db/seed.ts`.
 
+**The status workflow, added the same day.** `/admin/orders` shipped
+deliberately read-only (`52fa846`) because no status vocabulary existed yet —
+every order sat at `status = "pending"` forever, with no code anywhere that
+wrote another value. **The owner defined the vocabulary, relayed by the Lead,
+and it was built by ENG-4 · Forge on 2026-08-25**:
+
+- `pending` (default, unchanged) — submitted, nothing done yet.
+- `confirmed` — admin verified with the branch that the product is available
+  at the quoted price and delivery is proceeding. Still no money moves — this
+  is not a checkout, only a firmer request.
+- `cancelled` — won't be fulfilled (out of stock, branch declined, customer
+  unreachable/withdrew). Carries a reason, stored in the new
+  `Order.decisionNote` column.
+- `fulfilled` — delivered / handed off, request complete. Terminal.
+
+Transitions: `pending -> confirmed | cancelled`, `confirmed -> fulfilled |
+cancelled`. Nothing moves out of `fulfilled` or `cancelled`.
+
+**Soko admin only moves it, from `/admin/orders`.** There is no
+partner-facing order queue, and none was faked in this round —
+`Partner`/`PartnerUser` records are not linked to "their" orders anywhere in
+this schema; wiring that up is real future scope.
+
+**Built to the same shape as the partner-application review flow**
+(`src/server/partners/review.ts`), because that flow already found and fixed
+the exact concurrency bug this one would otherwise reintroduce: two admin
+tabs racing a decision on the same row. `src/server/orders/status.ts` holds
+`canTransition` (pure, exhaustively tested) and the guarded write — an
+`updateMany` with the valid source statuses in the WHERE, never `update` by
+id — and `Order.decidedBy`/`decidedAt`/`decisionNote` mirror
+`PartnerApplication.reviewedBy`/`reviewedAt`/`decisionNote` field for field.
+A real-SQLite integration test (`status.integration.test.ts`) proves the
+guard: two concurrent `Promise.all` calls at the same target — the "two tabs
+both click Confirm" scenario — resolve to exactly one success, never both.
+Migration: `20260825164357_add_order_status_workflow`, three new nullable
+columns, no data migration needed.
+
 ---
 
 ## Quick start

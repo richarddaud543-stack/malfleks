@@ -5,9 +5,9 @@ import { getPrisma } from "@/server/db/client";
  *
  * Mirrors the shape of `src/server/partners/review.ts`: a trimmed interface
  * ("trimmed to what the page renders"), a pure `serialise` mapper, and no
- * writes at all in this module. Unlike the review queue, there is no decision
- * function here — this round is deliberately read-only. See the note on
- * `status` below for why.
+ * writes at all in this module. The decision functions live next to this in
+ * `src/server/orders/status.ts` — this module stays read-only, the same
+ * split `review.ts` (decisions) and the partner-application listing keep.
  */
 
 /** What an admin sees in the order list. Trimmed to what the page renders. */
@@ -36,6 +36,11 @@ export interface ListedOrder {
   routeCarrier: string;
   routeAgentPhone: string | null;
   routeEtaEstimate: string | null;
+
+  /** Set once a transition in `status.ts` has run; null on a still-pending order. */
+  decidedAt: string | null;
+  /** Why, for a cancellation — same convention as `ReviewableApplication.decisionNote`. */
+  decisionNote: string | null;
 
   requestedAt: string;
   createdAt: string;
@@ -82,11 +87,14 @@ function serialise(row: {
   routeCarrier: string;
   routeAgentPhone: string | null;
   routeEtaEstimate: string | null;
+  decidedAt: Date | null;
+  decisionNote: string | null;
   requestedAt: Date;
   createdAt: Date;
 }): ListedOrder {
   return {
     ...row,
+    decidedAt: row.decidedAt ? row.decidedAt.toISOString() : null,
     requestedAt: row.requestedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
   };
@@ -95,16 +103,13 @@ function serialise(row: {
 /**
  * Orders, newest-first, optionally narrowed by branch and/or status.
  *
- * **On `status`: every order today is `"pending"`, because nothing in the
- * codebase has ever written another value.** This function accepts a status
- * filter because the column is indexed and the query is free to support —
- * but no status *vocabulary* exists yet: what values are possible, who is
- * allowed to move an order between them, and whether that is Soko's call or
- * the branch's, is a real product decision this codebase leaves deliberately
- * undecided rather than having an engineer guess at it. Same convention as
- * the still-open retention-policy gap on saved order requests (see
- * `docs/engineering-standards.md`'s debt register, row #20). Nothing here
- * writes `status` — this module, and the page built on it, are read-only.
+ * **On `status`:** `"pending"` | `"confirmed"` | `"cancelled"` |
+ * `"fulfilled"`, the vocabulary the owner defined on 2026-08-25. Soko admin
+ * alone moves an order between them, from `/admin/orders`, through the
+ * guarded transitions in `src/server/orders/status.ts` — see that module's
+ * doc comment for the full table and who may move what. This function
+ * accepts a status filter because the column is indexed and the query is
+ * free to support; it does not write it.
  */
 export async function listOrders(
   filter: ListOrdersFilter = {},

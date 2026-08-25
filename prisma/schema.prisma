@@ -192,12 +192,16 @@ model AgentRegion {
 // against — see the "Cascades" section and the pruning note in
 // `docs/backend.md`, and the matching comment in `src/server/db/seed.ts`.
 //
-// `status` starts and stays "pending" until an admin queue exists to move it;
-// text rather than an enum, matching `PartnerApplication`/`Partner` — SQLite
-// has none, and an order is not a paid/confirmed transaction yet, which is
+// `status` moves through a small, owner-defined workflow — "pending" |
+// "confirmed" | "cancelled" | "fulfilled" — text rather than an enum,
+// matching `PartnerApplication`/`Partner`: SQLite has none, and this is
 // exactly why this is *not* named after the customer-facing lib type
 // (`OrderRequest` in src/lib/order.ts) despite mirroring its fields: that
-// type is a receipt shown to the browser, this is the durable record.
+// type is a receipt shown to the browser, this is the durable record. The
+// transition rules and the guarded write that moves this column live in
+// `src/server/orders/status.ts`; only Soko admin moves it, via
+// `/admin/orders`. "confirmed" still means no money has moved — see
+// `docs/backend.md`.
 model Order {
   id String @id @default(cuid())
 
@@ -208,6 +212,13 @@ model Order {
   customerId String?
 
   status String @default("pending")
+
+  // Mirrors `PartnerApplication.reviewedBy`/`reviewedAt`/`decisionNote`
+  // exactly — the admin uid and time of the last status transition, and why,
+  // for "cancelled" in particular. Null while still "pending".
+  decidedBy    String?
+  decidedAt    DateTime?
+  decisionNote String?
 
   // ---- Loose catalogue references --------------------------------------
   //
