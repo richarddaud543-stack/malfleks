@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdmin } from "@/server/auth/dal";
 import {
   listPendingApplications,
@@ -45,9 +46,17 @@ export default async function AdminPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">Admin</p>
-      <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
-        Partner applications
-      </h1>
+      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="font-display text-4xl font-medium tracking-tight">
+          Partner applications
+        </h1>
+        <Link
+          href="/admin/orders"
+          className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
+        >
+          Orders
+        </Link>
+      </div>
       <p className="mt-3 max-w-xl text-muted">
         Every application is decided here by a person. Approving creates the
         partner&apos;s account and lets them sign in — it does{" "}
