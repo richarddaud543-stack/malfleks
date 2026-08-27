@@ -137,8 +137,34 @@ export async function seedDatabase(prisma: PrismaClient): Promise<SeedCounts> {
 
       // Prune last: cascades from brands and branches clean up their children,
       // so removing a brand from `src/data` cannot orphan products.
+      //
+      // **Published submissions are exempt, and this is load-bearing.** A
+      // product an admin published from a `ProductSubmission` has no
+      // representation in `src/data` at all, so a `notIn` over the static array
+      // matches it and deletes it. That was measured on 2026-08-27, the day
+      // publishing landed: publish a product, re-seed, and the live listing was
+      // gone — a partner's product silently removed by a routine `db:setup`,
+      // taking the `Order.productId` of anyone who had ordered it with it.
+      //
+      // This is the first crack in debt #8's "two sources of one truth": the
+      // database now holds rows the arrays have never heard of, which is
+      // exactly what the reversal means. The prune's scope narrows to what it
+      // was always really for — records that came *from* `src/data` — rather
+      // than being switched off, because mirroring an edited array is still
+      // its job until the arrays are retired.
+      const publishedProductIds = (
+        await tx.productSubmission.findMany({
+          where: { publishedProductId: { not: null } },
+          select: { publishedProductId: true },
+        })
+      )
+        .map((s) => s.publishedProductId)
+        .filter((id): id is string => id !== null);
+
       await tx.product.deleteMany({
-        where: { id: { notIn: products.map((p) => p.id) } },
+        where: {
+          id: { notIn: [...products.map((p) => p.id), ...publishedProductIds] },
+        },
       });
       await tx.branch.deleteMany({
         where: { id: { notIn: branches.map((b) => b.id) } },

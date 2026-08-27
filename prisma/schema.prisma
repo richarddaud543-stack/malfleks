@@ -233,12 +233,12 @@ model Order {
   // cannot orphan a product — but nothing cascades *into* `Order`. The
   // snapshot columns further down are what every page actually renders
   // from; these four are for admin joins and filters only.
-  productId String?
-  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  brandId   String?
-  brand     Brand?   @relation(fields: [brandId], references: [id], onDelete: SetNull)
-  branchId  String?
-  branch    Branch?  @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  productId     String?
+  product       Product?       @relation(fields: [productId], references: [id], onDelete: SetNull)
+  brandId       String?
+  brand         Brand?         @relation(fields: [brandId], references: [id], onDelete: SetNull)
+  branchId      String?
+  branch        Branch?        @relation(fields: [branchId], references: [id], onDelete: SetNull)
   // The chosen courier on an agent route. Always null on a brand route,
   // where no third party is involved at all.
   agentId       String?
@@ -286,12 +286,59 @@ model Order {
   requestedAt DateTime
   createdAt   DateTime @default(now())
 
+  /// Append-only status history. See `OrderEvent`.
+  events OrderEvent[]
+
   // What an admin or branch view would query by: orders waiting on a
   // decision, a branch's own orders, newest first.
   @@index([status])
   @@index([branchId])
   @@index([createdAt])
   @@index([customerId])
+}
+
+// One status transition that actually happened, appended as it happens.
+//
+// `Order.decidedBy`/`decidedAt`/`decisionNote` record only the *last*
+// transition, which is all a single-step review needed. A money system needs
+// the whole sequence before it needs anything else — when was it confirmed,
+// how long did it sit, who cancelled it after it was already confirmed — and
+// none of that is recoverable from three columns that the next transition
+// overwrites. `docs/marketplace-model.md` Stage 1 asks for exactly this.
+//
+// **Append-only by discipline, not by database constraint.** Nothing in this
+// codebase updates or deletes an `OrderEvent`, and nothing should: an event is
+// a record of something that happened, and a corrected history is not a
+// history. SQLite cannot enforce that, so it is stated here and asserted by
+// the tests in `status.integration.test.ts`.
+//
+// Cascade is deliberate and the opposite of `Order`'s own loose references: an
+// event has no meaning without its order, where an order very much has meaning
+// without the branch that has since been deleted.
+//
+// Not backfilled. Orders created before 2026-08-27 have no events, and
+// inventing plausible ones would be fabricating a record — the same reasoning
+// that keeps invented catalogue data from claiming `verified: true`.
+model OrderEvent {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  /// The status the order was in. Null only for a synthetic "created" event.
+  fromStatus String?
+  /// The status it moved to.
+  toStatus   String
+
+  /// The admin uid that caused it. Null for a system or customer-driven event.
+  actorUid String?
+  /// Why — carries `cancelled`'s reason, mirroring `Order.decisionNote`.
+  note     String?
+
+  createdAt DateTime @default(now())
+
+  // The history of one order, oldest first, is the only read this table has.
+  @@index([orderId, createdAt])
 }
 
 // A brand branch or a courier asking to join Soko.
@@ -408,4 +455,82 @@ model PartnerUser {
   createdAt DateTime @default(now())
 
   @@index([partnerId])
+}
+
+// A product a branch partner wants listed, waiting on admin review.
+//
+// This is the reversal debt #8 has been waiting for. Today `src/data` is the
+// editorial source and `seedDatabase` mirrors it into the database; once
+// branches submit products here and an admin publishes them, **the database
+// becomes the source of truth** and `src/data` drops to seed and demo
+// fixtures. `docs/marketplace-model.md` §3 spells that out.
+//
+// Nothing here is customer-visible. A submission is a proposal; publishing is
+// what creates the live `Product` row, and only an admin does that.
+//
+// `branchId` is **derived from the submitting partner on the server**, never
+// taken from the payload — the same trust boundary `buildOrderRequest` holds
+// for prices. A branch says what it wants listed, not which branch it is.
+model ProductSubmission {
+  id String @id @default(cuid())
+
+  /// The `Partner` that submitted it. Loose, like `Order`'s references: a
+  /// submission is evidence of what was proposed, and it outlives the partner
+  /// record being tidied up.
+  partnerId String?
+  /// Resolved from the partner at submit time, never from the form.
+  branchId  String?
+  brandId   String?
+
+  // "pending" | "published" | "rejected". Text, not an enum — SQLite has none,
+  // matching `PartnerApplication`, `Partner` and `Order`.
+  status String @default("pending")
+
+  // ---- The proposed product -------------------------------------------
+  // Mirrors the customer-facing fields of `Product`. `slug`, `sortOrder` and
+  // the id are assigned at publish time, not proposed by the submitter.
+  name        String
+  category    String
+  priceTZS    Int
+  image       String
+  description String
+  inStock     Boolean @default(true)
+
+  specs ProductSubmissionSpec[]
+
+  // ---- Review ----------------------------------------------------------
+  // Mirrors `PartnerApplication.reviewedBy`/`reviewedAt`/`decisionNote` field
+  // for field, because the review flow is the same shape and a reader should
+  // not have to learn two vocabularies for one idea.
+  createdAt    DateTime  @default(now())
+  reviewedAt   DateTime?
+  /// The admin uid that decided. Null while pending.
+  reviewedBy   String?
+  /// Why it was rejected, so the decision is not folklore.
+  decisionNote String?
+
+  /// The live `Product` this became. Unique: publishing twice is a bug, and
+  /// the database is a better place to find that out than a code review —
+  /// exactly the reasoning behind `Partner.applicationId`.
+  publishedProductId String? @unique
+
+  // The admin queue reads pending-first, oldest-first.
+  @@index([status, createdAt])
+  @@index([partnerId])
+}
+
+// `Product.specs` is a `Record<string, string>`; `ProductSpec` stores it as
+// rows for portability. A submission's proposed specs need the same treatment
+// and the same reasoning — see the note on `ProductSpec`.
+model ProductSubmissionSpec {
+  submissionId String
+  submission   ProductSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  key   String
+  value String
+
+  position Int
+
+  @@id([submissionId, key])
+  @@index([submissionId, position])
 }

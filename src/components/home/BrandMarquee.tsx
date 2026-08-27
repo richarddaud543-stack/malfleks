@@ -38,9 +38,14 @@ export default function BrandMarquee({ brands }: { brands: Brand[] }) {
     { scope: trackRef, dependencies: [reduceMotion] }
   );
 
-  // Reduced motion: a single static row, wrapped, nothing duplicated —
-  // there is nothing to loop, so there is nothing to fake a loop with.
-  const items = reduceMotion ? brands : [...brands, ...brands];
+  // Both copies ALWAYS render, and CSS hides the second under reduced motion
+  // (see `.marquee-track` in globals.css). Choosing the child count from
+  // `reduceMotion` here is what caused React #418: the value is `false` during
+  // SSR and `true` in a reduced-motion browser, so the server sent twelve
+  // children and the client expected six. Do not reintroduce that branch —
+  // anything that changes the markup has to be decided by a media query, which
+  // resolves identically on both sides.
+  const items = [...brands, ...brands];
 
   return (
     <div
@@ -58,17 +63,13 @@ export default function BrandMarquee({ brands }: { brands: Brand[] }) {
           "linear-gradient(to right, transparent, black 8%, black 92%, transparent)",
       }}
     >
-      <div
-        ref={trackRef}
-        className={
-          reduceMotion
-            ? "flex flex-wrap items-center justify-center gap-4"
-            : "flex w-max flex-nowrap items-center gap-4"
-        }
-      >
+      <div ref={trackRef} className="marquee-track">
         {items.map((brand, i) => (
           <div
             key={`${brand.id}-${i}`}
+            // The second copy exists only to give the `xPercent: -50` loop a
+            // seam to land on; CSS drops it when nothing is looping.
+            data-marquee-clone={i >= brands.length ? "true" : undefined}
             className="relative h-16 w-32 shrink-0 rounded-2xl border border-border bg-surface-2 p-4 sm:h-20 sm:w-40"
           >
             <Image

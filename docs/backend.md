@@ -490,76 +490,71 @@ requirement:
 
 ## Remaining cutover work
 
-The application still reads `src/data` exclusively. Nothing below has been done,
-and none of it should be until the branch-locator and order-request features
-have landed.
+**Corrected 2026-08-27.** This section previously opened *"The application still
+reads `src/data` exclusively. Nothing below has been done"*, and then listed nine
+files to migrate and two "genuinely hard spots". All of it described a repository
+that stopped existing on **2026-08-17**, when the pages were moved onto the
+database. One of the two hard spots — `src/components/three/HeroScene.tsx` — was
+deleted outright in the light-direction pass and the directory it lived in no
+longer exists.
 
-### Files that import `src/data` at runtime
+It is rewritten rather than patched because a document that lies about the
+codebase costs more than a missing one: someone goes hunting for work that is
+already done, and finds a file that is not there. That is the same reasoning the
+debt register applied on 2026-08-22, when two rows were found stale and corrected
+in place.
 
-These need their import path changed and their data access awaited:
+### What is actually true today
 
-| File | Imports | Notes |
+**Every page reads the database**, through `src/server/repositories`. The home
+page, `/brands`, `/brands/[slug]`, the branch page, `/products/[id]`,
+`/delivery/[productId]`, `/agents`, `/search`, `/locator`, `/admin`, `/apply` and
+`sitemap.ts` all import from the repository layer, not from `src/data`.
+
+**`src/data` is still the editorial source**, and `seedDatabase` still mirrors it
+into the database. That is debt #8, and it is deliberate rather than forgotten:
+the arrays are where a human edits the catalogue today. `parity.test.ts` is the
+interim guard — ten cases, same records, same order — and the direction reverses
+when `ProductSubmission` and the admin publish flow become how products arrive.
+(Both landed 2026-08-27; the reversal completes when the seed's prune is retired,
+which needs real submitted products to reverse *into*.)
+
+Most remaining mentions of `@/data` outside `src/data` itself are `import type` —
+the domain types, which the repository imports and re-exports so the two
+implementations are provably the same shape. Those are not a cutover concern at
+all.
+
+### The value imports that remain, and why
+
+Six files import *values* rather than types. Each is either correct or a known,
+tracked exception:
+
+| File | Imports | Status |
 | --- | --- | --- |
-| `src/app/page.tsx` | `getAllBrands` | Server component — trivial |
-| `src/app/brands/page.tsx` | `getAllBrands` | Server component — trivial |
-| `src/app/brands/[slug]/page.tsx` | `brands`, `getBrandBySlug`, `getBranchesByBrandId` | `brands` is used by `generateStaticParams` |
-| `src/app/brands/[slug]/branches/[branchId]/page.tsx` | branch + product accessors | `generateStaticParams` |
-| `src/app/products/[id]/page.tsx` | product/brand/branch accessors | `generateStaticParams` |
-| `src/app/delivery/[productId]/page.tsx` | product/branch/agent accessors | `generateStaticParams`; this is the delivery-routing page |
-| `src/app/agents/page.tsx` | `deliveryAgents` | Computes the city list at module scope — must move inside the component |
-| `src/app/search/page.tsx` | `products` | Only for `products.length` in the metadata |
-| `src/app/sitemap.ts` | `brands`, `branches`, `products`, `getBrandById` | Already async-capable |
+| `src/server/db/seed.ts` | `brands`, `branches`, `products`, `deliveryAgents` | **Correct.** This is the seed. It is what mirroring means. |
+| `src/lib/search.ts` | `brands`, `branches`, `products` | **Debt #6, resolved in the shape that matters.** `buildListings` is the pure half and `/search` builds the joined set on the server; the module-scope arrays survive only as `getListings()`'s default argument, for tests. |
+| `src/lib/order.ts` | `getAgentsForCity` | Open. `resolveDeliveryRoute` reaches for couriers synchronously, and it is called from client components. Needs the agent list passed in, the same prop-drill `Hero`/`BrandMarquee`/`ShowcaseCarousel` already had. |
+| `src/server/orders/build-order-request.ts` | `getBranchById`, `getBrandById`, `getProductById` | Open, and the sharpest of the six. This is the trust boundary that re-derives price from the catalogue — it should re-derive from the *database*, which is what a customer was actually shown. |
+| `src/server/partners/applications.ts` | `brands` | Open, small. Validates a claimed `brandId` against the brand list. |
+| `src/components/locator/locator.fixture.ts` | `branches`, `brands`, `deliveryAgents` | **Correct.** A test fixture. |
 
-### Why server components make most of this tractable
+Two of those — `build-order-request.ts` and `order.ts` — are the ones worth
+sequencing deliberately, because both sit on the order path and both are
+synchronous today. Neither is urgent while `src/data` and the database are still
+mirrored and `parity.test.ts` proves they agree.
 
-Every file in that table except one is a server component or a route module.
-They already run on the server, they may already be `async`, and Next.js awaits
-them before rendering. So the change really is:
+### Still worth deciding before the source of truth flips
 
-```diff
--import { getBrandBySlug } from "@/data";
-+import { getBrandBySlug } from "@/server/repositories";
-...
--const brand = getBrandBySlug(slug);
-+const brand = await getBrandBySlug(slug);
-```
-
-`generateStaticParams` is likewise already allowed to be `async`, so the four
-that currently return synchronously just gain an `await`. No component becomes a
-client component, no data crosses the network boundary that did not already, and
-no serialisation format changes — the repository returns the same plain objects.
-
-### The two genuinely hard spots
-
-1. **`src/lib/search.ts` → `src/components/search/SearchExplorer.tsx`.**
-   `search.ts` imports `brands`, `branches` and `products` at module scope and
-   builds the `Listing[]` join in `getListings()`. `SearchExplorer` is a
-   `"use client"` component and calls `searchProducts(filters)` with the default
-   `listings = getListings()` argument, so the entire catalogue is currently
-   bundled into the client and filtered in the browser.
-
-   That cannot simply await a database call. The fix is to split `search.ts`
-   into a pure, data-free scoring/filtering half (stays client-safe) and a
-   loading half that runs on the server, then have `src/app/search/page.tsx`
-   load the listings and pass them to `SearchExplorer` as a prop —
-   `searchProducts` already accepts `listings` as its second parameter, so the
-   seam exists. Alternatively move filtering server-side behind a route handler
-   or server action, which is the better answer once the catalogue outgrows
-   what is reasonable to ship to a phone on a Tanzanian mobile connection.
-
-2. **`src/components/three/HeroScene.tsx`** is a `"use client"` component that
-   imports `brands` directly for the orbiting logos. It needs the brand list
-   passed down as a prop from a server parent. Small, but it is a real prop-drill
-   through `HeroSceneLoader`/`CanvasWrapper`.
-
-### Also worth deciding before cutover
-
-- **Caching.** Every page currently prerenders from constants. Once pages hit a
-  database, decide per route between `generateStaticParams` + ISR and dynamic
-  rendering, or the build will query the database once per generated path.
+- **Caching.** Pages hit the database now, and `generateStaticParams` still
+  prerenders paths from it. Decide per route between ISR and dynamic rendering
+  before the catalogue is large enough for the build cost to matter.
 - **Type ownership.** The repository imports the domain types from
-  `@/data/types` and re-exports them, so the two implementations are provably
-  the same shape. When `src/data` is retired, `types.ts` should move (to
-  `src/server/` or a shared `src/types/`) and that import updated — one line.
-- **Authentication** is out of scope for this phase and no user/session model
-  exists yet.
+  `@/data/types` and re-exports them. When `src/data` is retired, `types.ts`
+  should move (to `src/server/` or a shared `src/types/`) and that import
+  updated — one line.
+- **The seed's prune.** It hard-deletes a branch or product removed from
+  `src/data`. That is safe for orders (`onDelete: SetNull` keeps the order and
+  nulls the link) but it is not safe for a *published submission*, which has no
+  representation in `src/data` at all and would be pruned on the next seed. This
+  is the concrete thing that has to change when the direction reverses, and it is
+  the last piece of debt #8.

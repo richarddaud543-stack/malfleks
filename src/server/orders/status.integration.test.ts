@@ -25,7 +25,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { getPrisma, resetPrisma } from "@/server/db/client";
 import { seedDatabase } from "@/server/db/seed";
 import { createOrder } from "./create-order";
-import { cancelOrder, confirmOrder, markOrderFulfilled } from "./status";
+import { cancelOrder, confirmOrder, markOrderFulfilled, orderHistory } from "./status";
 import type { SaveOrderRequestInput } from "./build-order-request";
 
 const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
@@ -260,5 +260,94 @@ describe("order status transitions — a truly concurrent race, exactly one wins
 
     const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
     expect(row.status).toBe("fulfilled");
+  });
+});
+
+describe("the OrderEvent history", () => {
+  it("records nothing for an order that has never moved", async () => {
+    const orderId = await pendingOrder();
+    await expect(orderHistory(orderId)).resolves.toEqual([]);
+  });
+
+  it("appends one event per transition, oldest first, with the real from-status", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await markOrderFulfilled(orderId, "admin-2");
+
+    const events = await orderHistory(orderId);
+    expect(events.map((e) => [e.fromStatus, e.toStatus])).toEqual([
+      ["pending", "confirmed"],
+      ["confirmed", "fulfilled"],
+    ]);
+    expect(events.map((e) => e.actorUid)).toEqual(["admin-1", "admin-2"]);
+  });
+
+  it("carries the cancellation reason onto the event, trimmed like the order's own note", async () => {
+    const orderId = await pendingOrder();
+    await cancelOrder(orderId, "admin-1", "  Branch declined  ");
+
+    const [event] = await orderHistory(orderId);
+    expect(event.toStatus).toBe("cancelled");
+    expect(event.note).toBe("Branch declined");
+  });
+
+  it("writes no event when a transition is rejected as invalid", async () => {
+    const orderId = await pendingOrder();
+
+    // pending -> fulfilled is not an edge. It must leave no trace at all.
+    await expect(markOrderFulfilled(orderId, "admin-1")).resolves.toEqual({
+      ok: false,
+      reason: "invalid-transition",
+    });
+    await expect(orderHistory(orderId)).resolves.toEqual([]);
+  });
+
+  it("writes no event for an order that does not exist", async () => {
+    await expect(confirmOrder("no-such-order", "admin-1")).resolves.toEqual({
+      ok: false,
+      reason: "not-found",
+    });
+    await expect(
+      getPrisma().orderEvent.count({ where: { orderId: "no-such-order" } })
+    ).resolves.toBe(0);
+  });
+
+  // The property the whole in-transaction design exists for: the loser of a
+  // race must not leave a history entry claiming it won. A naive
+  // "update, then log" implementation writes two events here.
+  it("records exactly ONE event when two admin tabs race the same transition", async () => {
+    const orderId = await pendingOrder();
+
+    await Promise.all([
+      confirmOrder(orderId, "admin-1"),
+      confirmOrder(orderId, "admin-2"),
+    ]);
+
+    const events = await orderHistory(orderId);
+    expect(events).toHaveLength(1);
+    expect(events[0].toStatus).toBe("confirmed");
+
+    // And the event agrees with the row that actually landed.
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(events[0].actorUid).toBe(row.decidedBy);
+  });
+
+  it("keeps each order's history to itself", async () => {
+    const a = await pendingOrder();
+    const b = await pendingOrder();
+    await confirmOrder(a, "admin-1");
+
+    await expect(orderHistory(b)).resolves.toEqual([]);
+    await expect(orderHistory(a)).resolves.toHaveLength(1);
+  });
+
+  it("the history always agrees with the order's current status", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await cancelOrder(orderId, "admin-2", "Customer withdrew");
+
+    const events = await orderHistory(orderId);
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(events[events.length - 1].toStatus).toBe(row.status);
   });
 });

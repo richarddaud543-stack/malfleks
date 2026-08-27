@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import BrandMarquee from "./BrandMarquee";
 import { brands } from "@/data";
 
@@ -26,14 +26,38 @@ describe("BrandMarquee", () => {
     }
   });
 
-  it("renders exactly one copy, with no loop, when motion is reduced", () => {
+  // Updated 2026-08-27. This case used to assert one copy under reduced
+  // motion, which is what the component did — and it was a hydration bug:
+  // `useReducedMotion()` is `false` during SSR and `true` in a reduced-motion
+  // browser, so the server sent two copies and the client expected one, and
+  // React discarded the tree (#418). These tests could never have caught it,
+  // because they mock the hook and render each branch in isolation — there is
+  // no server render to disagree with.
+  //
+  // The markup is now identical in both states and CSS hides the clone. What
+  // this case can still assert is the property that actually prevents the bug:
+  // the rendered output does not depend on the hook at all.
+  it("renders the same markup whatever the reduced-motion preference, so SSR and the client cannot disagree", () => {
+    useReducedMotion.mockReturnValue(false);
+    const { container: allowed } = render(<BrandMarquee brands={brands} />);
+    const allowedHtml = allowed.innerHTML;
+
+    cleanup();
+
+    useReducedMotion.mockReturnValue(true);
+    const { container: reduced } = render(<BrandMarquee brands={brands} />);
+
+    expect(reduced.innerHTML).toBe(allowedHtml);
+  });
+
+  it("marks the second copy as a clone so CSS can drop it when nothing is looping", () => {
     useReducedMotion.mockReturnValue(true);
 
-    render(<BrandMarquee brands={brands} />);
+    const { container } = render(<BrandMarquee brands={brands} />);
 
-    for (const brand of brands) {
-      expect(screen.getAllByAltText(brand.name)).toHaveLength(1);
-    }
+    expect(container.querySelectorAll("[data-marquee-clone='true']")).toHaveLength(
+      brands.length,
+    );
   });
 
   it("hides the whole strip from assistive tech — brand names are already spelled out in the hero copy, and a duplicated logo strip would otherwise announce each one twice", () => {

@@ -294,6 +294,62 @@ td p { margin:5px 0 0; color:var(--muted); font-size:12.5px; }
 .stage p { margin:6px 0 0; font-size:13.5px; color:var(--muted); }
 .stage.first { border-left:4px solid var(--ember); }
 
+
+/* ── Mind map ─────────────────────────────────── */
+.mapbar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:12px; }
+.mapbar .spacer { flex:1 1 auto; }
+.mapbtn {
+  font-family:"Geist Mono",monospace; font-size:11px; letter-spacing:.05em; text-transform:uppercase;
+  padding:5px 11px; border-radius:999px; border:1px solid var(--line);
+  background:var(--surface-2); color:var(--muted); cursor:pointer;
+}
+.mapbtn:hover { color:var(--ink); border-color:var(--line-strong); }
+.maphint { font-size:12px; color:var(--muted); }
+
+.mapview {
+  position:relative; overflow:hidden; height:560px;
+  border:1px solid var(--line); border-radius:16px;
+  background:
+    radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0) 0 0/22px 22px,
+    var(--surface);
+  cursor:grab; touch-action:none;
+}
+.mapview.dragging { cursor:grabbing; }
+.mapstage { position:absolute; top:0; left:0; transform-origin:0 0; }
+.mapstage svg { position:absolute; top:0; left:0; overflow:visible; pointer-events:none; }
+.mapstage svg path { fill:none; stroke:var(--line-strong); stroke-width:1.5; }
+
+.mapnode {
+  position:absolute; box-sizing:border-box;
+  display:flex; align-items:center; gap:7px;
+  font:inherit; text-align:left; text-decoration:none;
+  padding:7px 11px; border-radius:10px;
+  border:1px solid var(--line); background:var(--surface-2); color:var(--ink);
+  font-size:12.5px; line-height:1.25; cursor:pointer;
+  box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.mapnode:hover { border-color:var(--line-strong); }
+.mapnode .lbl { flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.mapnode .cnt {
+  flex:0 0 auto; font-family:"Geist Mono",monospace; font-size:9.5px;
+  color:var(--muted); border:1px solid var(--line); border-radius:999px; padding:0 5px;
+}
+.mapnode.root {
+  background:var(--ink); color:var(--ground); border-color:var(--ink);
+  font-family:"Bricolage Grotesque",sans-serif; font-size:15px; font-weight:600;
+  padding:11px 16px;
+}
+.mapnode.branch { font-family:"Bricolage Grotesque",sans-serif; font-weight:600; font-size:13px; }
+.mapnode.st-shipped { border-left:3px solid var(--done); }
+.mapnode.st-design  { border-left:3px solid var(--violet); }
+.mapnode.st-open    { border-left:3px solid var(--open); }
+.mapnode.st-owner   { border-left:3px solid var(--lime); }
+.mapnode.dim { opacity:.35; }
+
+.maplegend { display:flex; flex-wrap:wrap; gap:14px; margin-top:12px; font-size:12px; color:var(--muted); }
+.maplegend span { display:inline-flex; align-items:center; gap:6px; }
+.maplegend i { width:10px; height:10px; border-radius:3px; display:inline-block; }
+
 footer { padding:38px 0 62px; color:var(--muted); font-size:13px; }
 footer p { margin:0 0 6px; }
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
@@ -328,6 +384,7 @@ html { scroll-behavior:smooth; }
 
 <div class="navbar">
   <nav>
+    <a href="#map">Mind map</a>
     <a href="#board">Assignment board</a>
     <a href="#log">Ship log</a>
     <a href="#edges">Who works with whom</a>
@@ -349,6 +406,41 @@ html { scroll-behavior:smooth; }
 </div>
 
 <main class="wrap">
+
+  <!-- ══════════ MIND MAP ══════════ -->
+  <section id="map">
+    <div class="sec-head">
+      <p class="eyebrow">Orientation</p>
+      <h2>The whole thing, on one branch at a time</h2>
+      <p>
+        Every part of Soko and how it hangs together. Click a branch to open or close it,
+        drag to pan, scroll to zoom. A leaf with a coloured edge jumps to that section —
+        and the colour tells you whether it is <strong>built</strong>, still only
+        <strong>designed</strong>, or <strong>waiting on you</strong>.
+      </p>
+    </div>
+
+    <div class="mapbar">
+      <button type="button" class="mapbtn" id="map-expand">Expand all</button>
+      <button type="button" class="mapbtn" id="map-collapse">Collapse</button>
+      <button type="button" class="mapbtn" id="map-reset">Recentre</button>
+      <span class="spacer"></span>
+      <span class="maphint">Drag to pan · scroll to zoom</span>
+    </div>
+
+    <div class="mapview" id="mapview">
+      <div class="mapstage" id="mapstage">
+        <svg id="mapsvg" aria-hidden="true"></svg>
+      </div>
+    </div>
+
+    <div class="maplegend">
+      <span><i style="background:var(--done)"></i> Built and running</span>
+      <span><i style="background:var(--violet)"></i> Designed, not built</span>
+      <span><i style="background:var(--open)"></i> Open debt</span>
+      <span><i style="background:var(--lime)"></i> Needs your decision</span>
+    </div>
+  </section>
 
   <!-- ══════════ LIVE ASSIGNMENT BOARD ══════════ -->
   <section id="board">
@@ -1425,6 +1517,251 @@ function renderDebt() {
 }
 
 function renderAll() { renderFilters(); renderLog(); renderEdges(); renderRoster(); renderDebt(); }
+
+
+/* ── Mind map ──────────────────────────────────────────────────────────
+   A collapsible centre-out tree. Nodes are real <button>/<a> elements
+   absolutely positioned over an SVG that draws only the connectors, so the
+   whole thing stays keyboard-reachable and screen-readable — an SVG-only
+   map would have needed every affordance rebuilt by hand.                */
+const MAP = {
+  id: "soko", label: "Soko", children: [
+    { id: "rule", label: "The rule", href: "#phases", st: "shipped", children: [
+      { id: "r1", label: "Brand fleet · 6 of 19", st: "shipped", href: "#phases" },
+      { id: "r2", label: "Local courier · 13 of 19", st: "shipped", href: "#phases" },
+      { id: "r3", label: "4 cities · 5 couriers", st: "shipped", href: "#phases" },
+      { id: "r4", label: "No speed filter — on purpose", st: "shipped", href: "#product" },
+    ]},
+    { id: "team", label: "The team", href: "#team", st: "shipped", children: [
+      { id: "t1", label: "Atlas · frontend & motion", href: "#team" },
+      { id: "t2", label: "Mercury · data & logic", href: "#team" },
+      { id: "t3", label: "Sentinel · QA", href: "#team" },
+      { id: "t4", label: "Forge · platform", href: "#team" },
+      { id: "t5", label: "Beacon · content & IA", href: "#team" },
+      { id: "t6", label: "Prism · visual design", href: "#team" },
+      { id: "t7", label: "Vault · security", href: "#team" },
+      { id: "t8", label: "Ledger · commerce", href: "#team" },
+    ]},
+    { id: "flow", label: "How work flows", href: "#process", st: "shipped", children: [
+      { id: "f0", label: "Phase 0 · research first", href: "#process" },
+      { id: "f1", label: "Phase 1 · build", href: "#process" },
+      { id: "f2", label: "Phase 2 · record it", href: "#process" },
+      { id: "f3", label: "Every task has an owner", href: "#process", st: "shipped" },
+    ]},
+    { id: "arch", label: "Architecture", href: "#architecture", st: "shipped", children: [
+      { id: "a1", label: "Prisma owns the catalogue", st: "shipped", href: "#architecture" },
+      { id: "a2", label: "Firebase = auth + analytics", st: "shipped", href: "#architecture" },
+      { id: "a3", label: "6 tables · 38 products", st: "shipped", href: "#data" },
+      { id: "a4", label: "Orders move to Prisma", st: "design", href: "#roadmap" },
+    ]},
+    { id: "partner", label: "Partners", href: "#pipeline", st: "shipped", children: [
+      { id: "p1", label: "Apply at /apply", st: "shipped", href: "#pipeline" },
+      { id: "p2", label: "Admin approves at /admin", st: "shipped", href: "#pipeline" },
+      { id: "p3", label: "Sign-in = the partner account", st: "shipped", href: "#pipeline" },
+      { id: "p4", label: "Submit products", st: "design", href: "#roadmap" },
+      { id: "p5", label: "Publish to catalogue", st: "design", href: "#pipeline" },
+    ]},
+    { id: "money", label: "The money", href: "#money", st: "design", children: [
+      { id: "m1", label: "Goods ladder · cap 40,000", st: "design", href: "#money" },
+      { id: "m2", label: "Delivery billed to courier", st: "design", href: "#money" },
+      { id: "m3", label: "Deposit = Soko's cut", st: "design", href: "#money" },
+      { id: "m4", label: "No escrow · no BOT licence", st: "design", href: "#money" },
+      { id: "m5", label: "Bottom rung charges 25%", st: "owner", href: "#you" },
+    ]},
+    { id: "quality", label: "Quality", href: "#quality", st: "shipped", children: [
+      { id: "q1", label: "437 unit tests", st: "shipped", href: "#quality" },
+      { id: "q2", label: "64 E2E tests", st: "shipped", href: "#quality" },
+      { id: "q3", label: "Open the page and use it", st: "shipped", href: "#quality" },
+      { id: "q4", label: "No mutation testing yet", st: "open", href: "#debt" },
+    ]},
+    { id: "blocked", label: "Needs you", href: "#you", st: "owner", children: [
+      { id: "b1", label: "A git remote", st: "owner", href: "#you" },
+      { id: "b2", label: "Firebase credentials", st: "owner", href: "#you" },
+      { id: "b3", label: "PII retention policy", st: "owner", href: "#you" },
+      { id: "b4", label: "App Check enforcement", st: "owner", href: "#you" },
+      { id: "b5", label: "Verify a branch is real", st: "owner", href: "#you" },
+    ]},
+  ],
+};
+
+(function mindmap() {
+  const view = document.getElementById("mapview");
+  const stage = document.getElementById("mapstage");
+  const svg = document.getElementById("mapsvg");
+  if (!view || !stage || !svg) return;
+
+  const ROW = 32, COL = 208, NODE_W = 186;
+  const open = new Set(["soko", "partner", "money", "blocked"]);
+
+  function leaves(n) {
+    if (!n.children || !open.has(n.id)) return 1;
+    return n.children.reduce((s, c) => s + leaves(c), 0);
+  }
+
+  function place(n, depth, top, dir, out) {
+    const h = leaves(n) * ROW;
+    out.push({ n, depth, dir, y: top + h / 2 });
+    if (n.children && open.has(n.id)) {
+      let t = top;
+      for (const c of n.children) { place(c, depth + 1, t, dir, out); t += leaves(c) * ROW; }
+    }
+  }
+
+  function render() {
+    const kids = MAP.children;
+    const half = Math.ceil(kids.length / 2);
+    const right = kids.slice(0, half), left = kids.slice(half);
+
+    const nodes = [];
+    let t = 0;
+    for (const c of right) { place(c, 1, t, 1, nodes); t += leaves(c) * ROW; }
+    const rightH = t;
+    t = 0;
+    for (const c of left) { place(c, 1, t, -1, nodes); t += leaves(c) * ROW; }
+    const leftH = t;
+
+    const H = Math.max(rightH, leftH);
+    // Each side is centred against the taller one, so the root sits level.
+    for (const p of nodes) p.y += (H - (p.dir === 1 ? rightH : leftH)) / 2;
+    nodes.push({ n: MAP, depth: 0, dir: 0, y: H / 2 });
+
+    let maxDepth = 0;
+    for (const p of nodes) maxDepth = Math.max(maxDepth, p.depth);
+    const halfW = maxDepth * COL + NODE_W;
+    const W = halfW * 2;
+
+    for (const p of nodes) {
+      p.cx = halfW + p.dir * p.depth * COL;
+      p.left = p.dir >= 0 ? p.cx : p.cx - NODE_W;
+      if (p.depth === 0) p.left = halfW - NODE_W / 2;
+    }
+
+    stage.style.width = W + "px";
+    stage.style.height = (H + 40) + "px";
+    svg.setAttribute("width", W);
+    svg.setAttribute("height", H + 40);
+
+    [...stage.querySelectorAll(".mapnode")].forEach((el) => el.remove());
+    svg.textContent = "";
+
+    const by = new Map(nodes.map((p) => [p.n.id, p]));
+    const OFF = 20;
+
+    for (const p of nodes) {
+      if (p.depth === 0) continue;
+      const parent = p.depth === 1 ? by.get("soko") : findParent(p.n.id, nodes, by);
+      if (!parent) continue;
+      const x1 = p.dir === 1
+        ? (parent.depth === 0 ? parent.left + NODE_W / 2 : parent.left + NODE_W)
+        : (parent.depth === 0 ? parent.left + NODE_W / 2 : parent.left);
+      const x2 = p.dir === 1 ? p.left : p.left + NODE_W;
+      const y1 = parent.y + OFF, y2 = p.y + OFF;
+      const mid = (x1 + x2) / 2;
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`);
+      svg.appendChild(path);
+    }
+
+    for (const p of nodes) {
+      const hasKids = Boolean(p.n.children);
+      const el = document.createElement(hasKids || !p.n.href ? "button" : "a");
+      el.className = "mapnode" +
+        (p.depth === 0 ? " root" : p.depth === 1 ? " branch" : "") +
+        (p.n.st ? " st-" + p.n.st : "");
+      el.style.left = p.left + "px";
+      el.style.top = (p.y + OFF - 15) + "px";
+      if (p.depth !== 0) el.style.width = NODE_W + "px";
+
+      const lbl = document.createElement("span");
+      lbl.className = "lbl";
+      lbl.textContent = p.n.label;
+      el.appendChild(lbl);
+
+      if (hasKids) {
+        el.type = "button";
+        el.setAttribute("aria-expanded", String(open.has(p.n.id)));
+        const cnt = document.createElement("span");
+        cnt.className = "cnt";
+        cnt.textContent = open.has(p.n.id) ? "−" : "+" + p.n.children.length;
+        el.appendChild(cnt);
+        el.addEventListener("click", () => {
+          if (open.has(p.n.id)) open.delete(p.n.id); else open.add(p.n.id);
+          render();
+        });
+      } else if (p.n.href) {
+        el.href = p.n.href;
+      }
+      stage.appendChild(el);
+    }
+  }
+
+  /** Walks the tree for a node's parent — the layout list is flat. */
+  function findParent(id, nodes, by) {
+    const walk = (n) => {
+      if (!n.children) return null;
+      for (const c of n.children) {
+        if (c.id === id) return n;
+        const found = walk(c);
+        if (found) return found;
+      }
+      return null;
+    };
+    const parent = walk(MAP);
+    return parent ? by.get(parent.id) : null;
+  }
+
+  // ── pan and zoom ──
+  let scale = 1, tx = 0, ty = 0, dragging = false, sx = 0, sy = 0;
+  function apply() {
+    stage.style.transform = `translate(${tx}px, ${ty}px) scale(${scale})`;
+  }
+  function recentre() {
+    const r = view.getBoundingClientRect();
+    scale = Math.min(1, (r.width - 24) / stage.offsetWidth);
+    tx = (r.width - stage.offsetWidth * scale) / 2;
+    ty = Math.max(12, (r.height - stage.offsetHeight * scale) / 2);
+    apply();
+  }
+
+  view.addEventListener("pointerdown", (e) => {
+    if (e.target.closest(".mapnode")) return;
+    dragging = true; sx = e.clientX - tx; sy = e.clientY - ty;
+    view.classList.add("dragging");
+    view.setPointerCapture(e.pointerId);
+  });
+  view.addEventListener("pointermove", (e) => {
+    if (!dragging) return;
+    tx = e.clientX - sx; ty = e.clientY - sy; apply();
+  });
+  const stop = () => { dragging = false; view.classList.remove("dragging"); };
+  view.addEventListener("pointerup", stop);
+  view.addEventListener("pointercancel", stop);
+
+  view.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const r = view.getBoundingClientRect();
+    const px = e.clientX - r.left, py = e.clientY - r.top;
+    const next = Math.min(1.6, Math.max(0.3, scale * (e.deltaY < 0 ? 1.1 : 0.9)));
+    // Keep the point under the cursor fixed while zooming.
+    tx = px - ((px - tx) / scale) * next;
+    ty = py - ((py - ty) / scale) * next;
+    scale = next;
+    apply();
+  }, { passive: false });
+
+  document.getElementById("map-expand").addEventListener("click", () => {
+    const all = (n) => { if (n.children) { open.add(n.id); n.children.forEach(all); } };
+    all(MAP); render(); recentre();
+  });
+  document.getElementById("map-collapse").addEventListener("click", () => {
+    open.clear(); open.add("soko"); render(); recentre();
+  });
+  document.getElementById("map-reset").addEventListener("click", recentre);
+
+  render();
+  recentre();
+  window.addEventListener("resize", recentre);
+})();
 
 (async function boot() {
   renderAll();

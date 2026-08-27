@@ -100,6 +100,12 @@ export type TransitionOutcome =
  * confirmed the order exists, a `count === 0` from the write below can only
  * mean the status changed underneath it — `invalid-transition`, not
  * `not-found`.
+ *
+ * **The `OrderEvent` is appended inside the same transaction as the update**,
+ * and only when the guarded write actually moved a row. That ordering is the
+ * whole point: a transition that lost the race writes no history, so the event
+ * log can never claim something happened that did not. A separate write after
+ * the fact would be a second chance to disagree with the order's own status.
  */
 async function writeTransition(
   orderId: string,
@@ -116,21 +122,62 @@ async function writeTransition(
   const check = canTransition(order, target);
   if (!check.ok) return check;
 
-  const { count } = await db.order.updateMany({
-    where: { id: orderId, status: { in: sourceStatusesFor(target) } },
-    data: {
-      status: target,
-      decidedBy: adminUid,
-      decidedAt: new Date(),
-      decisionNote: note,
-    },
+  const sources = sourceStatusesFor(target);
+
+  return db.$transaction(async (tx) => {
+    // Re-read inside the transaction so the event records the status the row
+    // was *actually* in when it moved, rather than the one the pre-check saw.
+    // Those can differ under the two-tabs race, and the event has to be true.
+    const current = await tx.order.findUnique({
+      where: { id: orderId },
+      select: { status: true },
+    });
+
+    const { count } = await tx.order.updateMany({
+      where: { id: orderId, status: { in: sources } },
+      data: {
+        status: target,
+        decidedBy: adminUid,
+        decidedAt: new Date(),
+        decisionNote: note,
+      },
+    });
+
+    if (count === 0) {
+      return { ok: false, reason: "invalid-transition" } as const;
+    }
+
+    await tx.orderEvent.create({
+      data: {
+        orderId,
+        fromStatus: current?.status ?? null,
+        toStatus: target,
+        actorUid: adminUid,
+        note,
+      },
+    });
+
+    return { ok: true } as const;
   });
+}
 
-  if (count === 0) {
-    return { ok: false, reason: "invalid-transition" };
-  }
-
-  return { ok: true };
+/**
+ * One order's status history, oldest first.
+ *
+ * Read-only by design: nothing in this codebase updates or deletes an
+ * `OrderEvent`, and nothing should. See the note on the model in
+ * `prisma/schema.prisma`.
+ *
+ * An order created before 2026-08-27 returns an empty history rather than a
+ * reconstructed one — the events were never recorded, and inventing them would
+ * be fabricating a record.
+ */
+export async function orderHistory(orderId: string) {
+  const db = getPrisma();
+  return db.orderEvent.findMany({
+    where: { orderId },
+    orderBy: { createdAt: "asc" },
+  });
 }
 
 /**
