@@ -62,6 +62,20 @@ jobs:
       # the type-check — without it tsc fails on every Prisma model.
       - run: npm ci
 
+      # `tsc` alone is not enough on a fresh checkout, which is the only kind CI
+      # gets. Next generates `LayoutProps`, `PageProps` and the route union into
+      # `.next/types/`, and `src/app/layout.tsx` uses `LayoutProps<"/">`. A
+      # developer never sees this because their `.next` survives from the last
+      # `dev` or `build`; CI has no `.next` at all and fails with
+      # "Cannot find name 'LayoutProps'" — a type that is not missing so much as
+      # not yet written. Measured 2026-08-29 on CI run #3.
+      #
+      # `typegen` rather than a full `build`: it writes the same types in about a
+      # second and touches no database, so the type-check keeps failing fast
+      # instead of waiting on a build it does not need.
+      - name: Generate route types
+        run: npm run typegen
+
       - name: Type-check
         run: npx tsc --noEmit
 
