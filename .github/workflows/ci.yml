@@ -109,6 +109,28 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
 
+      # `e2e/auth.spec.ts` asserts the sign-in page offers a real "Continue with
+      # Google" button. Without these, `isAuthConfigured()` is false and the
+      # panel renders its "sign-in isn't available on this deployment" fallback
+      # instead — a supported state, and the wrong one to test against. The spec
+      # failed on exactly this in CI run #5.
+      #
+      # Written in plain sight rather than held as secrets, deliberately. Both
+      # values are public identifiers: Next inlines anything prefixed
+      # NEXT_PUBLIC_ into the client bundle, so the deployed site serves these
+      # to every visitor by design. Storing a published string in a secret store
+      # teaches the next person that it is sensitive, and the one value here
+      # that genuinely is — the database password — would then look no
+      # different. What protects the data is Row Level Security and the fact
+      # that Prisma, not the browser, does the reading.
+      #
+      # No OAuth round trip happens in CI: driving Google's consent screen needs
+      # a real account this repository must not hold. These only get the page
+      # into its configured state.
+      NEXT_PUBLIC_SUPABASE_URL: https://nnrcjeowivnbzdkwxxrm.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_GCS9CCARSyX9pHUPb4CMMg_CVqKbPmq
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+
     steps:
       - uses: actions/checkout@v4
 
