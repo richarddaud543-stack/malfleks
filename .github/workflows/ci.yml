@@ -13,16 +13,43 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
-env:
-  # Type-check, lint and the unit suite never touch a database; the repository
-  # tests build their own throwaway SQLite file. This exists so nothing falls
-  # back to a developer's dev.db path.
-  DATABASE_URL: file:./prisma/ci.db
-
 jobs:
   static:
     name: Types, lint and unit tests
     runs-on: ubuntu-latest
+
+    # The repository, order and partner suites talk to a real database. Since
+    # the move to Postgres there is no SQLite file to fall back on, and that is
+    # the point rather than a cost: `status.integration` and
+    # `submissions.integration` exist to prove that two admin tabs racing the
+    # same row produce exactly one winner. SQLite serialises writes at the file
+    # level; Postgres uses MVCC with row-level locks. A guard that holds under
+    # the first says nothing about the second, and production is the second.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        # Without a health check the job races the container: `npm test` can
+        # start before Postgres accepts connections, and the failure then reads
+        # as a test bug rather than a startup ordering one.
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Each suite creates a uniquely-named schema on this server and drops it
+      # afterwards, so no two suites see each other's rows and `public` is never
+      # touched. `src/server/db/test-database.ts` explains why a schema and not
+      # a database, and `src/server/db/client.ts` explains why `?schema=` needs
+      # help from the adapter to take effect at all.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+
     steps:
       - uses: actions/checkout@v4
 
@@ -44,38 +71,30 @@ jobs:
       - name: Unit and component tests
         run: npm test
 
-  rules:
-    name: Firestore Security Rules
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      # The Firestore emulator is a Java process. GitHub's ubuntu runners ship
-      # a JDK, but pinning it means a runner-image change cannot silently take
-      # this job out — and this is the job that proves one customer cannot read
-      # another's order requests.
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-
-      - run: npm ci
-
-      # `emulators:exec` starts the emulator, runs the suite, and shuts down —
-      # exiting non-zero if the suite fails. The suite itself fails loudly when
-      # it cannot reach the emulator, so a broken emulator cannot pass as a
-      # skipped test.
-      - name: Rules tests against the Firebase emulator
-        run: npm run test:rules:ci
-
   e2e:
     name: End-to-end
     runs-on: ubuntu-latest
+
+    # `next build` runs `generateStaticParams`, which queries the database. With
+    # no reachable Postgres the build step fails, which reads as an
+    # infrastructure fault rather than the missing-database fault it is — so
+    # give it one.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres?schema=public
+
     steps:
       - uses: actions/checkout@v4
 
@@ -85,6 +104,13 @@ jobs:
           cache: npm
 
       - run: npm ci
+
+      # The specs assert on real catalogue content — brand names, branch counts,
+      # prices — so an empty database would fail them for the wrong reason. The
+      # guard inside `db:seed` waves this through because the host is localhost;
+      # see src/server/db/destructive-guard.ts.
+      - name: Migrate and seed
+        run: npm run db:setup
 
       # Only chromium: the suite declares a single chromium project, and
       # downloading the other two engines doubles this job for nothing.
