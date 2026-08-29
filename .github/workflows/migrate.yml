@@ -47,10 +47,18 @@ jobs:
     name: prisma migrate deploy
     runs-on: ubuntu-latest
 
-    # A named environment is where you add a required reviewer if you ever want
-    # a second pair of eyes before production schema changes. Costs nothing to
-    # declare now and means the control is one checkbox away later.
-    environment: production
+    # There was an `environment: production` here, as somewhere to hang a
+    # required-reviewer rule later. It had to go, and the reason is worth
+    # recording because the symptom gave nothing away: **environments are a
+    # paid feature in private repositories** — GitHub Free offers them on
+    # public repos only. A private-repo workflow that names one is not
+    # registered at all. Not a red X, not an "invalid workflow file" banner:
+    # the workflow simply never appears in the Actions sidebar, and its URL
+    # answers "This workflow does not exist." Meanwhile `ci.yml`, which names
+    # no environment, ran perfectly from the same commit.
+    #
+    # If a second pair of eyes on production migrations ever matters more than
+    # the plan cost, this is the line to put back — along with GitHub Pro.
 
     steps:
       # Typing the ref is not security — anyone who can dispatch this can type
