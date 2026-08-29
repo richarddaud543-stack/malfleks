@@ -110,36 +110,45 @@ export default function OrderRequestForm({
     store(request);
     setSubmitting(true);
 
-    // Persisted unconditionally, signed in or not — every order request now
-    // gets a real backend record. This runs regardless of whether `session`
-    // has resolved yet: unlike the account-save path below, it does not need
-    // to know who is signed in on the client, only that a request was made.
-    // `submitOrder` reads identity from the verified session cookie on the
-    // server, and writes `customerId: null` for a signed-out customer rather
-    // than skipping the write.
-    try {
-      await submitOrder({
-        // Ids and the customer's own words only. Price, product name,
-        // carrier and total are re-derived on the server from the catalogue,
-        // so nothing here can misstate what was ordered.
-        productId: product.id,
-        quantity: input.quantity,
-        fullName: result.value.fullName,
-        phone: result.value.phone,
-        address: result.value.address,
-        agentId: result.value.agent?.id ?? null,
-        reference: request.reference,
-        requestedAt: request.requestedAt,
-      });
-    } catch {
-      // A failed persist costs the customer nothing they had a moment ago:
-      // the browser copy is already written and the confirmation screen does
-      // not depend on the backend write having succeeded.
-    }
-
-    // Saving to an account is a separate, additional convenience — the
-    // customer's own deletable copy — and stays gated on being signed in.
+    // Nothing leaves the device for a signed-out customer. Not the order, not
+    // the name, phone or address — no request of any kind.
+    //
+    // This was briefly unconditional: every submission POSTed to `submitOrder`
+    // so that every request got a queryable record, signed in or not. The
+    // confirmation screen was never updated to match, so the site went on
+    // telling people their details had been transmitted nowhere while the
+    // server wrote them to Postgres. `e2e/auth.spec.ts` caught it the first
+    // time CI ever ran (2026-08-29) by asserting there is no same-origin POST
+    // at all — which is why the guard is *here*, in the client, and not a
+    // `return` inside the action. An action that declines to write still
+    // receives the payload.
+    //
+    // The owner's call, 2026-08-29: a signed-out request stays in the tab.
+    // Nothing is dispatched to a branch anyway, so a stored row bought an
+    // admin view of orders nobody acts on, in exchange for holding a
+    // stranger's home address with no retention policy.
     if (session?.signedIn) {
+      try {
+        await submitOrder({
+          // Ids and the customer's own words only. Price, product name,
+          // carrier and total are re-derived on the server from the catalogue,
+          // so nothing here can misstate what was ordered.
+          productId: product.id,
+          quantity: input.quantity,
+          fullName: result.value.fullName,
+          phone: result.value.phone,
+          address: result.value.address,
+          agentId: result.value.agent?.id ?? null,
+          reference: request.reference,
+          requestedAt: request.requestedAt,
+        });
+      } catch {
+        // A failed persist costs the customer nothing they had a moment ago:
+        // the browser copy is already written and the confirmation screen does
+        // not depend on the backend write having succeeded.
+      }
+
+      // The customer's own deletable copy, separate from Soko's record above.
       try {
         const outcome = await saveOrderRequest({
           // Ids and the customer's own words only. Price, product name,

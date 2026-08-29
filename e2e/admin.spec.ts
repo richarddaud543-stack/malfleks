@@ -5,8 +5,8 @@ import { test, expect } from "@playwright/test";
  *
  * Same constraint as `auth.spec.ts`: driving a real Google sign-in here would
  * mean automating Google's consent screen against a credential this repo must
- * not hold, and there is no way to mint an `admin: true` custom claim without
- * the Admin SDK. So this file covers what *is* testable end to end — the
+ * not hold, and an `admin: true` flag in `app_metadata` can only be set through
+ * Supabase's Admin API. So this file covers what *is* testable end to end — the
  * signed-out path, which is also the one where a mistake would let anyone see
  * partner applications, not just the wrong subset of them.
  *

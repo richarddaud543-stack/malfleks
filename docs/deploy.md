@@ -260,11 +260,15 @@ Being online is not being finished. In rough order of how much they matter:
 - **No payments.** The fee module computes correctly and is barred from every
   customer surface. Going live does not change that, and nothing on the site
   should imply it has.
-- **The confirmation screen still lies.** It tells customers their request "has
-  not been transmitted to anyone" while the server writes their name, phone and
-  address to the database. Verified by submitting a real order and querying the
-  row. **Fix this before any real customer sees it** — `docs/assignments/beacon-04.md`
-  is written and ready.
+- ~~**The confirmation screen still lies.**~~ **Fixed 2026-08-29.** It told
+  customers their request "has not been transmitted to anyone" while the server
+  wrote their name, phone and address to the database. CI caught it on its first
+  ever execution: `e2e/auth.spec.ts` asserts a signed-out submission makes no
+  same-origin POST, and it had been failing silently for weeks because the suite
+  had never run anywhere but a developer's machine. The owner chose the honest
+  side — a signed-out request now stays in the browser tab, and neither server
+  action fires without a session. The guard is in the client, not the action: an
+  action that declines to write has still received the address.
 - **7 of 19 branches and 3 of 5 couriers are unverified placeholders**, and no
   address is geocoded. A live site with invented branch addresses is a different
   kind of problem from a prototype with them. `docs/assignments/mercury-06.md`.

@@ -11,23 +11,28 @@ import type { SaveOrderRequestInput } from "@/server/orders/build-order-request"
 /**
  * Persisting an order request as a real backend record.
  *
- * This is the action `OrderRequestForm` now calls on **every** submission —
- * signed in or not. That is a deliberate reversal of the property this flow
- * used to guarantee ("a signed-out customer's request is transmitted
- * nowhere"): the owner decided every order request gets a real, queryable
- * record instead. See `docs/backend.md`'s third Decision block.
+ * `OrderRequestForm` calls this **only for a signed-in customer**, and the
+ * guard is in the client on purpose — an action that declined to write would
+ * still have received the name, phone number and address over the wire, and
+ * "nothing is transmitted" has to mean no request at all. `e2e/auth.spec.ts`
+ * asserts exactly that: zero same-origin POSTs on a signed-out submission.
  *
- * `customerId` comes from the verified session cookie here, on the server —
- * never from the payload, and never from the client's own read of its
- * session state. A signed-out customer gets `customerId: null`, not a
- * rejected write.
+ * ## The reversal, and the reversal of the reversal
  *
- * This does not gate on `isAuthConfigured()` the way `saveOrderRequest`
- * (`./order-requests.ts`) does. That check exists because *that* action writes
- * a row owned by a specific customer, and without auth there is no customer to
- * own it. This one records the order either way, so a missing Supabase
- * configuration must not stop it; all that should happen is `verifySession()`
- * finding nobody signed in, which it already handles by returning `null`.
+ * This action briefly ran on every submission, signed in or not, so that every
+ * request got a queryable record. Nobody updated the confirmation screen, so
+ * the site kept telling signed-out customers their details had gone nowhere
+ * while the server wrote them to Postgres. CI caught it on its first ever run
+ * (2026-08-29) and the owner chose the honest side: a signed-out request stays
+ * in the browser tab. Nothing is dispatched to a branch either way, so the
+ * stored row bought an admin view of orders nobody acts on, in exchange for
+ * holding a stranger's home address with no retention policy.
+ *
+ * `customerId` still comes from the verified session here, on the server —
+ * never from the payload, and never from the client's own read of its session
+ * state. The client decides *whether* to call; it does not get to say who it
+ * is. A session that has expired between the page loading and the submit
+ * simply writes nothing, which is the safe direction to fail.
  */
 
 export type SubmitOrderResult =

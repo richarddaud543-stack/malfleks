@@ -15,23 +15,12 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
-    // Every spec but consent.spec.ts runs as a visitor who has already
-    // answered the analytics banner, so it is not sitting over the bottom of
-    // the viewport intercepting clicks in specs that are about something else.
-    // "denied" rather than "granted" on purpose: no spec should be quietly
-    // firing real Analytics requests. consent.spec.ts overrides this with an
-    // empty state to test the first-visit path.
-    storageState: {
-      cookies: [],
-      origins: [
-        {
-          origin: baseURL,
-          localStorage: [
-            { name: "soko:analytics-consent:v1", value: "denied" },
-          ],
-        },
-      ],
-    },
+    // There used to be a seeded `storageState` here, pre-answering the
+    // analytics consent banner so it was not sitting over the bottom of the
+    // viewport intercepting clicks in specs about something else. Both the
+    // banner and `consent.spec.ts` went with Firebase Analytics on 2026-08-29,
+    // and a seeded key for a feature that no longer reads it is the kind of
+    // dead config that outlives everyone who knew why it was there.
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
