@@ -12,7 +12,7 @@ import {
  *
  * Every order request now gets one of these — signed in or anonymous — per
  * the owner's decision recorded in `docs/backend.md`'s third Decision block.
- * This lives in Prisma, not Firestore: an order joins to product, branch,
+ * Soko's own record of an order, in Postgres: an order joins to product, branch,
  * brand and agent, and needs admin/business querying, which is the same
  * relational shape as the catalogue rather than the saved-order-requests
  * exception (`saved-requests.ts`, which stays as-is alongside this — a
@@ -27,7 +27,7 @@ import {
 
 /**
  * `"quota"` is inherited from `SaveOrderRequestFailure` but unreachable here:
- * it is a Firestore write-ceiling concern (`saved-requests.ts`), and
+ * it is the saved-request write ceiling (`saved-requests.ts`), and
  * `buildOrderRequest` never produces it. `"persist-failed"` is the one new
  * case — the database itself refused the write, including a reference
  * collision that survived the retry below.
@@ -48,7 +48,7 @@ export type CreateOrderOutcome =
 /**
  * Writes one order.
  *
- * `customerId` is the Firebase uid from the verified session, or `null` for
+ * `customerId` is the Supabase user id from the verified session, or `null` for
  * a signed-out customer — the caller (`src/app/actions/orders.ts`) decides
  * that from the session cookie, never from the payload, same trust boundary
  * as everywhere else in this codebase that touches identity.

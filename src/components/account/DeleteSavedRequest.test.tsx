@@ -7,7 +7,7 @@ import DeleteSavedRequest from "./DeleteSavedRequest";
  * back out, and cannot do it by accident.**
  *
  * Debt #20 was that the save path had no counterpart — name, phone and home
- * address went into Firestore and there was no way to remove them. The risk in
+ * address went into storage and there was no way to remove them. The risk in
  * fixing it is the opposite one, so both directions are tested: the first click
  * must not delete anything, and the second must.
  */

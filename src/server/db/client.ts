@@ -16,7 +16,7 @@ const globalForPrisma = globalThis as unknown as {
  * because there is no way to read it back at runtime — and the reason it has to
  * be a constant at all is the finding below.
  */
-const SCHEMA_PROVIDER: "sqlite" | "postgresql" = "sqlite";
+const SCHEMA_PROVIDER: "sqlite" | "postgresql" = "postgresql";
 
 /**
  * Measured 2026-08-27, answering the question `docs/assignments/forge-09.md`
@@ -60,6 +60,45 @@ function assertProviderMatches(url: string): void {
 }
 
 /**
+ * Builds the Postgres adapter, honouring `?schema=` in the connection string.
+ *
+ * **This is not decoration.** Prisma's own connection layer reads `?schema=`,
+ * but a driver adapter does not: the string is handed to `pg`, which has no
+ * such parameter and silently ignores it. A client built from
+ * `...?schema=test_foo` therefore reads and writes `public` — which is how
+ * seven "isolated" test suites all ended up sharing one schema and seeing each
+ * other's rows (measured 2026-08-27: a suite pointed at an empty schema
+ * returned `public`'s six brands).
+ *
+ * Two settings are needed, because they cover different query paths:
+ *
+ * - `{ schema }` makes Prisma **qualify the table names** it generates, which
+ *   covers every model query (`db.brand.findMany()` and friends).
+ * - `options: -c search_path=...` sets it on the **session**, which covers raw
+ *   SQL and anything else that resolves an unqualified name.
+ *
+ * Either alone leaves a hole. `public` stays on the path so extensions and
+ * shared types installed there still resolve.
+ */
+function postgresAdapter(url: string): PrismaPg {
+  const parsed = new URL(url);
+  const schema = parsed.searchParams.get("schema")?.trim();
+  if (!schema) return new PrismaPg({ connectionString: url });
+
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(schema)) {
+    throw new Error(
+      `DATABASE_URL has schema="${schema}", which is not a plain identifier. ` +
+        `It is interpolated into a session setting, so only [A-Za-z0-9_] is accepted.`,
+    );
+  }
+
+  return new PrismaPg(
+    { connectionString: url, options: `-c search_path=${schema},public` },
+    { schema },
+  );
+}
+
+/**
  * The application's Prisma client.
  *
  * Construction is lazy rather than module-level so the connection string is
@@ -70,8 +109,13 @@ function assertProviderMatches(url: string): void {
  * string gets `PrismaPg`, anything else gets SQLite. Both halves of the switch
  * are real and tested; what the switch alone cannot do is change the provider
  * the client was generated against, which is why `assertProviderMatches` runs
- * first. Leave `DATABASE_URL` unset and `npm run dev` still works against
- * `prisma/dev.db` with no setup, which is a property worth protecting.
+ * first.
+ *
+ * The SQLite half is now unreachable in practice — this build is generated from
+ * a `postgresql` schema, so `assertProviderMatches` rejects a `file:` URL before
+ * the switch is read. It is kept because the switch is the thing that makes the
+ * provider a one-line change rather than a rewrite, and deleting it would have
+ * to be undone to move back.
  */
 export function getPrisma(): PrismaClient {
   if (!globalForPrisma.sokoPrisma) {
@@ -80,7 +124,7 @@ export function getPrisma(): PrismaClient {
 
     const adapter =
       resolveDatabaseProvider(url) === "postgresql"
-        ? new PrismaPg({ connectionString: url })
+        ? postgresAdapter(url)
         : new PrismaBetterSqlite3({ url });
 
     globalForPrisma.sokoPrisma = new PrismaClient({ adapter });

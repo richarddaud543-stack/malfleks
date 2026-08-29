@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminEmailAllowlist, hasAdminClaim, isAdminUser } from "./admin";
+import { adminEmailAllowlist, hasAdminFlag, isAdminUser } from "./admin";
 import type { Session } from "./dal";
 
 /**
@@ -42,40 +42,39 @@ describe("adminEmailAllowlist", () => {
   });
 });
 
-// `hasAdminClaim` is exported and documented as the pure claim check, but
-// nothing in `src/server` currently calls it — `dal.ts` inlines
-// `decoded.admin === true` when building the session, and `isAdminUser` reads
-// `session.admin` directly rather than calling this function. Tested anyway,
-// because it is public API this module promises a caller: whatever reads a
-// raw claims bag (a decoded ID token has the same `admin` field name as a
-// decoded session cookie) needs the boolean-narrowing behaviour verified, not
-// assumed from the fact that it currently has no caller.
-describe("hasAdminClaim", () => {
+// `hasAdminFlag` is exported and documented as the pure check, but nothing in
+// `src/server` currently calls it — `dal.ts` inlines `appMeta.admin === true`
+// when building the session, and `isAdminUser` reads `session.admin` directly.
+// Tested anyway, because it is public API this module promises a caller, and
+// because the narrowing is the whole point: `app_metadata` is arbitrary JSON
+// set through Supabase's Admin API, so a string "true" reaching it is a
+// question of what someone typed into the dashboard, not a hypothetical.
+describe("hasAdminFlag", () => {
   it("is true only for the literal boolean true", () => {
-    expect(hasAdminClaim({ admin: true })).toBe(true);
+    expect(hasAdminFlag({ admin: true })).toBe(true);
   });
 
-  it("rejects truthy non-boolean values a token could plausibly carry", () => {
-    // Custom claims are just JSON; nothing stops a value of "true", 1, or
-    // similar from arriving on the wire. A `== true` check would admit all of
-    // these; `=== true` must not.
+  it("rejects truthy non-boolean values the metadata could plausibly carry", () => {
+    // `app_metadata` is just JSON; nothing stops a value of "true", 1, or
+    // similar from being set. A `== true` check would admit all of these;
+    // `=== true` must not.
     for (const admin of ["true", 1, "1", {}, [], "yes"]) {
-      expect(hasAdminClaim({ admin }), `admin: ${JSON.stringify(admin)} must not pass`).toBe(
+      expect(hasAdminFlag({ admin }), `admin: ${JSON.stringify(admin)} must not pass`).toBe(
         false
       );
     }
   });
 
   it("rejects a missing claim and an explicit false", () => {
-    expect(hasAdminClaim({})).toBe(false);
-    expect(hasAdminClaim({ admin: false })).toBe(false);
-    expect(hasAdminClaim({ admin: null })).toBe(false);
-    expect(hasAdminClaim({ admin: undefined })).toBe(false);
+    expect(hasAdminFlag({})).toBe(false);
+    expect(hasAdminFlag({ admin: false })).toBe(false);
+    expect(hasAdminFlag({ admin: null })).toBe(false);
+    expect(hasAdminFlag({ admin: undefined })).toBe(false);
   });
 });
 
 describe("isAdminUser — who is let in", () => {
-  it("admits a session carrying the custom claim, with no allowlist at all", () => {
+  it("admits a session carrying the app_metadata flag, with no allowlist at all", () => {
     expect(isAdminUser(session({ admin: true }), {})).toBe(true);
   });
 

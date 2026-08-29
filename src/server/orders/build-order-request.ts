@@ -11,12 +11,16 @@ import {
  * The trust boundary shared by every order-persistence path.
  *
  * Split out of `src/server/orders/saved-requests.ts`, which built this first
- * for the Firestore-backed saved-copy feature. `createOrder`
- * (`src/server/orders/create-order.ts`, the Prisma-backed persistence this
- * module now also serves) needs the exact same rebuild and cannot depend on
- * `saved-requests.ts` without pulling `firebase-admin` into a path that has
- * nothing to do with Firestore. `saved-requests.ts` re-exports everything
- * here, so nothing that imported from it before has to change.
+ * for the customer's saved copy. `createOrder`
+ * (`src/server/orders/create-order.ts`) needs the exact same rebuild, and two
+ * copies of a trust boundary is one copy too many.
+ *
+ * The original reason for the split was narrower — it kept `firebase-admin`
+ * out of a path that had nothing to do with Firestore — and that reason is
+ * gone with Firebase. The split stays on its own merit: this is the module
+ * with the tests, and both persistence paths call it rather than each
+ * re-deriving price, carrier and route. `saved-requests.ts` re-exports
+ * everything here, so nothing that imported from it has to change.
  */
 
 /**
@@ -41,8 +45,8 @@ export interface SaveOrderRequestInput {
 }
 
 /**
- * `"quota"` is a Firestore-specific concern (the saved-request write ceiling
- * in `saved-requests.ts`) — `buildOrderRequest` itself never returns it, and
+ * `"quota"` belongs to the saved-request write ceiling in
+ * `saved-requests.ts` — `buildOrderRequest` itself never returns it, and
  * neither does `createOrder`. It stays part of the union because both
  * callers report through the same `reason` field, and a caller that only
  * ever sees a subset is unremarkable; inventing two near-identical types
@@ -88,7 +92,7 @@ export function sanitizeRequestedAt(
 /**
  * Rebuilds the order request server-side from the catalogue.
  *
- * Pure: no Firestore, no Prisma, no session, no clock beyond what is
+ * Pure: no database, no session, no clock beyond what is
  * injected. This is where the trust boundary actually is, so it is the part
  * with tests (`saved-requests.test.ts`) — both persistence paths call this
  * one function rather than each re-deriving price, carrier and route.

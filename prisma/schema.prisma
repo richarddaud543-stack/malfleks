@@ -5,9 +5,9 @@
 // field-for-field so the repository layer in `src/server/` can return the exact
 // same shapes and the eventual cutover is an import-path change.
 //
-// SQLite is the dev provider so the project runs with no external service.
-// Everything here is chosen to be Postgres-compatible: no scalar lists, no
-// enums, no `Json` columns. See `docs/backend.md` for the Postgres switch.
+// Postgres everywhere: dev, CI and production all run the same engine, so the
+// concurrency guarantees the integration tests prove are the ones that ship.
+// See `docs/deploy.md` for why one build cannot serve two providers.
 
 generator client {
   provider = "prisma-client-js"
@@ -18,7 +18,7 @@ generator client {
 // adapter (`src/server/db/client.ts`). Swapping providers therefore touches
 // three known places, not the whole schema.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
 }
 
 model Brand {
@@ -205,10 +205,11 @@ model AgentRegion {
 model Order {
   id String @id @default(cuid())
 
-  // Firebase uid, or null for a signed-out customer. Deliberately not a FK:
-  // the identity lives in Firebase, not this database — same reasoning
-  // `docs/backend.md` already gives for keeping saved order requests out of
-  // Postgres. Present so a future "my orders" view can filter by it.
+  // Supabase user id (a UUID), or null for a signed-out customer.
+  // Deliberately not a FK: the identity lives in Supabase's `auth.users`,
+  // which is a schema this application's Prisma client does not model and
+  // must not couple its migrations to. Present so a future "my orders" view
+  // can filter by it.
   customerId String?
 
   status String @default("pending")
@@ -439,7 +440,7 @@ model Partner {
   @@index([kind, status])
 }
 
-// The Firebase account that manages a partner.
+// The Supabase account that manages a partner.
 //
 // `uid` is the primary key, so one account belongs to at most one partner. That
 // is a real constraint rather than an oversight: today a person running two
@@ -533,4 +534,56 @@ model ProductSubmissionSpec {
 
   @@id([submissionId, key])
   @@index([submissionId, position])
+}
+
+// A signed-in customer's own copy of an order request.
+//
+// ## Why this is a separate table from `Order`
+//
+// They look like duplicates and they are not. `Order` is Soko's record —
+// written for every request, signed in or not, and it must survive: it is what
+// the admin queue works from and what the status workflow transitions. This is
+// the *customer's* copy, and its defining property is that the customer can
+// delete it. Merging them would mean either a customer can destroy Soko's
+// operational record, or the "delete my saved request" button quietly does not
+// delete. Both are worse than one extra table.
+//
+// ## Why the request is a Json column
+//
+// It arrives as `OrderRequest` (src/lib/order.ts) — a nested snapshot of the
+// product, brand, branch, route and customer details exactly as shown at
+// request time. `Order` already flattens that same shape into columns because
+// admins filter and join on it. Nothing filters on this one; it is fetched
+// whole, by owner, and rendered. Flattening it a second time would create a
+// second thing to keep in step with `OrderRequest` for no query that needs it.
+//
+// ## Ownership
+//
+// `customerId` is the Supabase user id, taken from the verified session and
+// never from a payload. Under Firestore, ownership was a *path segment*
+// checked by a rules file, which is why the old code had to validate that an
+// incoming id was not secretly a path. Here it is a `WHERE` clause: an id
+// belonging to another customer matches zero rows and reads as not-found. The
+// injection surface is gone rather than guarded.
+model SavedOrderRequest {
+  id String @id @default(cuid())
+
+  /// Supabase user id. Not a FK, for the reason given on `Order.customerId`.
+  customerId String
+
+  /// Denormalised out of `payload` so a customer's list can be found by the
+  /// reference they were shown, without reading every row's JSON.
+  reference String
+
+  /// When the customer submitted, as they saw it.
+  requestedAt DateTime
+  /// When it actually landed here. The server's clock, not the browser's.
+  savedAt     DateTime @default(now())
+
+  /// The whole `OrderRequest`. See the note above.
+  payload Json
+
+  // The only read path: one customer's requests, newest first.
+  @@index([customerId, requestedAt])
+  @@index([customerId, reference])
 }

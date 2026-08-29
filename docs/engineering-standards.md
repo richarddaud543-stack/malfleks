@@ -70,7 +70,7 @@ Soko Ltd — Engineering
     ├── ENG-4 · Forge     — Platform/backend (DB, auth, API)
     ├── ENG-5 · Beacon    — SEO, metadata, content, IA
     ├── ENG-6 · Prism     — Visual & graphic design (type, colour, composition)
-    ├── ENG-7 · Vault     — Cloud platform & security (Firebase, auth, rules)
+    ├── ENG-7 · Vault     — Cloud platform & security (Supabase, auth, sessions)
     └── ENG-8 · Ledger    — Commerce & payments (mobile money, fees, trust)
 ```
 
@@ -93,6 +93,18 @@ in parallel without four of them editing the same document.
 Established by the 2026-08-13 standards pass and non-negotiable for new work:
 
 - `npx tsc --noEmit`, `npm run lint` and `npm test` all clean before any hand-off.
+- **CI is two jobs and there is no third.** `static` runs types, lint and
+  `npm test` against a real Postgres service; `e2e` runs Playwright against a
+  production build. Updated 2026-08-28: the `rules` job — the Firestore Security
+  Rules suite against the Firebase emulator, on its own pinned JDK — was deleted
+  with Firebase, along with the `test:rules`, `test:rules:ci`, `emulators` and
+  `rules:deploy` scripts. The property it existed to prove did not go with it:
+  cross-customer isolation is now asserted in
+  `src/server/orders/saved-requests.integration.test.ts` against real Postgres,
+  inside the suite everyone already runs. A separate command was the right shape
+  when the check needed Java installed; it is the wrong shape now that it does
+  not, because a check nobody has to run by hand is a check that cannot be
+  forgotten.
 - Every new page ships with page-specific `metadata`/`generateMetadata` (the root
   layout uses a `%s — Soko` title template) and a sitemap entry.
 - Every new feature ships with at least one real test. Behaviour, not
@@ -125,11 +137,11 @@ ever pays down.
 | 11 | No mutation testing — nothing checks whether our tests would catch a deliberately wrong implementation | Low, rising. Proposed by Forge as the structural answer to an agent writing a test that trivially passes against the code it just wrote | Open. Scope to `src/server` and `src/lib`; sequence after #2 |
 | 12 | No cross-route view transitions — the icon tile on a card and the same product's page have no visual relationship | Low. Pure craft, but it is the one page-to-page gap the current stack cannot close | **Done** (2026-08-15, `7d79c19`), and this row was simply never updated — found still marked open on 2026-08-22 and corrected then. `ProductCard`, `ListingCard` and `src/app/products/[id]/page.tsx` share a `product-${id}` name; `enter`/`exit` are scoped to a `product-view` transition type rather than left on the zero-config morph, so an unrelated same-page transition cannot fire them, and `update="none"` keeps an in-place re-render from picking up the browser's default move. `ProductShowcase` is documented as needing to stay a single stable root because of it. The reduced-motion guard is in `globals.css`: these pseudo-elements run outside React, so `useReducedMotion()` never sees them |
 | 13 | The delivery route is computed only on `/delivery/[productId]`, one page after the customer decides | Medium. `resolveDeliveryRoute()` already answers "brand fleet or which courier" — the answer just arrives after the choice it should inform | **Done** (2026-08-17). `previewDelivery()` wraps the same `resolveDeliveryRoute`/`orderBlockReason` pair — one rule, two altitudes — and `DeliveryRouteLine` renders it on the search card and the product page. An unorderable product now says so on its own page instead of after the click. Deliberate non-goal: **no delivery-speed search facet.** Only couriers publish an ETA, so filtering on speed would silently hide every brand-fleet listing; the honest move is to show the number, not to filter on one we only have half of |
-| 14 | **Two persistence stacks, neither read by a page**: Prisma 7 + SQLite (`src/server/`, `prisma/`) and the Firebase SDK wired to `v-mall-f37c6` | Was high — the expensive kind of ambiguity, since both looked equally live | **Decided 2026-08-15 by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.** Recorded with full reasoning in [`docs/backend.md`](backend.md#decision-prisma-owns-the-catalogue-firebase-is-scoped-to-auth-and-analytics). No Firestore reads or writes; no second source of truth for catalogue data |
-| 15 | Firebase Analytics runs for every visitor with no consent gate | Medium, jurisdiction-dependent. Analytics sets identifiers on load; Soko's market is Tanzania but the site is reachable anywhere | **Done** (2026-08-17). `src/lib/consent.ts` holds the rule, `ConsentBanner` asks it, and the footer's `ConsentPreferencesButton` takes it back on every page. Five E2E cases assert that an undecided visitor generates **zero** requests to Google's endpoints. The gate is "never call `initAnalytics`" rather than Google's consent mode, because consent mode's `denied` still sends cookieless pings — that is *less* collection, not none. Two limits worth stating plainly: withdrawing does not unload a gtag already running in that tab (nothing in the SDK unloads it), which is exactly why the default has to be off; and `setConsent` denies the three ad types permanently, because the Analytics SDK's own default is every consent type **granted** |
-| 16 | No Firebase Security Rules or App Check in the repo | Was downgraded by the #14 decision on the reasoning that it "becomes relevant again only if Auth stores user documents". **That condition was met on 2026-08-16** when Auth shipped with saved order requests | **Done** (2026-08-16, Vault). `firestore.rules` is default-deny with owner-only reads and no client writes at all; 13 assertions run against the real emulator (`npm run test:rules`, own CI job with a pinned JDK), and both directions were checked by injecting the two classic mistakes and watching the suite fail. App Check is wired (`initAppCheck`, reCAPTCHA v3) but **enforcement is an operator action in the console and has not been turned on** — Google's guidance is monitor-only first. See [`docs/auth.md`](auth.md) |
-| 20 | Saved order requests are the first customer PII Soko stores at rest — name, phone and delivery address, per request, in Firestore | Medium. The feature requires it, but no retention policy exists, and rules forbid client deletes so a customer cannot remove their own record | **Half done** (2026-08-22). The **delete path is built**: `deleteOrderRequest` goes through the Admin SDK like the write does, so `firestore.rules` keeps denying client deletes unchanged, and `DeleteSavedRequest` puts an inline two-step confirm (not `window.confirm()`) on every card in `/account`. Made it a **hard delete against Vault's soft-delete proposal**: the "an order request is evidence" reasoning in `firestore.rules` assumes a counterparty, and Soko transmits nothing to the branch and charges nothing, so a retained shell settles no dispute and only means the deletion is not quite one. Reversible in one function if a branch is ever actually told. A security property found on the way and now tested: `collection.doc("a/b/c")` is legal Firestore and addresses a nested document, so a browser-supplied id is validated as a 20-char auto id (`isValidRequestId`) before anything touches the network. **Still open — and deliberately not decided here: the retention policy.** How long an untouched request lives before it expires, and whether closing an account purges the subcollection, are the owner's calls; a number invented by an engineer would read as policy to whoever found it next. No TTL or scheduled purge is built |
-| 21 | The save-order-request action has a ceiling (200 per customer) but no rate limit | Low–medium. Bounds total damage, not burst rate; Firestore's free tier is 20,000 writes/day project-wide | Open, raised by Vault. The honest fix is App Check *enforcement* plus a per-uid rate limit; only the first is built |
+| 14 | **Two persistence stacks, neither read by a page**: Prisma 7 + SQLite (`src/server/`, `prisma/`) and the Firebase SDK wired to `v-mall-f37c6` | Was high — the expensive kind of ambiguity, since both looked equally live | **Decided 2026-08-15 by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.** Recorded with full reasoning in [`docs/backend.md`](backend.md#decision-prisma-owns-the-catalogue-firebase-is-scoped-to-auth-and-analytics). No Firestore reads or writes; no second source of truth for catalogue data. **Closed structurally 2026-08-28**: Auth moved to Supabase, Analytics and App Check were removed with no replacement, and the Firebase SDKs were uninstalled. There is one persistence stack, so the ambiguity this row was opened for cannot recur |
+| 15 | Firebase Analytics runs for every visitor with no consent gate | Medium, jurisdiction-dependent. Analytics sets identifiers on load; Soko's market is Tanzania but the site is reachable anywhere | **Done** (2026-08-17). `src/lib/consent.ts` holds the rule, `ConsentBanner` asks it, and the footer's `ConsentPreferencesButton` takes it back on every page. Five E2E cases assert that an undecided visitor generates **zero** requests to Google's endpoints. The gate is "never call `initAnalytics`" rather than Google's consent mode, because consent mode's `denied` still sends cookieless pings — that is *less* collection, not none. Two limits worth stating plainly: withdrawing does not unload a gtag already running in that tab (nothing in the SDK unloads it), which is exactly why the default has to be off; and `setConsent` denies the three ad types permanently, because the Analytics SDK's own default is every consent type **granted**. **Retired 2026-08-28**: Analytics went with Firebase, and the consent feature built to gate it (`src/lib/consent.ts`, `src/components/consent/`) was deleted with it rather than left standing over nothing — a banner asking permission for collection that no longer happens is a lie in the other direction. Everything in this row is preserved as the reasoning to reuse if any analytics ever returns; the conclusion — the gate is "never load it", not the vendor's own consent mode — is the part that would still hold |
+| 16 | No Firebase Security Rules or App Check in the repo | Was downgraded by the #14 decision on the reasoning that it "becomes relevant again only if Auth stores user documents". **That condition was met on 2026-08-16** when Auth shipped with saved order requests | **Done** (2026-08-16, Vault). `firestore.rules` is default-deny with owner-only reads and no client writes at all; 13 assertions run against the real emulator (`npm run test:rules`, own CI job with a pinned JDK), and both directions were checked by injecting the two classic mistakes and watching the suite fail. App Check is wired (`initAppCheck`, reCAPTCHA v3) but **enforcement is an operator action in the console and has not been turned on** — Google's guidance is monitor-only first. See [`docs/auth.md`](auth.md). **Retired 2026-08-28, not completed**: rules, the emulator suite and App Check were deleted with Firebase, and the open half of this row — App Check enforcement as an unclicked console action — is void rather than outstanding, because there is no Firebase project in front of the app to enforce anything on. Do not read this as "App Check is on". The thing the rules file guaranteed, cross-customer isolation on saved order requests, is the one part carried forward, and it is now a Postgres integration test |
+| 20 | Saved order requests are the first customer PII Soko stores at rest — name, phone and delivery address, per request, in Firestore | Medium. The feature requires it, but no retention policy exists, and rules forbid client deletes so a customer cannot remove their own record | **Half done** (2026-08-22). The **delete path is built**: `deleteOrderRequest` goes through the Admin SDK like the write does, so `firestore.rules` keeps denying client deletes unchanged, and `DeleteSavedRequest` puts an inline two-step confirm (not `window.confirm()`) on every card in `/account`. Made it a **hard delete against Vault's soft-delete proposal**: the "an order request is evidence" reasoning in `firestore.rules` assumes a counterparty, and Soko transmits nothing to the branch and charges nothing, so a retained shell settles no dispute and only means the deletion is not quite one. Reversible in one function if a branch is ever actually told. A security property found on the way and now tested: `collection.doc("a/b/c")` is legal Firestore and addresses a nested document, so a browser-supplied id is validated as a 20-char auto id (`isValidRequestId`) before anything touches the network. **Still open — and deliberately not decided here: the retention policy.** How long an untouched request lives before it expires, and whether closing an account purges the subcollection, are the owner's calls; a number invented by an engineer would read as policy to whoever found it next. No TTL or scheduled purge is built. **Moved store 2026-08-28, still half done.** The PII is now columns on `SavedOrderRequest` in Postgres, not documents in Firestore. Three details in this row are history rather than current mechanism: the write and delete no longer go through the Admin SDK, `firestore.rules` no longer exists to keep denying client deletes, and `isValidRequestId` is gone because the path-injection it guarded against is a Firestore property — a foreign id now matches zero rows. The hard-delete decision, the two-step inline confirm in `/account` and the unanswered retention question are all unchanged, and the last one is still the owner's |
+| 21 | The save-order-request action has a ceiling (200 per customer) but no rate limit | Low–medium. Bounds total damage, not burst rate; Firestore's free tier was 20,000 writes/day project-wide | Open, raised by Vault. **The proposed fix no longer exists** (2026-08-28): it was App Check *enforcement* plus a per-uid rate limit, and App Check went with Firebase, so the half that was built is now the half that is gone. The ceiling of 200 is still there and still bounds total damage rather than burst rate. What replaces App Check on a Supabase-and-Postgres stack has not been decided, and the quota it was protecting is now our own database rather than a vendor's free tier |
 
 ## Role research
 
@@ -363,7 +375,7 @@ table-driven check covers all ten titled routes (Lead-added). All pass, so nothi
 was hiding.
 
 Still open: **no automated accessibility tooling at all** (#17), and `collectConsoleErrors`
-exists but runs only on `/`, so a hydration or Firebase error on any other route ships
+exists but runs only on `/`, so a hydration or auth error on any other route ships
 silently (#19). Sentinel also argues mutation testing (#11) deserves a higher priority
 than it currently carries, on the grounds that it is the structural answer to
 AI-generated test tautology.
@@ -466,11 +478,24 @@ shipping an invisible icon.
 server-minted session cookie, saved order requests in Firestore, Security Rules and
 App Check. Closes debt #16.
 
-The Phase 0 finding that survived contact with the build: **design auth around a Data
-Access Layer, not a proxy.** There is no `proxy.ts` here, so `verifySession()` in
-`src/server/auth/dal.ts` is not a second layer behind one — it is the only layer, which
-is exactly why it does the authoritative `verifySessionCookie(cookie, true)` rather than
-an optimistic cookie read.
+**Migrated 2026-08-28 → [`docs/auth.md`](auth.md)** — Supabase Auth replaces all of
+it. `@supabase/ssr` holds the session, `src/app/auth/callback/route.ts` exchanges the
+OAuth code, saved order requests are a Postgres table, and there are no Security Rules
+and no App Check because nothing is left for them to stand in front of. Debt #16 is
+retired rather than completed; the register says why that distinction matters.
+
+The Phase 0 finding that survived contact with the build — **and then survived the
+vendor swap, which is the real test of it** — is: **design auth around a Data Access
+Layer, not a proxy.** There is no `proxy.ts` here, so `verifySession()` in
+`src/server/auth/dal.ts` is not a second layer behind one; it is the only layer, which
+is exactly why it does the authoritative check rather than an optimistic cookie read.
+Under Firebase that check was `verifySessionCookie(cookie, true)`. It is now
+`supabase.auth.getUser()`, **never `getSession()`**: `getSession()` decodes the cookie
+and returns what it says without checking that anyone legitimate wrote it — fine in a
+browser, worthless on a server where the cookie is attacker-supplied input. The
+`Session` interface and the `verifySession`/`requireSession`/`requireAdmin` signatures
+came through the migration unchanged, so no caller was rewritten. That is what having a
+DAL bought, and it was not visible until the day the vendor changed.
 
 Phase 1 needed one piece of research Phase 0 had not done: **which sign-in method for
 Tanzania.** The answer went against the market's instinct, and the full reasoning is in
@@ -483,28 +508,52 @@ July 2026), where a Google account is part of device setup. The order form *alre
 validates a TZ mobile number, so phone auth would also conflate "the number the driver
 calls" with "the number that owns the account". **Phone becomes right when Soko takes
 money** — mobile-money identity is the MSISDN — and nothing here blocks it: everything
-past `getIdToken()` is provider-agnostic.
+past the identity provider is provider-agnostic.
 
-Three things worth carrying beyond this assignment:
+**Still the conclusion after the 2026-08-28 move**, and worth separating the two halves
+now that one of them is history. The *market* half — Android share, a Google account
+already on the device, the driver's number not being the account's number — is about
+Tanzania and is untouched by which vendor we use. The *cost* half was specifically about
+Firebase's SMS pricing and region policy; those numbers no longer apply to us and should
+not be quoted as if they did. Google remains the sole provider under Supabase.
 
-**A security suite that skips is worse than no suite.** The rules tests need the Firebase
-emulator, which needs Java. Folding them into `npm test` would make every Java-less
-machine fail, and the fix people reach for is to make the suite skip itself — after which
-the green tick means nothing. They are a separate command with their own CI job and a
-pinned JDK, and they **fail loudly** when the emulator is unreachable.
+Four things worth carrying beyond this assignment:
+
+**The admin flag has to come from the half of the user the user cannot write.** Under
+Firebase it was a custom claim. Under Supabase it is `app_metadata.admin === true`, and
+it must never be read from `user_metadata` — that bag is populated from what the client
+passes and stays editable by the account holder afterwards, so an admin check against it
+is a self-service promotion. `SOKO_ADMIN_EMAILS` remains the bootstrap allowlist, read
+per request, because nothing inside the app should be able to mint the first admin.
+
+**A security suite that skips is worse than no suite.** The rules tests needed the
+Firebase emulator, which needs Java. Folding them into `npm test` would have made every
+Java-less machine fail, and the fix people reach for is to make the suite skip itself —
+after which the green tick means nothing. They were a separate command with their own CI
+job and a pinned JDK, and they **failed loudly** when the emulator was unreachable.
+*Deleted 2026-08-28 with the rules they tested.* The lesson is the load-bearing part and
+it carries: the isolation property is now in `npm test` rather than beside it, and it
+still refuses to skip — `saved-requests.integration.test.ts` needs a real Postgres and
+fails rather than passing vacuously without one.
 
 **Passing is not evidence; failing on a mutation is.** Both rule properties were checked
 by deliberately breaking them — `request.auth != null` instead of an owner check (2 tests
 fail) and a client-writable `create` (1 test fails). This is Forge's mutation-testing
-argument (#11) applied by hand to the one file where a false pass is a breach.
+argument (#11) applied by hand to the one file where a false pass is a breach. The file
+is gone; the method is not, and it is the thing to reach for on the `where: { customerId }`
+clause that replaced it, which fails just as silently in the permissive direction.
 
 **`npm run build`'s route table is a review artifact.** `/account` first shipped as
 prerendered **static**, because `verifySession()` short-circuits before reading cookies
-when no Admin credentials are present — so a CI build running before runtime secrets exist
+when auth is not configured — `isAuthConfigured()` today, Admin credentials then — so a
+CI build running before runtime secrets exist
 would have baked in a permanent redirect to sign-in, and the build output would have
 looked healthy. No test would have caught it. Read the ○/●/ƒ column.
 
-Sources: [Firebase Auth limits](https://firebase.google.com/docs/auth/limits) ·
+Sources, as cited by the 2026-08-15 Phase 0 — the four Firebase pages are kept because
+they are what the phone-vs-Google decision was actually reasoned from, not because they
+describe the stack we run:
+[Firebase Auth limits](https://firebase.google.com/docs/auth/limits) ·
 [SMS regions](https://cloud.google.com/identity-platform/docs/admin/sms-regions) ·
 [signInWithRedirect best practices](https://firebase.google.com/docs/auth/web/redirect-best-practices) ·
 [Manage session cookies](https://firebase.google.com/docs/auth/admin/manage-cookies) ·

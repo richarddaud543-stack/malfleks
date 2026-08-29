@@ -3,9 +3,10 @@
 import { useEffect, useId, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { getFirebaseAuth, isFirebaseConfigured } from "@/lib/firebase";
-import { signInWithIdToken } from "@/app/actions/auth";
-import { invalidateSessionState, useSessionState } from "./session-state";
+
+import { safeDestination } from "@/lib/auth-redirect";
+import { startGoogleSignIn } from "@/app/actions/auth";
+import { useSessionState } from "./session-state";
 
 /**
  * Google sign-in.
@@ -18,64 +19,54 @@ import { invalidateSessionState, useSessionState } from "./session-state";
  * browsing in Tanzania happens on Android, where a Google account is part of
  * setting the device up.
  *
- * The important consequence for this component: it is one provider today and
- * the layer underneath it is provider-agnostic. Adding phone sign-in later is
- * another button that produces an ID token, not a rewrite — everything past
- * `getIdToken()` is identical.
+ * ## What the move off Firebase removed from this file
  *
- * `signInWithPopup`, not `signInWithRedirect`: the redirect flow depends on
- * third-party storage on `*.firebaseapp.com`, which Chrome, Safari and Firefox
- * now block. Firebase's own redirect-best-practices page lists switching to
- * popup as the fix for a site not served from its own Firebase Hosting domain,
- * which is us. Popups can be blocked, so that case is handled explicitly rather
- * than left to fail silently.
+ * The popup. Firebase's redirect flow depended on third-party storage on
+ * `*.firebaseapp.com`, which Chrome, Safari and Firefox now block, so the only
+ * workable option was `signInWithPopup` — and popups bring their own failure
+ * modes, each of which needed its own message: blocked by the browser, closed
+ * by the user, cancelled by a second request. Then the panel had to mint an ID
+ * token, post it to a Server Action, and sign the client SDK back out so that
+ * two systems did not both believe they knew who was signed in.
+ *
+ * Supabase's flow is a plain top-level redirect, so all of that is gone. This
+ * component now does one thing: hand a validated destination to a Server Action
+ * and let it redirect. No token is ever handled here.
+ *
+ * Whether sign-in is available is decided by the *server* — the panel is
+ * rendered with `configured` as a prop rather than reading an environment
+ * variable itself. That is not a style preference: reading it here would make
+ * the answer depend on what was inlined into the client bundle at build time,
+ * and the server's own view is the one that decides whether sign-in works.
  */
 
-/** Maps Firebase's error codes to something a customer can act on. */
-function messageForCode(code: string): string {
+export { DEFAULT_DESTINATION, safeDestination } from "@/lib/auth-redirect";
+
+/** Maps the callback's `?error=` back to something a customer can act on. */
+function messageForError(code: string | null): string | null {
   switch (code) {
-    case "auth/popup-blocked":
-      return "Your browser blocked the sign-in window. Allow pop-ups for this site and try again.";
-    case "auth/popup-closed-by-user":
-    case "auth/cancelled-popup-request":
+    case null:
+      return null;
+    case "cancelled":
       return "Sign-in was cancelled.";
-    case "auth/unauthorized-domain":
-      return "Sign-in isn't enabled for this address yet. Please tell us where you saw this.";
-    case "auth/network-request-failed":
-      return "We couldn't reach Google. Check your connection and try again.";
+    case "unconfigured":
+      return "Signing in isn't available on this deployment yet.";
     default:
       return "Sign-in didn't complete. Please try again.";
   }
 }
 
-export const DEFAULT_DESTINATION = "/account";
-
-/**
- * Where to land after sign-in.
- *
- * Anything not a plain same-site path is discarded. `//evil.example` and
- * `https://evil.example` are both valid *values* of a query parameter and both
- * are open redirects — the protocol-relative one especially, because it looks
- * like a path. Backslashes are rejected too: some browsers normalise `/\` to
- * `//`.
- */
-export function safeDestination(raw: string | null): string {
-  if (!raw) return DEFAULT_DESTINATION;
-  if (!raw.startsWith("/")) return DEFAULT_DESTINATION;
-  if (raw.startsWith("//") || raw.startsWith("/\\")) return DEFAULT_DESTINATION;
-  return raw;
-}
-
-export default function SignInPanel() {
+export default function SignInPanel({ configured }: { configured: boolean }) {
   const router = useRouter();
   const errorId = useId();
   const session = useSessionState();
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    messageForError(searchParams.get("error")),
+  );
 
   const next = safeDestination(searchParams.get("next"));
-  const configured = isFirebaseConfigured();
 
   // Someone who is already signed in has no business on this page.
   useEffect(() => {
@@ -86,52 +77,21 @@ export default function SignInPanel() {
     setBusy(true);
     setError(null);
 
-    try {
-      const { GoogleAuthProvider, signInWithPopup, signOut } = await import(
-        "firebase/auth"
-      );
-      const auth = await getFirebaseAuth();
-      const provider = new GoogleAuthProvider();
-      // Always show the account chooser. On a shared phone — which is a normal
-      // device pattern here — silently reusing the last Google account is how
-      // one person's order request lands in another person's account.
-      provider.setCustomParameters({ prompt: "select_account" });
-
-      const credential = await signInWithPopup(auth, provider);
-      const idToken = await credential.user.getIdToken();
-
-      const result = await signInWithIdToken(idToken);
-
-      // The server session cookie is now the only session. Dropping the client
-      // SDK's user leaves exactly one answer to "who is signed in".
-      await signOut(auth);
-
-      if (!result.ok) {
-        setError(result.message);
-        setBusy(false);
-        return;
-      }
-
-      invalidateSessionState();
-      router.replace(next);
-      router.refresh();
-    } catch (caught) {
-      const code =
-        typeof caught === "object" && caught !== null && "code" in caught
-          ? String((caught as { code: unknown }).code)
-          : "";
-      setError(messageForCode(code));
-      setBusy(false);
-    }
+    // On success this never returns — the action redirects to Google. A
+    // returned value therefore always means failure, which is why the result
+    // type has no success case.
+    const result = await startGoogleSignIn(next);
+    setError(result.message);
+    setBusy(false);
   }
 
   if (!configured) {
     return (
       <div className="glass-card rounded-2xl p-6">
         <p className="text-sm text-muted">
-          Sign-in isn&apos;t available on this deployment — it has no Firebase
-          configuration. You can still place an order request without an
-          account; it will be held in this browser tab.
+          Sign-in isn&apos;t available on this deployment — it has no Supabase
+          authentication configuration. You can still place an order request
+          without an account; it will be held in this browser tab.
         </p>
         <Link
           href="/search"

@@ -4,8 +4,8 @@ import { useState, useTransition } from "react";
 import { deleteOrderRequest } from "@/app/actions/order-requests";
 
 /**
- * The control that lets a customer take their own details back out of
- * Firestore — the missing half of the save path, and the point of debt #20.
+ * The control that lets a customer take their own details back out of the
+ * database — the missing half of the save path, and the point of debt #20.
  *
  * Two steps rather than one, and deliberately not `window.confirm()`. A native
  * confirm is unstyled, unannounced in the page's own live region, and blocks

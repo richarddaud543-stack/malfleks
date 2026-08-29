@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Runs against a real SQLite database built from the committed migrations,
+// Runs against a real Postgres schema built from the committed migrations,
 // for the same reason `review.integration.test.ts` does: the property under
 // test is that the *database* refuses a second publish of the same
 // submission, and a mocked Prisma client would return whatever it was told to.
@@ -12,13 +12,10 @@
 // interleave the reads before either write, which is what the
 // `updateMany`-with-status-in-WHERE guard exists for. Do not delete them.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { getPrisma, resetPrisma } from "@/server/db/client";
+import { getPrisma } from "@/server/db/client";
+import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 import { seedDatabase } from "@/server/db/seed";
 import {
   canPublish,
@@ -28,36 +25,15 @@ import {
   submitProduct,
 } from "./submissions";
 
-const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
-const PRISMA_CLI = path.join(PROJECT_ROOT, "node_modules", "prisma", "build", "index.js");
-
-let workDir: string;
+let db: TestDatabase;
 
 beforeAll(async () => {
-  workDir = mkdtempSync(path.join(tmpdir(), "soko-submissions-test-"));
-  const databaseUrl = `file:${path.join(workDir, "test.db").replaceAll("\\", "/")}`;
-
-  process.env.DATABASE_URL = databaseUrl;
-  await resetPrisma();
-
-  if (!existsSync(PRISMA_CLI)) {
-    throw new Error(
-      `Prisma CLI not found at ${PRISMA_CLI}. Run "npm install" before the test suite.`,
-    );
-  }
-
-  execFileSync(process.execPath, [PRISMA_CLI, "migrate", "deploy"], {
-    cwd: PROJECT_ROOT,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    stdio: "pipe",
-  });
-
+  db = await createTestDatabase("submissions");
   await seedDatabase(getPrisma());
 }, 180_000);
 
 afterAll(async () => {
-  await resetPrisma();
-  rmSync(workDir, { recursive: true, force: true });
+  await db.teardown();
 });
 
 let partnerSeq = 0;

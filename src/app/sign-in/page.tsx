@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import SignInPanel from "@/components/auth/SignInPanel";
+import { isAuthConfigured } from "@/server/auth/config";
 
 export const metadata: Metadata = {
   title: "Sign in",
@@ -49,7 +50,7 @@ export default function SignInPage() {
           {/* useSearchParams needs a Suspense boundary to keep this route
               static — the same reason /search has one. */}
           <Suspense fallback={<PanelSkeleton />}>
-            <SignInPanel />
+            <SignInPanel configured={isAuthConfigured()} />
           </Suspense>
         </div>
       </div>

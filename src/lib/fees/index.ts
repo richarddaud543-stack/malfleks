@@ -2,7 +2,7 @@
  * What Soko earns on an order, and who pays whom.
  *
  * A pure function over the tables in `./tables.ts`. No I/O, no Prisma, no
- * Firebase, no imports from `src/server` — the same shape as `buildListings`
+ * Supabase, no imports from `src/server` — the same shape as `buildListings`
  * and `previewDelivery`, and for the same reason: money bugs are the worst
  * kind, and a pure function is the only part worth trusting. Everything here
  * can be exercised exhaustively over the real catalogue in milliseconds, which

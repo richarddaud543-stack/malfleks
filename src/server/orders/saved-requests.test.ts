@@ -1,17 +1,15 @@
 // @vitest-environment node
 //
-// firebase-admin cannot run in jsdom, and this file imports the module that
-// pulls it in. Same reason `repositories.test.ts` opts out.
+// Node, not jsdom: this file imports the module that reaches Prisma. Same
+// reason `repositories.test.ts` opts out.
 
 import { describe, expect, it } from "vitest";
 import { getProductById } from "@/data";
 import {
   buildOrderRequest,
-  deleteFromCollection,
   isValidRequestId,
   sanitizeReference,
   sanitizeRequestedAt,
-  type RequestCollection,
   type SaveOrderRequestInput,
 } from "./saved-requests";
 
@@ -197,77 +195,25 @@ describe("sanitizeRequestedAt", () => {
 });
 
 describe("isValidRequestId", () => {
-  it("accepts a Firestore auto id", () => {
-    expect(isValidRequestId("aBcDeFgHiJkLmNoPqRsT")).toBe(true);
+  // Under Firestore this was a security control, because `collection.doc(id)`
+  // accepts a path and a crafted id could address another customer's document.
+  // It is now an early exit only — `deleteMany` scopes by `customerId`, so a
+  // foreign id matches nothing regardless. These cases stay because the two
+  // outcomes still mean different things to a caller: "invalid-id" is a bug in
+  // our own client, "not-found" is a stale tab.
+  it("accepts the cuid shape Prisma generates", () => {
+    expect(isValidRequestId("clh3k9x2p0000qwer8tyu1234")).toBe(true);
   });
 
-  it("rejects an id carrying a path separator", () => {
-    // The one that matters. `collection.doc("a/b/c")` is legal Firestore and
-    // addresses a nested document, so an id echoed straight back from the
-    // browser is a way out of the customer's own subcollection.
-    expect(isValidRequestId("aBcDeFgHiJkLmNoPqR/x")).toBe(false);
+  it("rejects anything carrying a path separator", () => {
+    expect(isValidRequestId("clh3k9x2p0000qwer8ty/1234")).toBe(false);
     expect(isValidRequestId("../../customers/other")).toBe(false);
   });
 
-  it("rejects the wrong length, and anything that is not a string", () => {
+  it("rejects the wrong shape entirely", () => {
     expect(isValidRequestId("tooShort")).toBe(false);
-    expect(isValidRequestId("aBcDeFgHiJkLmNoPqRsTu")).toBe(false);
+    expect(isValidRequestId("")).toBe(false);
     expect(isValidRequestId(null)).toBe(false);
     expect(isValidRequestId(42)).toBe(false);
-  });
-});
-
-describe("deleteFromCollection", () => {
-  const VALID = "aBcDeFgHiJkLmNoPqRsT";
-
-  /** A Firestore stand-in that records what was asked of it. */
-  function fakeCollection(exists: boolean) {
-    const calls = { get: 0, delete: 0, ids: [] as string[] };
-    const collection: RequestCollection = {
-      doc(id: string) {
-        calls.ids.push(id);
-        return {
-          async get() {
-            calls.get += 1;
-            return { exists };
-          },
-          async delete() {
-            calls.delete += 1;
-          },
-        };
-      },
-    };
-    return { collection, calls };
-  }
-
-  it("deletes a request that exists", async () => {
-    const { collection, calls } = fakeCollection(true);
-    await expect(deleteFromCollection(collection, VALID)).resolves.toEqual({
-      deleted: true,
-    });
-    expect(calls.delete).toBe(1);
-    expect(calls.ids).toEqual([VALID]);
-  });
-
-  it("reports not-found instead of claiming success", async () => {
-    // Firestore's delete() resolves happily for a document that was never
-    // there, so without the read first this path would tell the customer their
-    // details were removed when nothing was.
-    const { collection, calls } = fakeCollection(false);
-    await expect(deleteFromCollection(collection, VALID)).resolves.toEqual({
-      deleted: false,
-      reason: "not-found",
-    });
-    expect(calls.delete).toBe(0);
-  });
-
-  it("never touches Firestore for a malformed id", async () => {
-    const { collection, calls } = fakeCollection(true);
-    await expect(
-      deleteFromCollection(collection, "aBcDeFgHiJkLmNoPqR/x")
-    ).resolves.toEqual({ deleted: false, reason: "invalid-id" });
-    expect(calls.ids).toEqual([]);
-    expect(calls.get).toBe(0);
-    expect(calls.delete).toBe(0);
   });
 });

@@ -1,6 +1,7 @@
-import { FieldValue, Timestamp } from "firebase-admin/firestore";
+import type { Prisma, PrismaClient } from "@prisma/client";
+
 import type { OrderRequest } from "@/lib/order";
-import { getAdminFirestore } from "@/server/firebase/admin";
+import { getPrisma } from "@/server/db/client";
 import {
   buildOrderRequest,
   sanitizeReference,
@@ -13,27 +14,42 @@ import {
 /**
  * A signed-in customer's saved order requests.
  *
- * Why Firestore and not Prisma: `docs/backend.md` settles that Prisma owns the
- * catalogue and names the one exception worth revisiting — a genuinely
- * user-scoped, realtime-shaped slice. This is that slice. It is keyed by
- * Firebase uid, it is not relational, nothing joins it to the catalogue, and
- * the identity that owns it already lives in Firebase. Putting it in Postgres
- * would mean mirroring Firebase uids into a second store for no gain. The
- * decision is recorded in `docs/backend.md` under the original one.
+ * ## This used to live in Firestore
  *
- * Path: `customers/{uid}/orderRequests/{autoId}`. Ownership is a path segment
- * compared against `request.auth.uid` in `firestore.rules`, not a field — see
- * that file for why.
+ * The original argument for keeping it out of Postgres was that it was a
+ * user-scoped, non-relational slice keyed by a Firebase uid, and that mirroring
+ * Firebase uids into a second store would buy nothing. That argument was sound
+ * and it died with Firebase: there is no second store any more. It is now one
+ * table in the database that already holds everything else.
  *
- * This is an **addition** on top of every order request now also being
- * persisted in Prisma (`src/server/orders/create-order.ts`), not a
- * replacement for it — see `docs/backend.md`'s third Decision block. This is
- * still the only place a customer gets their own deletable copy back.
+ * Three things got better in the move, and they are worth naming because they
+ * are the reason this file is shorter than the one it replaces:
+ *
+ * 1. **Ownership is a `WHERE` clause, not a path.** Firestore's
+ *    `collection.doc(id)` accepts a *path* — `doc("a/b/c")` addresses a nested
+ *    document — so an id taken from the browser could step outside the
+ *    customer's own subcollection, and the old code carried an
+ *    `isValidRequestId` regex specifically to stop that. Here a foreign id
+ *    matches zero rows. The injection surface is gone rather than guarded.
+ * 2. **Delete is one guarded statement.** Firestore's `delete()` succeeds on a
+ *    document that was never there, so the old path had to read first and then
+ *    delete — two round trips with a race between them. `deleteMany` reports
+ *    how many rows it matched, which answers both questions at once. This is
+ *    the same discipline `writeTransition` uses on order status.
+ * 3. **No server-timestamp limbo.** `savedAt` was a Firestore sentinel that
+ *    read back as `null` for the instant between the write being acknowledged
+ *    and the timestamp materialising, and every reader had to handle it.
+ *    Postgres writes the value in the same statement.
+ *
+ * This remains an **addition** on top of every order request also being
+ * persisted as an `Order` (`./create-order.ts`), not a replacement for it. The
+ * distinction is lifecycle: an `Order` is Soko's operational record and must
+ * survive, while this is the customer's own copy and the whole point of it is
+ * that they can delete it. `prisma/schema.prisma` says the same on the model.
  *
  * `buildOrderRequest` — the trust-boundary rebuild every persistence path
- * shares — now lives in `./build-order-request` so it has no Firestore
- * dependency; re-exported here so nothing that imported it from this module
- * before has to change.
+ * shares — lives in `./build-order-request`; re-exported here so nothing that
+ * imported it from this module has to change.
  */
 export {
   buildOrderRequest,
@@ -47,104 +63,88 @@ export {
 /**
  * The most saved requests one customer may hold.
  *
- * A signed-in customer can call the save action in a loop. Firestore bills per
- * write and the free tier is 20,000 writes/day for the whole project, so an
- * unbounded per-user write path is a billing incident waiting for someone
- * bored. This is a ceiling, not a rate limit — see docs/auth.md for what is
- * still missing.
+ * A signed-in customer can call the save action in a loop. Firestore billed per
+ * write, which made an unbounded write path a billing incident waiting for
+ * someone bored; Postgres does not bill that way, so the reason has changed
+ * rather than disappeared. What is left is disk and a list view that stops
+ * being usable long before it stops being cheap. This is a ceiling, not a rate
+ * limit — see docs/auth.md for what is still missing.
  */
 export const MAX_SAVED_REQUESTS_PER_CUSTOMER = 200;
-
-function collection(uid: string) {
-  return getAdminFirestore().collection("customers").doc(uid).collection("orderRequests");
-}
 
 export type SaveOutcome =
   | { saved: true; id: string; reference: string }
   | { saved: false; reason: SaveOrderRequestFailure };
 
+export interface SavedOrderRequest extends OrderRequest {
+  id: string;
+  /** ISO string. Always present — Postgres writes it in the same statement. */
+  savedAt: string;
+}
+
 /**
  * Writes one request for one customer.
  *
- * `uid` comes from the verified session cookie and never from the payload —
- * that is what makes the path safe. Auto-generated document ids are used on
- * purpose: Firestore shards by key range, so timestamp- or counter-prefixed
- * ids put every new write on the same shard. Its own generated ids scatter.
+ * `customerId` comes from the verified session and never from the payload.
+ * That, and only that, is what makes the row this customer's.
+ *
+ * The quota check and the insert are wrapped in a transaction so two rapid
+ * submissions cannot both read 199 and both write. It is not a strict
+ * serialisation guarantee — two transactions at READ COMMITTED can still each
+ * see 199 — but it closes the window to something a bored human cannot hit,
+ * and the ceiling is a courtesy rather than a security boundary.
  */
 export async function saveOrderRequestForCustomer(
-  uid: string,
-  input: SaveOrderRequestInput
+  customerId: string,
+  input: SaveOrderRequestInput,
+  db: PrismaClient = getPrisma(),
 ): Promise<SaveOutcome> {
   const built = buildOrderRequest(input);
   if (!built.ok) return { saved: false, reason: built.reason };
 
-  const requests = collection(uid);
+  return db.$transaction(async (tx) => {
+    const existing = await tx.savedOrderRequest.count({ where: { customerId } });
+    if (existing >= MAX_SAVED_REQUESTS_PER_CUSTOMER) {
+      return { saved: false, reason: "quota" } as const;
+    }
 
-  // One aggregation read rather than fetching the documents to count them.
-  const existing = await requests.count().get();
-  if (existing.data().count >= MAX_SAVED_REQUESTS_PER_CUSTOMER) {
-    return { saved: false, reason: "quota" };
-  }
+    const row = await tx.savedOrderRequest.create({
+      data: {
+        customerId,
+        reference: built.value.reference,
+        requestedAt: new Date(built.value.requestedAt),
+        payload: built.value as unknown as Prisma.InputJsonValue,
+      },
+      select: { id: true },
+    });
 
-  const doc = requests.doc();
-  await doc.set({
-    ...built.value,
-    // Redundant with the path, and kept anyway: an export, an audit query or a
-    // collection-group read all lose the path but keep the fields.
-    customerId: uid,
-    // The server's clock, not the browser's. `requestedAt` is what the customer
-    // saw; this is when it actually landed.
-    savedAt: FieldValue.serverTimestamp(),
+    return { saved: true, id: row.id, reference: built.value.reference } as const;
   });
-
-  return { saved: true, id: doc.id, reference: built.value.reference };
-}
-
-export interface SavedOrderRequest extends OrderRequest {
-  id: string;
-  /** ISO string, or `null` while the server timestamp is still resolving. */
-  savedAt: string | null;
 }
 
 /**
  * A customer's saved requests, newest first.
  *
- * `savedAt` is a server timestamp, which reads back as `null` for the instant
- * between the write being acknowledged and the timestamp being materialised.
- * Ordering falls back to `requestedAt`, which is always present.
+ * Ordered by `requestedAt` — what the customer saw — rather than `savedAt`,
+ * matching the order the Firestore version returned and the order a person
+ * expects when they scan their own list.
  */
 export async function listOrderRequestsForCustomer(
-  uid: string,
-  limit: number = 50
+  customerId: string,
+  limit: number = 50,
+  db: PrismaClient = getPrisma(),
 ): Promise<SavedOrderRequest[]> {
-  const snapshot = await collection(uid)
-    .orderBy("requestedAt", "desc")
-    .limit(limit)
-    .get();
-
-  return snapshot.docs.map((doc) => {
-    const data = doc.data();
-    const savedAt = data.savedAt;
-    return {
-      ...(data as OrderRequest),
-      id: doc.id,
-      savedAt: savedAt instanceof Timestamp ? savedAt.toDate().toISOString() : null,
-    };
+  const rows = await db.savedOrderRequest.findMany({
+    where: { customerId },
+    orderBy: { requestedAt: "desc" },
+    take: limit,
   });
-}
 
-/**
- * A Firestore auto-generated document id: 20 characters of `[A-Za-z0-9]`.
- *
- * This is a security check, not a tidiness one. `collection.doc(id)` happily
- * accepts a *path* — `doc("a/b/c")` addresses a nested document — so an id
- * taken from the browser and passed straight through could step outside the
- * customer's own subcollection. Every id we hand out is one Firestore
- * generated in `saveOrderRequestForCustomer`, so anything else is a forged
- * request and gets no further.
- */
-export function isValidRequestId(id: unknown): id is string {
-  return typeof id === "string" && /^[A-Za-z0-9]{20}$/.test(id);
+  return rows.map((row) => ({
+    ...(row.payload as unknown as OrderRequest),
+    id: row.id,
+    savedAt: row.savedAt.toISOString(),
+  }));
 }
 
 export type DeleteOutcome =
@@ -152,60 +152,47 @@ export type DeleteOutcome =
   | { deleted: false; reason: "invalid-id" | "not-found" };
 
 /**
- * The half of the delete path that does not need a real Firestore.
+ * Whether an id is even shaped like one we hand out.
  *
- * Split out for the same reason `buildOrderRequest` is pure: the part worth
- * testing is the decision — is this id even ours to look at, and did it exist —
- * not the network call underneath. Mirrors `buildListings`/`getListings`.
+ * Kept — with a much smaller job than it had. Under Firestore this was a
+ * security control, because an id could be a path. Here it is only an early
+ * exit: `deleteMany` would return zero for a malformed id anyway, and the
+ * caller would see `not-found`. Distinguishing the two still helps, because
+ * "invalid-id" means a bug in our own client and "not-found" means a stale
+ * tab, and those want different responses.
+ *
+ * Prisma's `cuid()` is 25 characters starting with `c`. The check is
+ * deliberately loose about the exact length so a Prisma version that adjusts
+ * its generator does not turn every delete into a false `invalid-id`.
  */
-export interface RequestDocument {
-  get(): Promise<{ exists: boolean }>;
-  delete(): Promise<unknown>;
-}
-
-export interface RequestCollection {
-  doc(id: string): RequestDocument;
-}
-
-export async function deleteFromCollection(
-  requests: RequestCollection,
-  id: string
-): Promise<DeleteOutcome> {
-  if (!isValidRequestId(id)) return { deleted: false, reason: "invalid-id" };
-
-  const doc = requests.doc(id);
-
-  // Read before delete. Firestore's `delete()` succeeds on a document that was
-  // never there, so without this the UI would cheerfully report "removed" for
-  // an id that belonged to somebody else — telling the caller nothing about
-  // whether it existed, which is its own small information leak.
-  const snapshot = await doc.get();
-  if (!snapshot.exists) return { deleted: false, reason: "not-found" };
-
-  await doc.delete();
-  return { deleted: true };
+export function isValidRequestId(id: unknown): id is string {
+  return typeof id === "string" && /^[a-z0-9]{20,32}$/.test(id);
 }
 
 /**
  * Removes one saved request, permanently.
  *
- * A hard delete rather than the soft delete debt #20 first proposed, and the
- * reason is that the "evidence" argument in `firestore.rules` does not survive
- * contact with what Soko actually does. Nothing is transmitted to the branch
- * and nothing is charged, so there is no counterparty holding the other half
- * of this record and no dispute it could ever settle. What is left is a name,
- * a phone number and a home address kept after the person asked us to stop
- * keeping them. Redacting the fields and retaining a shell would be the right
- * shape if a branch had ever been told; today it just means the deletion is
- * not quite a deletion.
+ * A hard delete rather than a soft one, and the reason survives the move off
+ * Firestore unchanged: nothing is transmitted to the branch and nothing is
+ * charged, so there is no counterparty holding the other half of this record
+ * and no dispute it could ever settle. What a retained shell would preserve is
+ * a name, a phone number and a home address kept after the person asked us to
+ * stop keeping them.
  *
- * `uid` comes from the verified session, so the path is the authorization:
- * a customer can only ever address their own subcollection, and an id from
- * another customer's reads as `not-found` rather than deleting anything.
+ * `customerId` comes from the verified session, and it is in the `WHERE`. An id
+ * belonging to another customer matches nothing and reads as `not-found` — it
+ * cannot delete their row, and the response does not confirm the row exists.
  */
 export async function deleteOrderRequestForCustomer(
-  uid: string,
-  id: string
+  customerId: string,
+  id: string,
+  db: PrismaClient = getPrisma(),
 ): Promise<DeleteOutcome> {
-  return deleteFromCollection(collection(uid), id);
+  if (!isValidRequestId(id)) return { deleted: false, reason: "invalid-id" };
+
+  const { count } = await db.savedOrderRequest.deleteMany({
+    where: { id, customerId },
+  });
+
+  return count > 0 ? { deleted: true } : { deleted: false, reason: "not-found" };
 }

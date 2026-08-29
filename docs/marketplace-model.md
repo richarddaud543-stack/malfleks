@@ -216,6 +216,15 @@ So orders go in Prisma, and **the existing Firestore saved-requests feature is
 superseded** — its data migrates and Firestore reverts to Auth and Analytics only.
 That is a change to decision #14 and belongs in `docs/backend.md` with its reasoning.
 
+> **Done, and then overtaken.** Orders became a real `Order` table on 2026-08-25, for
+> the reason argued here. The second half went further than this paragraph asked: on
+> 2026-08-28 Firebase was removed from the repo altogether — Auth is Supabase, Analytics
+> and App Check are gone with no replacement, and saved order requests are a
+> `SavedOrderRequest` table rather than data waiting to migrate. So Firestore did not
+> "revert to Auth and Analytics only"; there is no Firestore, and the identity that made
+> a separate store defensible now lives in the same Postgres as everything else. Both
+> reversals are recorded in `docs/backend.md` under the decisions they overturn.
+
 **Debt #8 closes as a side effect.** The register says the `src/data` arrays and the
 database are two sources of one truth, "fully resolved when Phase 2 reverses the
 direction and retires the seed's prune". The admin publish flow *is* that reversal: once
@@ -225,6 +234,13 @@ truth** and `src/data` becomes seed/demo fixtures only.
 **Debt #20 and #21 change shape.** Customer PII retention and the save-action rate limit
 were scoped to Firestore saved requests. When orders move to Prisma they need answering
 again in the new place — the retention question does not go away, it moves.
+
+> **It moved, and one of them lost its answer.** Both now sit against Postgres tables.
+> Retention (#20) is unchanged and still unanswered: it is the owner's number, and no TTL
+> or purge is built. The rate limit (#21) got worse rather than better — the fix on the
+> register was App Check enforcement plus a per-uid limit, and App Check went with
+> Firebase, so the only half that existed is the half that is gone. The 200-per-customer
+> ceiling still bounds total damage and still does nothing about burst rate.
 
 ---
 
@@ -247,17 +263,22 @@ Nothing below is honest until this changes.
 - The server re-derives every number from the catalogue, exactly as
   `buildOrderRequest()` in `src/server/orders/saved-requests.ts` already does. The
   browser says *which product* and *who to*, never a price.
-- Migrate the Firestore saved requests, then retire that path.
+- Migrate the Firestore saved requests, then retire that path. *(Done 2026-08-28 —
+  `SavedOrderRequest`, migration `20260828000000_saved_order_requests`. Firestore was
+  not migrated away from and left running; it was removed.)*
 
 ### Phase 2 — Partners and admin *(the founder's stated first priority)*
 
 - `Partner` (type `BRANCH` | `AGENT`, status `applied` / `approved` / `suspended`),
   linked to the existing `Branch` or `DeliveryAgent` rows.
-- `PartnerUser` mapping a Firebase uid to a partner. **Accounts are created by admin
+- `PartnerUser` mapping a Supabase user id to a partner. **Accounts are created by admin
   after the external application — there is no self-serve signup.**
-- An `admin` role as a Firebase custom claim, checked in `src/server/auth/dal.ts`.
+- An `admin` role as `app_metadata.admin === true`, checked in `src/server/auth/dal.ts`.
   Authorization stays in the DAL, next to the data — the repo has already rejected a
-  proxy as the only line of defence, and that reasoning holds here.
+  proxy as the only line of defence, and that reasoning holds here. It must be
+  `app_metadata` and never `user_metadata`: the second is writable by the account holder,
+  so an admin check against it is a self-service promotion. `SOKO_ADMIN_EMAILS` is the
+  bootstrap allowlist, because nothing in the app should be able to mint the first admin.
 - `ProductSubmission` model plus `/admin`: approve partners, review submissions,
   publish. Publishing writes the live `Product` row.
 - `/partner`: a branch submits products and sees its own orders; a courier sees its
@@ -324,9 +345,11 @@ Nothing below is honest until this changes.
 - **Status machine**: tests that illegal transitions are rejected, not just that legal
   ones work.
 - **Authorization**: E2E proving a branch cannot see another branch's orders, and a
-  courier cannot see any branch's, in the shape of the existing
-  `src/security/firestore-rules.test.ts` — both directions, by injecting the mistake and
-  watching the suite fail.
+  courier cannot see any branch's, in the shape of
+  `src/server/orders/saved-requests.integration.test.ts` — the cross-customer isolation
+  suite that replaced `src/security/firestore-rules.test.ts` when Firebase was removed,
+  and which asserts the same property against real Postgres instead of an emulator. Both
+  directions, by injecting the mistake and watching the suite fail.
 - **The whole loop**: place an order as a customer, receive it as the branch, deliver it
   as the courier, and check the ledger says what §2 says it should.
 - And the standing rule: **open the page and use it.** Two bugs escaped the entire test

@@ -1,55 +1,27 @@
 // @vitest-environment node
 //
-// These tests run against a real SQLite database built from the committed
-// migration and populated by the real seed script. Nothing is mocked: the point
+// These tests run against a real Postgres database — a throwaway schema built
+// from the committed migrations and populated by the real seed script. Nothing is mocked: the point
 // is to prove the DB-backed accessors are interchangeable with the static ones,
 // and a mocked Prisma would only prove the mock returns what it was told to.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import * as staticData from "@/data";
-import { getPrisma, resetPrisma } from "@/server/db/client";
+import { getPrisma } from "@/server/db/client";
+import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 import { seedDatabase } from "@/server/db/seed";
 import * as repo from "@/server/repositories";
 
-const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
-const PRISMA_CLI = path.join(PROJECT_ROOT, "node_modules", "prisma", "build", "index.js");
-
-let workDir: string;
+let db: TestDatabase;
 
 beforeAll(async () => {
-  workDir = mkdtempSync(path.join(tmpdir(), "soko-repo-test-"));
-  const databaseUrl = `file:${path.join(workDir, "test.db").replaceAll("\\", "/")}`;
-
-  // Set before the first query so the lazily-built client binds to this file
-  // and not to the developer's dev.db.
-  process.env.DATABASE_URL = databaseUrl;
-  await resetPrisma();
-
-  if (!existsSync(PRISMA_CLI)) {
-    throw new Error(
-      `Prisma CLI not found at ${PRISMA_CLI}. Run "npm install" before the test suite.`
-    );
-  }
-
-  // Applying the committed migrations, rather than `db push` from the schema,
-  // means a migration that drifts from the schema fails here instead of in prod.
-  execFileSync(process.execPath, [PRISMA_CLI, "migrate", "deploy"], {
-    cwd: PROJECT_ROOT,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    stdio: "pipe",
-  });
-
+  db = await createTestDatabase("repositories");
   await seedDatabase(getPrisma());
 }, 180_000);
 
 afterAll(async () => {
-  await resetPrisma();
-  rmSync(workDir, { recursive: true, force: true });
+  await db.teardown();
 });
 
 describe("brand accessors", () => {

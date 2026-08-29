@@ -15,14 +15,25 @@ deliberate — see [Remaining cutover work](#remaining-cutover-work).
 
 **Decided 2026-08-15 by the owner. This closes debt #14 and is not an open question.**
 
+**Amended 2026-08-28: the Firebase half of this decision no longer describes
+anything.** Auth moved to Supabase, and Analytics and App Check were removed with
+no replacement. The catalogue half stands unchanged and is the reason the move
+was cheap — nothing that mattered was in Firestore. Every Firestore prohibition
+below is now enforced by there being no Firestore: `src/lib/firebase.ts`,
+`src/components/firebase/`, `src/server/firebase/`, `firestore.rules`,
+`firebase.json` and both Firebase packages are deleted. Read what follows as the
+reasoning that put the catalogue in Prisma, which is still load-bearing, not as
+a description of a second store that exists.
+
 The repo briefly held two persistence stacks — this one, and a Firebase SDK wired to
 project `v-mall-f37c6` — with neither read by any page. That ambiguity was the expensive
 kind: both looked equally live, so whoever came next would build against whichever they
 found first.
 
 **Prisma is the catalogue's source of truth.** Firebase is scoped to **Auth and
-Analytics**, and nothing else. Analytics is already live (`src/lib/firebase.ts`,
-`src/components/firebase/FirebaseAnalytics.tsx`). Auth is not built yet.
+Analytics**, and nothing else. Analytics was live at the time (`src/lib/firebase.ts`,
+`src/components/firebase/FirebaseAnalytics.tsx`, both since deleted). Auth was not
+built yet.
 
 The reasoning, from two engineers who reached it independently from opposite ends:
 
@@ -47,6 +58,10 @@ Firestore own a genuinely realtime slice such as live order status, which is the
 thing it would do better than Postgres here. That would need its own decision recorded
 below this one, not an assumption.
 
+*(That exception was taken on 2026-08-16 and reversed on 2026-08-28 — both blocks
+below. It cannot be reopened as written: there is no Firestore in the repo to grant
+it to.)*
+
 ---
 
 ## Decision: Firestore owns saved order requests, and only those
@@ -54,6 +69,12 @@ below this one, not an assumption.
 **Decided 2026-08-16, assigned by the Lead, built by ENG-7 · Vault. This is the
 narrowly-scoped exception the decision above left open, now taken.** Full
 reasoning and the operator runbook: [`docs/auth.md`](auth.md).
+
+**Reversed 2026-08-28 — the reversal is the last decision block in this run, after
+the `Order` block it interleaves with.** This block is kept exactly as it was
+written because the argument in it was correct when it was made; what changed is
+the ground it stood on, and that is the part worth reading. Nothing below this
+line describes the code today.
 
 A signed-in customer's saved order requests live in Firestore at
 `customers/{uid}/orderRequests/{autoId}`. Nothing else does.
@@ -97,9 +118,9 @@ the note above was waiting for, and it resolves both flags it left open.
 Every submission of `OrderRequestForm` — signed in or anonymous — now writes
 an `Order` row via `src/server/orders/create-order.ts`, called from the
 server action `submitOrder` in `src/app/actions/orders.ts`. `customerId` is
-the Firebase uid from the verified session, or `null` for a signed-out
-customer; either way the write happens, which is the entire point of this
-change.
+the user id from the verified session — a Firebase uid when this was built, a
+Supabase user id since 2026-08-28 — or `null` for a signed-out customer; either
+way the write happens, which is the entire point of this change.
 
 **Why Prisma, not the Firestore exception above.** An order is not the
 narrowly-scoped, user-only slice that decision carved out — it joins to
@@ -111,14 +132,16 @@ unchanged and stays exactly what it was: a signed-in customer's own,
 separately-deletable convenience copy. Both now exist side by side for a
 signed-in customer's order — a durable business record in Prisma, and a copy
 they can delete themselves in Firestore — and that duplication is deliberate,
-not an oversight: deleting the Firestore copy removes *their* copy, not the
-order that exists whether or not they keep a copy of it.
+not an oversight: deleting the customer's copy removes *their* copy, not the
+order that exists whether or not they keep a copy of it. **Both copies are
+Prisma rows since 2026-08-28**; the duplication and the reasoning for it are
+unchanged, because the distinction was always lifecycle rather than store.
 
 **No second copy of the trust boundary.** `buildOrderRequest` — the pure
 function that re-derives price, carrier and route from the catalogue so a
 client can never say what an order cost — moved from `saved-requests.ts` to
 `src/server/orders/build-order-request.ts`, with no Firestore dependency, so
-the Prisma path does not have to import `firebase-admin` to reuse it.
+the Prisma path did not have to import `firebase-admin` to reuse it.
 `saved-requests.ts` re-exports everything from there, so nothing that
 imported the old location has to change.
 
@@ -136,7 +159,7 @@ those two columns nulled and every snapshot field untouched.
 
 **`reference` is `@unique`, with a regenerate-and-retry-once on collision.**
 The reference alphabet is 28 characters over 4 slots — 614,656 codes per
-brand+city pair — which is small enough that a saved Firestore copy never had
+brand+city pair — which is small enough that the saved customer copy never had
 to worry about it (a customer deletes those; nobody has 900 outstanding
 requests to one branch) but an indefinitely-retained `Order` table does. The
 retry does not duplicate `generateOrderReference`: it hands `buildOrderRequest`
@@ -194,6 +217,77 @@ columns, no data migration needed.
 
 ---
 
+## Decision reversed: saved order requests are a Prisma table, like everything else
+
+**Migrated 2026-08-28, when Firebase left the repo entirely.** This reverses the
+second decision above. That block is kept intact rather than edited, because the
+argument in it was right when it was made and the interesting part is which leg
+of it broke.
+
+Saved order requests are rows in `SavedOrderRequest`
+(migration `20260828000000_saved_order_requests`), read and written by
+`src/server/orders/saved-requests.ts` through the same client as everything else.
+`customers/{uid}/orderRequests` does not exist, and neither does the database it
+lived in.
+
+**The original argument, leg by leg.** It had three, and the first and third
+rested on the second:
+
+- *It is user-scoped, not catalogue data — none of the arguments that made the
+  catalogue relational apply to it.* Still true. But that was only ever an
+  argument that Firestore did no **harm** here, never that Postgres was the wrong
+  place for it.
+- *The identity that owns it already lives in Firebase, so Postgres would mean
+  mirroring Firebase uids into a second store.* **This is the leg that broke, and
+  it took the decision with it.** The identity now lives in Supabase, which is
+  Postgres — the same database the catalogue is in. There is no second store to
+  mirror a uid into. Keeping a Firestore collection would have *created* the
+  two-sources-of-truth problem debt #14 was closed to avoid, which is the exact
+  inversion of the reason it was allowed in the first place.
+- *Ownership is enforceable by path — `customers/{uid}/…` compared against
+  `request.auth.uid` in Security Rules is a guarantee Postgres would need
+  application code to reproduce.* True, and the trade was worth making the other
+  way once the second leg went. Ownership is a `where: { customerId }` clause on
+  a `customerId` taken from the verified session and never from a payload. The
+  guarantee `firestore.rules` used to carry is now carried by
+  `src/server/orders/saved-requests.integration.test.ts`, which proves it against
+  a real Postgres rather than against an emulator: a customer reads only their own
+  rows, and a delete aimed at another customer's id neither succeeds nor reveals
+  that the row exists.
+
+**Three things the move made smaller**, recorded because they are the concrete
+gain rather than the tidy-up:
+
+- **The id-injection surface is gone rather than guarded.** Firestore's
+  `collection.doc(id)` takes a *path* — `doc("a/b/c")` addresses a nested
+  document — so a browser-supplied id could step outside the customer's own
+  subcollection, which is why the old code carried an `isValidRequestId` regex to
+  stop it. A foreign id now matches zero rows.
+- **Delete is one guarded statement.** Firestore's `delete()` succeeds on a
+  document that was never there, so the old path read first and then deleted: two
+  round trips with a race between them. `deleteMany` reports how many rows it
+  matched, which answers "did it exist" and "is it gone" at once — the same
+  discipline the status workflow above uses for its guarded `updateMany`.
+- **No server-timestamp limbo.** `savedAt` was a Firestore sentinel that read back
+  as `null` for the instant between the write being acknowledged and the timestamp
+  materialising, and every reader had to handle that. Postgres writes the value in
+  the same statement.
+
+**What is unchanged.** This is still an *addition* on top of every order request
+also being persisted as an `Order`, not a replacement for it, and the distinction
+is still lifecycle: an `Order` is Soko's operational record and must survive, while
+this is the customer's own copy whose entire point is that they can delete it. The
+per-customer ceiling of 200 is unchanged, and so is the hard-delete decision
+recorded against debt #20 — a shell row settles no dispute when Soko has told the
+branch nothing.
+
+**What this forbids is now structural rather than written down.** There is one
+store. The prohibition the first decision had to spell out — no second source of
+truth for catalogue data, no Firestore collections — is enforced by there being
+nowhere else to put anything.
+
+---
+
 ## Quick start
 
 From a fresh clone:
@@ -201,7 +295,7 @@ From a fresh clone:
 ```bash
 npm install          # also runs `prisma generate` via postinstall
 npm run db:setup     # apply migrations, then seed from src/data
-npm test             # 78 tests, incl. the repository suite against a real DB
+npm test             # 553 tests over 42 files, incl. suites against a real DB
 ```
 
 `npm run db:setup` is `prisma migrate deploy && prisma db seed`. No `.env` is

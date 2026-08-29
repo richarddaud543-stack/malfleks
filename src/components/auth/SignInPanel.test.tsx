@@ -11,14 +11,16 @@ vi.mock("next/navigation", () => ({
   useSearchParams: () => params,
 }));
 
-const isFirebaseConfigured = vi.fn(() => true);
-vi.mock("@/lib/firebase", () => ({
-  isFirebaseConfigured: () => isFirebaseConfigured(),
-  getFirebaseAuth: vi.fn(),
-}));
-
+// The action redirects to Google on success and returns only on failure, so a
+// stub that returns a message is a stub of the *whole* interesting surface.
+const startGoogleSignIn = vi.fn<(next: string) => Promise<{ ok: false; message: string }>>(
+  async () => ({
+    ok: false,
+    message: "We couldn't reach Google. Check your connection and try again.",
+  }),
+);
 vi.mock("@/app/actions/auth", () => ({
-  signInWithIdToken: vi.fn(),
+  startGoogleSignIn: (next: string) => startGoogleSignIn(next),
 }));
 
 function mockSession(signedIn: boolean) {
@@ -67,8 +69,8 @@ describe("safeDestination", () => {
 describe("SignInPanel", () => {
   beforeEach(() => {
     replace.mockClear();
+    startGoogleSignIn.mockClear();
     params = new URLSearchParams();
-    isFirebaseConfigured.mockReturnValue(true);
     invalidateSessionState();
     mockSession(false);
   });
@@ -78,7 +80,7 @@ describe("SignInPanel", () => {
   });
 
   it("offers a keyboard-operable sign-in control with a real name", () => {
-    render(<SignInPanel />);
+    render(<SignInPanel configured />);
     const button = screen.getByRole("button", { name: /Continue with Google/i });
     expect(button).toBeEnabled();
     // A <button>, so Tab reaches it and Enter/Space activate it without any
@@ -87,15 +89,14 @@ describe("SignInPanel", () => {
   });
 
   it("keeps an alert region in the DOM so an error is announced", () => {
-    render(<SignInPanel />);
+    render(<SignInPanel configured />);
     // Present from the start rather than appearing with the message: a live
     // region added at the same moment as its content is often not announced.
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
-  it("says sign-in is unavailable rather than failing, with no Firebase config", () => {
-    isFirebaseConfigured.mockReturnValue(false);
-    render(<SignInPanel />);
+  it("says sign-in is unavailable rather than failing when the server has no config", () => {
+    render(<SignInPanel configured={false} />);
 
     expect(
       screen.getByText(/Sign-in isn't available on this deployment/i)
@@ -106,20 +107,47 @@ describe("SignInPanel", () => {
   });
 
   it("tells a signed-out visitor they can order without an account", () => {
-    render(<SignInPanel />);
+    render(<SignInPanel configured />);
     expect(screen.getByText(/don't need an account to order/i)).toBeVisible();
   });
 
   it("sends an already-signed-in visitor on to their account", async () => {
     mockSession(true);
-    render(<SignInPanel />);
+    render(<SignInPanel configured />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/account"));
   });
 
   it("honours a safe ?next= and ignores a hostile one", async () => {
     params = new URLSearchParams("next=//evil.example");
     mockSession(true);
-    render(<SignInPanel />);
+    render(<SignInPanel configured />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/account"));
+  });
+
+  it("hands the validated destination to the action, not the raw parameter", async () => {
+    params = new URLSearchParams("next=//evil.example");
+    render(<SignInPanel configured />);
+
+    screen.getByRole("button", { name: /Continue with Google/i }).click();
+
+    // The panel sanitises before the value leaves the browser. `/auth/callback`
+    // sanitises again on the way back, because between those two moments the
+    // value travels through Google and is no longer ours.
+    await waitFor(() => expect(startGoogleSignIn).toHaveBeenCalledWith("/account"));
+  });
+
+  it("surfaces a cancelled sign-in reported by the callback", () => {
+    params = new URLSearchParams("error=cancelled");
+    render(<SignInPanel configured />);
+    expect(screen.getByRole("alert")).toHaveTextContent(/cancelled/i);
+  });
+
+  it("shows the action's message when sign-in cannot start", async () => {
+    render(<SignInPanel configured />);
+    screen.getByRole("button", { name: /Continue with Google/i }).click();
+
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent(/couldn't reach Google/i),
+    );
   });
 });

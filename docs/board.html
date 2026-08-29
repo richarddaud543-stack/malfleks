@@ -500,8 +500,9 @@ html { scroll-behavior:smooth; }
         <strong>Atlas + Sentinel is the heaviest pairing in the repo</strong> — frontend work
         and its tests arrive in the same commit, which is the standing baseline working as
         intended rather than a coincidence. The thinnest edges are the honest ones too:
-        Vault touches almost nothing else, because auth and Security Rules are a genuinely
-        separable seam. And <strong>Beacon + Forge</strong> exists only because docs and CI
+        Vault touches almost nothing else, because auth is a genuinely separable seam —
+        which is also why swapping the whole identity vendor on 28 Aug rewrote
+        <code>src/server/auth</code> and left every caller of it alone. And <strong>Beacon + Forge</strong> exists only because docs and CI
         config live next to each other in the ownership map, not because they collaborate.
       </p>
     </div>
@@ -824,8 +825,10 @@ html { scroll-behavior:smooth; }
           <h4>Partners and admin <span class="tag">stated first priority</span></h4>
           <p>
             <code>Partner</code> (branch or agent; applied / approved / suspended),
-            <code>PartnerUser</code> mapping a Firebase uid to a partner, an <code>admin</code>
-            role as a custom claim checked in the DAL, <code>ProductSubmission</code> plus
+            <code>PartnerUser</code> mapping a Supabase user id to a partner, an
+            <code>admin</code> flag read from <code>app_metadata</code> in the DAL —
+            never <code>user_metadata</code>, which the account holder can write
+            themselves — <code>ProductSubmission</code> plus
             <code>/admin</code> to review and publish, and <code>/partner</code> where a branch
             sees its orders and a courier sees its balance.
           </p>
@@ -857,15 +860,19 @@ html { scroll-behavior:smooth; }
     </div>
 
     <div class="card" style="margin-top:15px">
-      <h4>One recorded decision has to change</h4>
+      <h4>One recorded decision had to change — and then the ground moved under it</h4>
       <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
-        <code>docs/backend.md</code> scopes Firestore to user-scoped data with no joins, which is
-        why saved order requests went there. <strong>A real order is the opposite</strong> — it
-        joins a product, a branch, a courier, a customer and a payment, and admin must query
-        across customers. So orders go in Prisma and <strong>the Firestore saved-requests
-        feature is superseded</strong>. That is a change to decision #14 and belongs in
-        <code>backend.md</code> with its reasoning, not done quietly. Debts #20 and #21 move with
-        it — the PII retention question doesn't disappear, it relocates.
+        The argument was that <code>docs/backend.md</code> scoped Firestore to user-scoped data
+        with no joins, which is why saved order requests went there, and that
+        <strong>a real order is the opposite</strong> — it joins a product, a branch, a courier,
+        a customer and a payment, and admin must query across customers. Orders became a real
+        <code>Order</code> table on 25 Aug on exactly that reasoning. <strong>On 28 Aug Firebase
+        was removed from the repo entirely</strong>: auth moved to Supabase, and saved order
+        requests moved to a <code>SavedOrderRequest</code> table rather than being migrated and
+        left behind. The decision they rested on is reversed in <code>backend.md</code> under the
+        block it overturns — the leg that broke was "the identity lives in Firebase", and there
+        is no second store now. Debts #20 and #21 moved with it: retention is still the owner's
+        unanswered question, and #21's proposed fix went with App Check.
       </p>
     </div>
   </section>
@@ -920,8 +927,8 @@ html { scroll-behavior:smooth; }
   <section id="architecture">
     <div class="sec-head">
       <p class="eyebrow">Architecture</p>
-      <h2>Two stores, one owner each</h2>
-      <p>The most expensive ambiguity this project had was two persistence stacks that both looked live. Settled by decision, written down, restated in the agent briefs.</p>
+      <h2>One store, after two</h2>
+      <p>The most expensive ambiguity this project had was two persistence stacks that both looked live. Settled by decision on 15 Aug, and settled structurally on 28 Aug when the second one was deleted.</p>
     </div>
     <div class="flow">
 <pre>
@@ -929,40 +936,39 @@ html { scroll-behavior:smooth; }
   ───────                        ───────────────────────                ────
 
   /search  /locator  ──────────▶  Server Component
-  /products/[id]                    └─ getListings()  ─────────────▶  Prisma 7
-                                       buildListings() (pure)         SQLite
-                                                                      6 models
+  /products/[id]                    └─ getListings()  ─────────────▶  Prisma
+                                       buildListings() (pure)         Postgres
+
+  sign in  ────────────────────▶  signInWithOAuth(Google)
+  (top-level redirect,              └─ /auth/callback  ────────────▶  Supabase
+   not a popup)                          exchanges the code           Auth
 
   order form  ─────────────────▶  Server Action
-  (client-side only until           ├─ verifySession()  ───────────▶  Firebase
-   the customer signs in)           │    session cookie                 Auth
+                                    ├─ verifySession()  ───────────▶  Supabase
+                                    │  getUser(), never getSession()  Auth
                                     ├─ buildOrderRequest()
                                     │    re-derives price from the
                                     │    catalogue, never the payload
-                                    └─ Admin SDK write  ───────────▶  Firestore
-                                                                      customers/
-                                                                        {uid}/
-                                                                        orderRequests
-
-  every page  ─────────────────▶  Analytics  ── gated on consent ──▶  (off by
-                                                                       default)
+                                    └─ Prisma write  ──────────────▶  Order
+                                                                      SavedOrder-
+                                                                      Request
 </pre>
     </div>
     <div class="split" style="margin-top:15px">
       <div class="panel">
-        <h4>Prisma owns the catalogue <span class="tag">settled</span></h4>
+        <h4>Prisma owns everything <span class="tag">settled</span></h4>
         <ul>
-          <li>The schema is <b>genuinely relational</b> and Firestore has no joins — tested invariants would become manually-synced fields.</li>
+          <li>The schema is <b>genuinely relational</b> and Firestore had no joins — tested invariants would have become manually-synced fields.</li>
           <li>Pages read the database, not the bundled arrays, since 17 Aug.</li>
           <li><code>src/data</code> is still the <b>editorial source</b> and the seed mirrors it. <code>parity.test.ts</code> guards the seam.</li>
         </ul>
       </div>
       <div class="panel">
-        <h4>Firebase is scoped <span class="tag">settled</span></h4>
+        <h4>Firebase is gone <span class="tag">28 Aug</span></h4>
         <ul>
-          <li>Auth, Analytics and saved order requests. <b>No catalogue reads or writes.</b></li>
-          <li>Saved requests are the one exception: <b>user-scoped, not relational, nothing joins them</b>.</li>
-          <li>Putting them in SQL would mean mirroring Firebase uids into a second store for no gain.</li>
+          <li>Auth is <b>Supabase</b>. Analytics and App Check were removed with <b>no replacement</b>, and the consent banner that gated Analytics went with them.</li>
+          <li>Saved order requests were the one carve-out — user-scoped, nothing joins them — and the carve-out rested on the identity living in Firebase. <b>It doesn't any more.</b></li>
+          <li>Keeping them out of SQL would now <em>create</em> the two-stores problem it was allowed to avoid. They are a <code>SavedOrderRequest</code> table.</li>
         </ul>
       </div>
     </div>
@@ -1021,31 +1027,35 @@ html { scroll-behavior:smooth; }
   <section id="auth">
     <div class="sec-head">
       <p class="eyebrow">Authentication</p>
-      <h2>Client proves identity, server holds the session</h2>
-      <p>Google sign-in only. <code>onAuthStateChanged</code> doesn't exist during SSR, so the cookie is the only thing a server-rendered page can check.</p>
+      <h2>The server asks who it is, every time</h2>
+      <p>Google sign-in only, on Supabase since 28 Aug. The session cookie is the only thing a server-rendered page can read — and reading it is not the same as believing it.</p>
     </div>
     <div class="flow">
 <pre>
   browser                                    server
   ───────                                    ──────
 
-  signInWithPopup(Google)
+  signInWithOAuth(Google)
+      │  top-level redirect,
+      │  not a popup
+      ▼
+  accounts.google.com
       │
-      └── ID token ────────────────────────▶ signInWithIdToken()   [Server Action]
-                                                ├─ verifyIdToken(token, checkRevoked)
-                                                ├─ reject if auth_time is stale (&gt; 5 min)
-                                                └─ createSessionCookie()
-                                                        │
-                                                        ▼
-                                                  soko_session
-                                                  httpOnly · Lax
-                                                  Secure in prod · 5 days
+      └── ?code= ──────────────────────────▶ /auth/callback        [Route Handler]
+                                                ├─ exchangeCodeForSession(code)
+                                                │     │
+                                                │     ▼
+                                                │  session cookies, httpOnly,
+                                                │  written by @supabase/ssr
+                                                ├─ safeDestination(next)
+                                                │    a plain same-site path,
+                                                │    or /account
+                                                └─ redirect
 
-  client SDK signs itself out                       ┊
-  (inMemoryPersistence — one                        ┊
-   session, one authority)                          ▼
   every later request ─────────────────────▶ verifySession()      [DAL, React cache()]
-                                                └─ verifySessionCookie(cookie, true)
+                                                └─ auth.getUser()
+                                                     validated at the auth server,
+                                                     never getSession()
 </pre>
     </div>
     <div class="split" style="margin-top:15px">
@@ -1054,16 +1064,17 @@ html { scroll-behavior:smooth; }
         <ul>
           <li>There is <b>no <code>proxy.ts</code></b>. The DAL isn't a second layer behind one — it is the only layer, which is why it's authoritative rather than optimistic.</li>
           <li>Next's own guidance: proxy "should not be your only line of defense" — it runs on prefetches, and a matcher edit can silently drop a route.</li>
-          <li><code>verifySessionCookie(cookie, true)</code> is the revocation-checking form; <code>cache()</code> pays for the round trip once per render pass.</li>
+          <li><b><code>getUser()</code>, never <code>getSession()</code></b> — <code>getSession()</code> decodes the cookie and reports what it says without checking who wrote it, which on a server is attacker-supplied input. <code>cache()</code> pays for the round trip once per render pass.</li>
+          <li>The interface survived the vendor swap unchanged, which is what having a DAL bought: <b>no caller was rewritten</b>.</li>
         </ul>
       </div>
       <div class="panel">
-        <h4>Security Rules <span class="tag">emulator-tested</span></h4>
+        <h4>Isolation is a <code>WHERE</code> clause <span class="tag">Postgres-tested</span></h4>
         <ul>
-          <li>Default-deny, owner-only reads, <b>no client writes at all</b>. Every write goes through the Admin SDK, which bypasses rules by design.</li>
-          <li>Ownership is keyed by the <b>path</b>, not a field — a field can be spoofed on the write that creates it; a path segment compared against <code>request.auth.uid</code> cannot.</li>
-          <li>13 assertions against the real emulator, on their own CI job. Both directions checked by injecting the two classic mistakes and watching the suite fail.</li>
-          <li>App Check is wired (reCAPTCHA v3) but <b>enforcement is still an unclicked console action</b>.</li>
+          <li>Ownership was a Firestore <b>path</b> checked by <code>firestore.rules</code>. It is now <code>where: { customerId }</code>, taken from the verified session and never from a payload.</li>
+          <li>The rules file, its 13 emulator assertions and their pinned-JDK CI job were deleted with Firebase. <b>The property was not:</b> <code>saved-requests.integration.test.ts</code> asserts it against real Postgres, inside <code>npm test</code>.</li>
+          <li>A delete aimed at another customer's id neither succeeds nor reveals the row exists — and <code>deleteMany</code>'s count answers "did it exist" in one statement, replacing a read-then-delete.</li>
+          <li>The admin flag is <code>app_metadata.admin</code>, <b>never <code>user_metadata</code></b>, which the account holder can write.</li>
         </ul>
       </div>
     </div>
@@ -1202,11 +1213,11 @@ html { scroll-behavior:smooth; }
           <tr data-own="prism"><td class="num">10</td><td><b>Accent colours used as borders with no contrast guard</b><p>Computed 22 Aug. Two real failures fixed; the row's own file references were wrong and were corrected.</p></td><td><span class="who-tag">prism</span></td><td><span class="pill done">Done</span></td></tr>
           <tr data-own="sentinel"><td class="num">11</td><td><b>No mutation testing</b><p>Nothing checks whether the tests would catch a deliberately wrong implementation. Sequenced after #2.</p></td><td><span class="who-tag">sentinel</span></td><td><span class="pill open">Open</span></td></tr>
           <tr data-own="atlas"><td class="num">12</td><td><b>Cross-route view transitions</b><p>Shipped 15 Aug; the row was never updated and sat "open" for six days.</p></td><td><span class="who-tag">atlas</span></td><td><span class="pill done">Done</span></td></tr>
-          <tr data-own="forge"><td class="num">14</td><td><b>Two persistence stacks, neither read by a page</b><p>Decided by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill done">Decided</span></td></tr>
-          <tr data-own="vault"><td class="num">15</td><td><b>Analytics ran with no consent gate</b><p>The gate is "never call <code>initAnalytics</code>", not Google's consent mode — <code>denied</code> still sends cookieless pings.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill done">Done</span></td></tr>
-          <tr data-own="vault"><td class="num">16</td><td><b>No Security Rules or App Check</b><p>Rules shipped and emulator-tested. App Check wired; <b>enforcement is an operator action, not yet taken.</b></p></td><td><span class="who-tag">vault</span></td><td><span class="pill half">Half</span></td></tr>
-          <tr data-own="vault"><td class="num">20</td><td><b>Customer PII at rest with no delete path</b><p>Delete path built 22 Aug — hard delete via the Admin SDK, rules unchanged. <b>Retention policy still unmade.</b></p></td><td><span class="who-tag">vault</span></td><td><span class="pill half">Half</span></td></tr>
-          <tr data-own="vault"><td class="num">21</td><td><b>Save action has a ceiling but no rate limit</b><p>200 per customer bounds total damage, not burst rate.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill open">Open</span></td></tr>
+          <tr data-own="forge"><td class="num">14</td><td><b>Two persistence stacks, neither read by a page</b><p>Decided 15 Aug: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics. Closed for good 28 Aug — Firebase was removed, so there is one stack to be ambiguous about.</p></td><td><span class="who-tag">forge</span></td><td><span class="pill done">Closed</span></td></tr>
+          <tr data-own="vault"><td class="num">15</td><td><b>Analytics ran with no consent gate</b><p>The gate was "never call <code>initAnalytics</code>", not Google's consent mode — <code>denied</code> still sends cookieless pings. Retired 28 Aug: Analytics went with Firebase and the consent feature went with it, rather than standing over nothing.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill parked">Retired</span></td></tr>
+          <tr data-own="vault"><td class="num">16</td><td><b>No Security Rules or App Check</b><p>Rules shipped 16 Aug and were emulator-tested; App Check was wired but never enforced. Both deleted with Firebase on 28 Aug — <b>retired, not completed</b>. The isolation property they guarded is now a Postgres integration test.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill parked">Retired</span></td></tr>
+          <tr data-own="vault"><td class="num">20</td><td><b>Customer PII at rest with no delete path</b><p>Delete path built 22 Aug, and it is still a hard delete — now one <code>deleteMany</code> on <code>SavedOrderRequest</code> rather than an Admin SDK write. <b>Retention policy still unmade.</b></p></td><td><span class="who-tag">vault</span></td><td><span class="pill half">Half</span></td></tr>
+          <tr data-own="vault"><td class="num">21</td><td><b>Save action has a ceiling but no rate limit</b><p>200 per customer bounds total damage, not burst rate. The proposed fix was App Check enforcement plus a per-uid limit; App Check went with Firebase on 28 Aug, so the built half is the gone half.</p></td><td><span class="who-tag">vault</span></td><td><span class="pill open">Open</span></td></tr>
           <tr data-own="prism"><td class="num">5</td><td><b>Product imagery is an icon set, not photography</b><p>Deliberate. Revisit before launch.</p></td><td><span class="who-tag">prism</span></td><td><span class="pill parked">Accepted</span></td></tr>
         </tbody>
       </table>
@@ -1217,7 +1228,7 @@ html { scroll-behavior:smooth; }
   <section id="you">
     <div class="sec-head">
       <p class="eyebrow">Blocked on the owner</p>
-      <h2>Nine things engineering can't decide</h2>
+      <h2>Eight things engineering can't decide</h2>
       <p>Each belongs to you, not an engineer. A number invented here would read as policy to whoever found it next.</p>
     </div>
     <div class="asks">
@@ -1242,10 +1253,7 @@ html { scroll-behavior:smooth; }
         <p>Needs your GitHub account. Everything lives on one disk, and CI has never run because it has nowhere to run. Unblocks #1 and #11 together — and none of the work above should start on an unbacked-up disk.</p></div></div>
       <div class="ask"><div class="who">Debt&nbsp;#20</div><div>
         <h4>A retention policy for customer PII</h4>
-        <p>How long should an untouched saved request live, and should closing an account purge the subcollection? Customers can delete their own records now. The enforcement mechanism isn't built because the rule doesn't exist yet.</p></div></div>
-      <div class="ask"><div class="who">Debt&nbsp;#16</div><div>
-        <h4>Turn on App Check enforcement</h4>
-        <p>Wired in code, monitor-only in the console — Google's recommended sequence. Flipping it to enforcing is a click only you can make.</p></div></div>
+        <p>How long should an untouched saved request live, and should closing an account purge that customer's rows? Customers can delete their own records now. The enforcement mechanism isn't built because the rule doesn't exist yet — and a number invented by an engineer would read as policy to whoever found it next.</p></div></div>
       <div class="ask"><div class="who">Data</div><div>
         <h4>Geocode the real addresses</h4>
         <p>Coordinates are approximate city-centre points, and 7 of 19 branches plus 3 of 5 couriers are unverified placeholders. Knowing which city a branch is in is not the same as having confirmed where it is.</p></div></div>
@@ -1268,7 +1276,7 @@ const ENGINEERS = [
   { id:"forge",    n:"Forge",    eid:"ENG-4", role:"Platform & backend",      owns:"src/server · prisma/ · .github/workflows",      d:"Prisma, the repository layer, migrations, seeding, CI and build tooling." },
   { id:"beacon",   n:"Beacon",   eid:"ENG-5", role:"SEO, content & IA",       owns:"agents · delivery · order routes · docs",       d:"Routes, titles, sitemap entries, navigation, wireframes, and the order flow's honesty." },
   { id:"prism",    n:"Prism",    eid:"ENG-6", role:"Visual & graphic design", owns:"globals.css · brand/product components",        d:"Palette, typography, spacing, tokens, and every colour or contrast decision." },
-  { id:"vault",    n:"Vault",    eid:"ENG-7", role:"Cloud platform & security", owns:"firestore.rules · server/auth · server/firebase", d:"Firebase config, auth, Security Rules, App Check, sessions, credentials and quotas." },
+  { id:"vault",    n:"Vault",    eid:"ENG-7", role:"Cloud platform & security", owns:"server/auth · app/auth/callback", d:"Supabase config, auth, sessions, the admin flag, credentials and quotas." },
   { id:"ledger",   n:"Ledger",   eid:"ENG-8", role:"Commerce & payments",     owns:"src/lib/order.ts",                              d:"Money, the order record, mobile money, pricing strategy, who bears delivery risk." },
 ];
 const STATUSES = ["idle","queued","active","review","blocked"];
@@ -1550,9 +1558,9 @@ const MAP = {
     ]},
     { id: "arch", label: "Architecture", href: "#architecture", st: "shipped", children: [
       { id: "a1", label: "Prisma owns the catalogue", st: "shipped", href: "#architecture" },
-      { id: "a2", label: "Firebase = auth + analytics", st: "shipped", href: "#architecture" },
+      { id: "a2", label: "Supabase Auth · Firebase gone", st: "shipped", href: "#architecture" },
       { id: "a3", label: "6 tables · 38 products", st: "shipped", href: "#data" },
-      { id: "a4", label: "Orders move to Prisma", st: "design", href: "#roadmap" },
+      { id: "a4", label: "Saved requests are Prisma rows", st: "shipped", href: "#architecture" },
     ]},
     { id: "partner", label: "Partners", href: "#pipeline", st: "shipped", children: [
       { id: "p1", label: "Apply at /apply", st: "shipped", href: "#pipeline" },
@@ -1576,9 +1584,8 @@ const MAP = {
     ]},
     { id: "blocked", label: "Needs you", href: "#you", st: "owner", children: [
       { id: "b1", label: "A git remote", st: "owner", href: "#you" },
-      { id: "b2", label: "Firebase credentials", st: "owner", href: "#you" },
+      { id: "b2", label: "Supabase project keys", st: "owner", href: "#you" },
       { id: "b3", label: "PII retention policy", st: "owner", href: "#you" },
-      { id: "b4", label: "App Check enforcement", st: "owner", href: "#you" },
       { id: "b5", label: "Verify a branch is real", st: "owner", href: "#you" },
     ]},
   ],

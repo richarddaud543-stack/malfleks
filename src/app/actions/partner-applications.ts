@@ -1,7 +1,7 @@
 "use server";
 
 import { verifySession } from "@/server/auth/dal";
-import { isAdminConfigured } from "@/server/firebase/admin-config";
+import { isAuthConfigured } from "@/server/auth/config";
 import type { PartnerApplicationInput } from "@/lib/partner-application";
 
 /**
@@ -28,7 +28,7 @@ export type ApplyResult =
 export async function submitPartnerApplication(
   input: PartnerApplicationInput
 ): Promise<ApplyResult> {
-  if (!isAdminConfigured()) return { submitted: false, reason: "unavailable" };
+  if (!isAuthConfigured()) return { submitted: false, reason: "unavailable" };
 
   // uid and email are taken from here and nowhere else. Whatever the payload
   // claims about who is applying, this is the only answer the write path sees.

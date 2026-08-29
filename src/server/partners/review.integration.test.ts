@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Runs against a real SQLite database built from the committed migrations.
+// Runs against a real Postgres schema built from the committed migrations.
 // Mocking Prisma here would prove nothing: the property under test is that the
 // *database* refuses a second decision, and a mock would simply return whatever
 // it was told to.
@@ -13,44 +13,20 @@
 // `canApprove` tests could never have caught it, because the bug lived in the
 // gap between the read and the write.
 
-import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import path from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
-import { getPrisma, resetPrisma } from "@/server/db/client";
+import { getPrisma } from "@/server/db/client";
+import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 import { approveApplication, rejectApplication } from "./review";
 
-const PROJECT_ROOT = path.resolve(import.meta.dirname, "../../..");
-const PRISMA_CLI = path.join(PROJECT_ROOT, "node_modules", "prisma", "build", "index.js");
-
-let workDir: string;
+let db: TestDatabase;
 
 beforeAll(async () => {
-  workDir = mkdtempSync(path.join(tmpdir(), "soko-review-test-"));
-  const databaseUrl = `file:${path.join(workDir, "test.db").replaceAll("\\", "/")}`;
-
-  process.env.DATABASE_URL = databaseUrl;
-  await resetPrisma();
-
-  if (!existsSync(PRISMA_CLI)) {
-    throw new Error(
-      `Prisma CLI not found at ${PRISMA_CLI}. Run "npm install" before the test suite.`
-    );
-  }
-
-  execFileSync(process.execPath, [PRISMA_CLI, "migrate", "deploy"], {
-    cwd: PROJECT_ROOT,
-    env: { ...process.env, DATABASE_URL: databaseUrl },
-    stdio: "pipe",
-  });
-  // No seed: none of this touches the catalogue.
+  db = await createTestDatabase("partner_review");
 }, 180_000);
 
 afterAll(async () => {
-  await resetPrisma();
-  rmSync(workDir, { recursive: true, force: true });
+  await db.teardown();
 });
 
 beforeEach(async () => {

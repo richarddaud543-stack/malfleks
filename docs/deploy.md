@@ -22,39 +22,24 @@ stop — that is not this document.
 
 ---
 
-## 1. A git remote (10 minutes, unblocks the most)
+## 1. A git remote — done
 
-44 commits currently exist on exactly one disk. A dropped laptop is the end of
-this project. This is the highest-leverage thing you can do today and it is
-almost entirely typing.
+`https://github.com/richarddaud543-stack/soko.git` is the remote and `master` is
+pushed. `.github/workflows/ci.yml` had never executed in its life; it now runs on
+every push and pull request.
 
-1. Create an **empty private repository** on GitHub — no README, no `.gitignore`,
-   no licence. GitHub offers to add all three; decline. An initialised remote
-   means your first push is a merge conflict instead of a push.
-2. From the repository root:
+One thing to confirm once, if you have not:
 
-   ```bash
-   git remote add origin https://github.com/<you>/soko.git
-   git push -u origin master
-   ```
+```bash
+git ls-files | grep -E "^\.env"
+```
 
-   The folder on disk is `brand-marketplace` and the project calls itself Soko
-   everywhere inside it. Name the repository whichever you intend to live with —
-   git does not care that they differ, and renaming the local folder later is
-   safe.
+That must print nothing. If it prints anything, stop and remove it from the index
+— a service-account key in a git history is not fixed by a later deletion.
 
-3. Confirm `.env` and `.env.local` are **not** in the push:
-
-   ```bash
-   git ls-files | grep -E "^\.env"
-   ```
-
-   That must print nothing. If it prints anything, stop and remove it from the
-   index before continuing — a service-account key in a git history is not
-   fixed by a later deletion.
-
-**What this unblocks:** `.github/workflows/ci.yml` already exists and has never
-executed. It starts running on your next push.
+The branch stayed `master` rather than `main` on purpose: the workflow triggers
+on `master`, and renaming the branch without renaming the trigger would have
+switched CI off silently on the very push that was meant to turn it on.
 
 ---
 
@@ -87,86 +72,133 @@ is exactly right and not an oversight to fix:
 **Do not add permissive policies** unless you later adopt Supabase's client
 libraries — that would open the exact hole RLS is currently closing.
 
-### Connection strings
+### Connection strings — there are three, and the obvious one does not work
 
-| Which | Port | Use it for |
-|---|---|---|
-| **Session / direct** — `db.nnrcjeowivnbzdkwxxrm.supabase.co` | 5432 | Migrations, from your laptop or CI |
-| **Transaction pooler** — the `pooler.supabase.com` host | 6543 | The deployed app. Required. |
+| Which | Host | Port | Use it for |
+|---|---|---|---|
+| **Direct** | `db.<ref>.supabase.co` | 5432 | **Unreachable from most networks — see below** |
+| **Session pooler** | `<region>.pooler.supabase.com` | 5432 | Migrations, from your laptop or CI |
+| **Transaction pooler** | `<region>.pooler.supabase.com` | 6543 | The deployed app. Required. |
 
-Copy both from **Supabase → Project Settings → Database → Connection string**
-rather than composing them; Supabase has changed pooler hostnames before.
+Copy all of them from **Supabase → Project Settings → Database → Connection
+string** rather than composing them; the pooler hostname's region prefix varies
+between projects and Supabase has changed the format before.
 
-**Why the pooler is not optional.** Every serverless invocation opens its own
-connection. A few hundred concurrent requests against the direct connection
-exhausts Postgres' connection limit and the site returns 500s under exactly the
-traffic you want. Append `?pgbouncer=true&connection_limit=1` for Prisma.
+**The direct connection is IPv6-only on the free tier.** IPv4 for it is a paid
+add-on. Measured 2026-08-28, and it cost an evening:
+
+```
+db.nnrcjeowivnbzdkwxxrm.supabase.co   → no A record at all
+aws-0-eu-west-1.pooler.supabase.com   → 108.128.216.176
+```
+
+Most home and mobile ISPs are IPv4-only — Tanzanian ones included — so a laptop
+resolves the direct host, finds nothing routable, and Prisma reports:
+
+```
+Error: P1001: Can't reach database server at `db.<ref>.supabase.co:5432`
+```
+
+Nothing in that message suggests a network-layer address-family problem, and the
+first instinct is to go checking the password. **Use the session pooler for
+migrations instead.** Note its username carries the project ref —
+`postgres.<ref>`, not `postgres` — which is how the pooler routes you.
+
+Every piece of general Supabase advice, including earlier drafts of this
+document, says "use the direct connection for migrations". That advice assumes
+IPv6. Read it as "use a *session-mode* connection", which is what actually
+matters: transaction mode does not hold a session across statements and is wrong
+for DDL.
+
+**Why a pooler at all for the deployed app.** Every serverless invocation opens
+its own connection. A few hundred concurrent requests against a direct
+connection exhausts Postgres' connection limit and the site returns 500s under
+exactly the traffic you want. Append `?pgbouncer=true&connection_limit=1` for
+Prisma on the transaction pooler.
 
 ---
 
-## 3. The one real gotcha — read before you push
+## 3. Postgres everywhere — done 2026-08-27
 
-**Setting `DATABASE_URL` is not enough to move this app to Postgres.** This was
-measured on 2026-08-27, not assumed, and it contradicts what the schema header
-and an earlier draft of this document implied.
+**Setting `DATABASE_URL` was never enough to move this app to Postgres.** Three
+separate things bound it to one provider, all measured rather than assumed:
 
-Three separate things bind the app to one provider:
-
-1. The committed migrations emit `DATETIME` and `REAL`; Postgres needs
-   `TIMESTAMP(3)` and `DOUBLE PRECISION`. They cannot be replayed there.
+1. The old migrations emitted `DATETIME` and `REAL`; Postgres needs
+   `TIMESTAMP(3)` and `DOUBLE PRECISION`. They could not be replayed there.
 2. `provider = env("DATABASE_PROVIDER")` is **rejected** by `prisma validate`.
    The provider must be a literal.
 3. The **generated client** is bound to it too. Handing `PrismaPg` to a client
    generated from a `sqlite` schema throws at construction.
 
-The good news: the app itself runs on Postgres perfectly. It was seeded and read
-back through `seedDatabase()` and the real repository layer against a live
-Postgres 16 — 6 brands, 19 branches, 38 products, coordinates, ETAs and specs
-all mapping correctly. **One build serves one provider**, and that is the whole
-of the constraint.
+The switch has now been made. `prisma/schema.prisma` says `postgresql` and the
+full gate is green on Postgres: type-check, lint, a production build and **569
+tests across 44 files**. (It was 596 across 47 before the Firebase removal on
+2026-08-28 took the Firestore rules, session-cookie and consent suites with it —
+fewer tests, and no lost guarantee: see `docs/auth.md`.)
 
-`src/server/db/client.ts` now refuses a mismatch with an error that says what to
-do, rather than failing deep inside Prisma.
+`prisma/migrations/` holds two migrations — `20260827000000_init_postgres` for
+the original 13 tables and `20260828000000_saved_order_requests` for the table
+that replaced the Firestore collection.
 
-### Switching the repo to Postgres
+### What that cost, and what it bought
 
-Do this **before** the first push, because of the next paragraph:
+SQLite dev is gone. `npm run dev` with no `DATABASE_URL` no longer works — it
+fails at startup with an error that names the fix rather than half-working.
+`.env.example` has the two connection strings.
 
-```bash
-# 1. Flip the provider
-#    prisma/schema.prisma        provider = "postgresql"
-#    src/server/db/client.ts     SCHEMA_PROVIDER = "postgresql"
+What it bought is that `status.integration` and `submissions.integration` now
+prove their concurrency guarantee on the engine you actually ship on. SQLite
+serialises writes at the file level; Postgres uses MVCC with row-level locks. A
+guard that holds under the first says nothing about the second.
 
-# 2. Regenerate the client
-npx prisma generate
+### The trap inside the trap: `?schema=` is ignored
 
-# 3. Replace the migration folder with Postgres DDL
-#    (Supabase is already migrated — this is for CI and fresh environments)
-npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script \
-  > prisma/migrations/00000000000000_init_postgres/migration.sql
+Worth knowing, because it cost an afternoon and it will look like a test bug if
+it ever recurs. Prisma's own connection layer reads `?schema=` from the URL. A
+**driver adapter does not** — the string goes to `pg`, which has no such
+parameter and silently ignores it. Seven test suites that each believed they had
+a private schema were all reading and writing `public`, and the symptom was
+suites seeing each other's rows depending on the order they ran in.
+
+`src/server/db/client.ts` now sets both the Prisma-side `{ schema }` option
+(which qualifies generated table names) and the session-side
+`options: -c search_path=...` (which covers raw SQL). Either alone leaves a hole.
+
+### Your local database now points at production
+
+This is the real hazard of having one provider. Two routine commands are
+destructive, and nothing in their names says which database you are aimed at:
+
+- `npm run db:seed` prunes every product not in the seed set.
+- `npm run db:reset` drops the schema and replays migrations.
+
+Both now **refuse against any host that is not localhost**, and the refusal
+prints the exact opt-in if you truly mean it:
+
+```
+SOKO_DESTRUCTIVE_OK=db.nnrcjeowivnbzdkwxxrm.supabase.co npm run db:seed
 ```
 
-**The cost, stated plainly:** SQLite dev goes away. `npm run dev` with no
-`DATABASE_URL` stops working, and every integration test that builds a throwaway
-SQLite file — `repositories`, `parity`, `status.integration`,
-`submissions.integration` — needs a Postgres to point at instead. That is a real
-trade, which is why it is your call and not one I made for you.
+Naming the host rather than a bare `=1` is deliberate: a blanket opt-in left
+exported in a shell keeps applying after `DATABASE_URL` moves to a different
+database, which is precisely the accident being prevented. Seven unit tests in
+`src/server/db/destructive-guard.test.ts` hold that line.
 
-The alternative is two schema files and a generate step keyed to the
-environment. It keeps the fast SQLite tests and adds a build step. Neither
-option is obviously right.
+**Take a Supabase backup before you ever type that override.**
 
 ---
 
 ## 4. Deploy the app
 
-**Your GitHub is already connected to Vercel, so the first push auto-deploys.**
+**Your GitHub is already connected to Vercel, so every push auto-deploys.**
 That is convenient and it is also the trap: the build runs
 `generateStaticParams`, which **queries the database**. A push with no
-`DATABASE_URL` set in Vercel fails the build.
+`DATABASE_URL` set in Vercel fails the build — and since the provider switch,
+there is no SQLite file for it to quietly fall back to.
 
-So the order is: set the environment variables **first**, switch the provider
-**second**, push **third**.
+So: set the environment variables **first**, push **second**. Until the variables
+are in place, every deploy fails at the build step, and it will look like a code
+problem.
 
 ### Environment variables
 
@@ -174,22 +206,28 @@ So the order is: set the environment variables **first**, switch the provider
 |---|---|---|
 | `DATABASE_URL` | the **pooled** string, port 6543 | with `?pgbouncer=true&connection_limit=1` |
 | `DIRECT_URL` | the **direct** string, port 5432 | migrations only |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | from Firebase console | public identifier, not a secret |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | " | |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | `v-mall-f37c6` | |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | " | |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | " | |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | " | |
-| `NEXT_PUBLIC_FIREBASE_APP_CHECK_SITE_KEY` | reCAPTCHA v3 **site** key | public by design |
-| `FIREBASE_SERVICE_ACCOUNT_KEY` | the JSON key, one line | **a real secret** |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://nnrcjeowivnbzdkwxxrm.supabase.co` | public identifier |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from Supabase → Project Settings → API | public by design |
+| `NEXT_PUBLIC_SITE_URL` | your deployed origin, no trailing slash | optional, recommended |
+| `SOKO_ADMIN_EMAILS` | your address, comma-separated for more | bootstrap admin access |
 
-`.env.example` explains the Firebase split at length. Everything with a
-`NEXT_PUBLIC_` prefix ships to every visitor by design; the service-account key
-must never acquire that prefix — it grants full project access and bypasses both
-Security Rules and App Check.
+**There is no secret in that list, and that is the change worth noticing.** The
+Firebase build needed `FIREBASE_SERVICE_ACCOUNT_KEY` — a private key granting
+full project access that bypassed both Security Rules and App Check, and whose
+most common failure was arriving with `\n` escaped rather than as real
+newlines. Supabase Auth needs nothing of the kind for what Soko does.
 
-Paste it straight from the Firebase console into Vercel's field. It should not
-pass through a file or a chat.
+The one secret left anywhere is inside `DATABASE_URL`, and it was already there.
+
+> The Supabase **`service_role`** key must never be added here. It bypasses Row
+> Level Security completely, and Soko has no use for it: Prisma reaches Postgres
+> as the `postgres` role, and Supabase is used for identity only.
+
+**One console step is not an environment variable and everyone forgets it.** In
+Supabase → Authentication → URL Configuration, add
+`https://<your-domain>/auth/callback` to **Redirect URLs**. Without it, sign-in
+works right up to the last hop and then bounces to an error page. `docs/auth.md`
+has the full sequence.
 
 **Without it**, sign-in degrades gracefully — a supported configuration per
 `.env.example` — and `/account`, `/admin` and the partner review queue are
@@ -207,9 +245,11 @@ In this order:
 3. **Check `/` against `docs/design/screens/`.** The generative field is seeded,
    so the hero should be pixel-identical to `home-desktop-01.jpg`. If it differs,
    something is wrong with font loading or the canvas, not with the seed.
-4. **Turn on App Check enforcement** — but only after reading the monitor-only
-   metrics. `docs/auth.md` has the sequence. Flipping it blind can lock out real
-   users you cannot see.
+4. **Sign in once, yourself.** The OAuth round trip is the one path no test in
+   this repo can reach — it needs a real Google client, a real callback
+   allowlist entry and a real browser. Every server-side piece around it is
+   tested; the hop through Google is not. If it fails, the first suspect is the
+   Redirect URL above.
 
 ---
 
@@ -231,7 +271,13 @@ Being online is not being finished. In rough order of how much they matter:
 - **Brand logos are trademarks used without agreement.** Nominative fair use
   covers identification; commercial operation is a conversation to have with
   each brand. `docs/design/` has the fallbacks costed.
-- **No retention policy** for the customer PII now stored at rest (#20).
+- **No retention policy** for the customer PII now stored at rest (#20). Hard
+  delete works; scheduled expiry does not exist.
+- **No bot attestation.** App Check went with Firebase and Supabase has no
+  equivalent. Supabase's own auth rate limits are what stands in for it.
+- **The OAuth round trip is untested by anything here.** It needs a real Google
+  client, a real callback allowlist entry and a real browser. Sign in once
+  yourself after the first deploy — step 4 above.
 
 `docs/assignments/README.md` lists all thirteen owner items with what each one
 unblocks.

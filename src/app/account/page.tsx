@@ -45,8 +45,8 @@ export default async function AccountPage() {
   try {
     requests = await listOrderRequestsForCustomer(session.uid);
   } catch {
-    // Firestore unreachable, or rules/credentials misconfigured. Say so
-    // plainly: an empty list would tell the customer their requests are gone.
+    // Database unreachable. Say so plainly: an empty list would tell the
+    // customer their requests are gone.
     requests = [];
     unavailable = true;
   }

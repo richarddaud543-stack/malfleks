@@ -1,16 +1,13 @@
-import { existsSync } from "node:fs";
-import path from "node:path";
 import { defineConfig } from "prisma/config";
 import { resolveDatabaseUrl } from "./src/server/db/database-url";
+import { loadDotEnv } from "./scripts/load-env.mjs";
 
 // Prisma 7 dropped automatic `.env` loading, so the CLI would otherwise not see
-// a developer's DATABASE_URL. Node's own loader is enough — no dotenv dependency.
+// a developer's DATABASE_URL. Node's own loader is enough — no dotenv
+// dependency — but it needs the BOM handling `loadDotEnv` adds; see that file.
 // An already-exported DATABASE_URL wins, so CI and the test suite can point the
 // CLI at a throwaway database without the checked-out `.env` overriding them.
-const envFile = path.resolve(process.cwd(), ".env");
-if (!process.env.DATABASE_URL && existsSync(envFile)) {
-  process.loadEnvFile(envFile);
-}
+loadDotEnv(process.cwd());
 
 export default defineConfig({
   schema: "prisma/schema.prisma",

@@ -16,7 +16,8 @@ import OrderRequestForm from "./OrderRequestForm";
  *   transmitted nowhere"); it now proves persistence happens for everyone.
  * - **Saving a copy to the customer's account stays gated on being signed
  *   in.** That is `saveOrderRequest` — a separate, additional convenience
- *   (Firestore) — and it must never fire for a signed-out customer. The
+ *   (the customer's own saved copy) — and it must never fire for a signed-out
+ *   customer. The
  *   confirmation screen still promises that one specifically.
  */
 
@@ -167,7 +168,7 @@ describe("OrderRequestForm and the customer's session", () => {
 
   it("still completes the order when the account save fails", async () => {
     mockSession(true);
-    saveOrderRequest.mockRejectedValue(new Error("Firestore unavailable"));
+    saveOrderRequest.mockRejectedValue(new Error("database unavailable"));
 
     render(<OrderRequestForm {...brandDelivered} />);
     await waitFor(() => expect(fetch).toHaveBeenCalled());

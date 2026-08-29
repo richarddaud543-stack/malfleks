@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import * as staticData from "@/data";
 import * as repo from "@/server/repositories";
 import { getPrisma } from "@/server/db/client";
 import { seedDatabase } from "@/server/db/seed";
+import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 
 /**
  * The guard rail for the static-to-database cutover.
@@ -19,12 +20,30 @@ import { seedDatabase } from "@/server/db/seed";
  *
  * Once `src/data` stops being the editorial source of truth (Phase 2), this
  * test retires with it — its whole purpose is to make the swap provable.
+ *
+ * ## It now builds its own database, and that was a latent bug
+ *
+ * This file used to seed into whatever `DATABASE_URL` happened to point at —
+ * usually a developer's `dev.db`. That worked only because nothing else wrote
+ * there. The move to Postgres put every suite on one server and the assumption
+ * broke immediately: rows another suite had published showed up in
+ * `getProductsByBranchId` and the comparison failed.
+ *
+ * The failure was the honest kind. A parity test that reads a database anyone
+ * else can write to is not comparing the arrays against the seed, it is
+ * comparing them against whatever ran last — and on SQLite that would have
+ * surfaced as an inexplicable failure on someone's laptop rather than here.
  */
 
+let db: TestDatabase;
+
 beforeAll(async () => {
-  // The dev database may be stale or empty in a fresh checkout, and this file
-  // compares against the arrays, so it seeds from them first.
+  db = await createTestDatabase("parity");
   await seedDatabase(getPrisma());
+}, 180_000);
+
+afterAll(async () => {
+  await db.teardown();
 });
 
 describe("repository / static-data parity", () => {

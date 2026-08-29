@@ -1,0 +1,101 @@
+name: Migrate database
+
+# Runs `prisma migrate deploy` against a chosen database, from a GitHub runner
+# rather than from someone's laptop.
+#
+# ## Why this exists
+#
+# Two reasons, and the second is the one that will matter in six months.
+#
+# 1. **Supabase's direct host is IPv6-only** on the free tier, and most home and
+#    mobile ISPs are IPv4-only — Tanzanian ones included. The session pooler is
+#    IPv4-reachable and is the documented way round that, but reaching a
+#    database from a home connection stays fragile: filtered ports, long
+#    round trips against short client timeouts, captive portals. On
+#    2026-08-28 that cost an evening. GitHub's runners have IPv6, no egress
+#    filtering, and sit close to eu-west-1.
+#
+# 2. **A production migration should not depend on one person's laptop being
+#    online.** That is true even when the laptop works. This makes the
+#    operation reproducible, logged, and available to anyone with repository
+#    access.
+#
+# Manual dispatch only. Nothing here runs on a push — a schema change reaching
+# production because someone merged a branch is precisely the accident worth
+# designing out.
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type the project ref to confirm (nnrcjeowivnbzdkwxxrm)'
+        required: true
+        type: string
+      baseline:
+        description: 'First run only: mark an existing migration as already applied, e.g. 20260827000000_init_postgres. Leave blank otherwise.'
+        required: false
+        type: string
+
+concurrency:
+  # Two migrations racing the same database is the one thing worse than no
+  # migration at all. `cancel-in-progress: false` because a half-applied
+  # migration must be allowed to finish rather than be killed mid-statement.
+  group: migrate-production
+  cancel-in-progress: false
+
+jobs:
+  migrate:
+    name: prisma migrate deploy
+    runs-on: ubuntu-latest
+
+    # A named environment is where you add a required reviewer if you ever want
+    # a second pair of eyes before production schema changes. Costs nothing to
+    # declare now and means the control is one checkbox away later.
+    environment: production
+
+    steps:
+      # Typing the ref is not security — anyone who can dispatch this can type
+      # it. It is a speed bump against the wrong tab and the wrong button,
+      # which is the realistic failure mode for a one-click production action.
+      - name: Confirm the target
+        run: |
+          if [ "${{ inputs.confirm }}" != "nnrcjeowivnbzdkwxxrm" ]; then
+            echo "::error::Confirmation did not match the project ref. Nothing ran."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # `migrate status` before anything mutating, so the log records what the
+      # database looked like going in. When a migration goes wrong, this is the
+      # line you want and cannot reconstruct afterwards.
+      - name: Migration status before
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate status || true
+
+      # Only for a database whose tables were created outside Prisma — as this
+      # one's were, through the Supabase API, which left no `_prisma_migrations`
+      # table behind. Without this, `deploy` refuses with P3005 ("the database
+      # schema is not empty") rather than trying to replay DDL over live tables.
+      - name: Baseline an already-applied migration
+        if: ${{ inputs.baseline != '' }}
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate resolve --applied "${{ inputs.baseline }}"
+
+      - name: Deploy
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate deploy
+
+      - name: Migration status after
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npx prisma migrate status

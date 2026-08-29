@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
 import { isAdminUser } from "@/server/auth/admin";
-import { isAdminConfigured } from "@/server/firebase/admin-config";
+import { isAuthConfigured } from "@/server/auth/config";
 import { createOrder, type CreateOrderFailure } from "@/server/orders/create-order";
 import type { TransitionBlocker } from "@/server/orders/status";
 import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
@@ -22,12 +22,12 @@ import type { SaveOrderRequestInput } from "@/server/orders/build-order-request"
  * session state. A signed-out customer gets `customerId: null`, not a
  * rejected write.
  *
- * This does not gate on `isAdminConfigured()` the way `saveOrderRequest`
- * (`./order-requests.ts`) does — that check exists because *that* action
- * touches Firestore via the Admin SDK. This one only touches Prisma, so a
- * misconfigured Firebase project should not stop an order from being
- * recorded; it should only stop `verifySession()` from finding anyone
- * signed in, which it already handles by returning `null`.
+ * This does not gate on `isAuthConfigured()` the way `saveOrderRequest`
+ * (`./order-requests.ts`) does. That check exists because *that* action writes
+ * a row owned by a specific customer, and without auth there is no customer to
+ * own it. This one records the order either way, so a missing Supabase
+ * configuration must not stop it; all that should happen is `verifySession()`
+ * finding nobody signed in, which it already handles by returning `null`.
  */
 
 export type SubmitOrderResult =
@@ -77,7 +77,7 @@ export type OrderTransitionResult =
     };
 
 async function requireAdminSession() {
-  if (!isAdminConfigured()) return null;
+  if (!isAuthConfigured()) return null;
   const session = await verifySession();
   if (!session || !isAdminUser(session)) return null;
   return session;

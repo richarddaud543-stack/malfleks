@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
 import { isAdminUser } from "@/server/auth/admin";
-import { isAdminConfigured } from "@/server/firebase/admin-config";
+import { isAuthConfigured } from "@/server/auth/config";
 
 /**
  * Approving and rejecting partner applications.
@@ -32,7 +32,7 @@ export type ReviewResult =
     };
 
 async function requireAdminSession() {
-  if (!isAdminConfigured()) return null;
+  if (!isAuthConfigured()) return null;
   const session = await verifySession();
   if (!session || !isAdminUser(session)) return null;
   return session;
