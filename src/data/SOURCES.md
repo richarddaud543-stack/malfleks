@@ -21,6 +21,42 @@ Sample product images are NOT photographs — they're custom flat-icon illustrat
 
 **Before going live**: replace with real licensed/official product photography per brand.
 
+## Phone numbers — removed 2026-08-31
+
+**Every phone number in this dataset was invented, and some of them were sitting
+on records flagged `verified: true`.** They have all been deleted rather than
+replaced, and no record should gain one again without a primary source.
+
+What was there, and why it was obvious in hindsight:
+
+| Records | Numbers |
+|---|---|
+| Toyota / Ford / BMW, Dar es Salaam | `+255 22 286 0000`, `286 1000`, `286 2000` |
+| Halotel Shop — Dar es Salaam | `+255 76 000 0000` |
+| All five couriers | `+255 68 000 0001` … `0005` |
+
+Counting sequences, all of them.
+
+The defect worth understanding is not that placeholder data existed — this file
+already said it did. It is that **`verified` described the record's existence,
+while the phone number was invented to fill a required field, and then inherited
+the record's badge.** A branch can be genuinely real and its contact details
+still fabricated. `Halotel Shop — Dar es Salaam` is a real shop; `+255 76 000 0000`
+was never its number.
+
+The live consequence: `AgentCard` rendered courier numbers as `tel:` links, so
+the deployed site was inviting customers to dial numbers nobody answers.
+
+`DeliveryAgent.phone` is now optional in both the domain type and the Prisma
+schema (migration `20260831000000_delivery_agent_phone_optional`), matching
+`Branch.phone`, which was always nullable. The UI says "No published number"
+rather than showing a dead link — the same choice `OrderConfirmation` already
+made for a branch without one.
+
+**Before republishing any number**: confirm it against the brand's own site or a
+document from the business itself, and add the source to this file. A missing
+number costs a customer one extra step. A wrong one sends them to a stranger.
+
 ## Branch & delivery-agent data
 
 `src/data/branches.ts` and `src/data/delivery-agents.ts` carry a `verified: boolean` field:

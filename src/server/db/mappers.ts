@@ -131,7 +131,7 @@ export function mapDeliveryAgent(row: DeliveryAgentRowWithRegions): DeliveryAgen
     regionsServed: [...row.regionsServed]
       .sort((a, b) => a.position - b.position)
       .map((region) => region.region),
-    phone: row.phone,
+    phone: orUndefined(row.phone),
     eta: { minDays: row.etaMinDays, maxDays: row.etaMaxDays },
     verified: row.verified,
   };

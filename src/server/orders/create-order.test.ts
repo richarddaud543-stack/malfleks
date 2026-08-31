@@ -109,8 +109,18 @@ describe("createOrder — writing a row", () => {
     expect(row.routeKind).toBe("agent");
     expect(row.agentId).toBe(AGENT_IN_ARUSHA);
     expect(row.routeCarrier).toBe("Fargo Courier");
-    expect(row.routeAgentPhone).toBeTruthy();
     expect(row.routeEtaEstimate).toBeTruthy();
+
+    // The point of these columns is that an order keeps a *snapshot* of the
+    // courier as it was when the order was placed, so later catalogue edits
+    // cannot rewrite history. So assert the snapshot equals the agent — which
+    // stays a real assertion whether or not that agent publishes a number.
+    // This previously asserted the phone was merely truthy, and started
+    // failing on 2026-08-31 when the invented courier numbers were removed.
+    const agent = await getPrisma().deliveryAgent.findUniqueOrThrow({
+      where: { id: AGENT_IN_ARUSHA },
+    });
+    expect(row.routeAgentPhone).toBe(agent.phone);
   });
 
   it("regenerates and retries once on a reference collision", async () => {

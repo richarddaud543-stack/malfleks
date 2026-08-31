@@ -54,7 +54,8 @@ export default function AgentChoice({
           Based in {agent.city} · Serves {agent.regionsServed.join(", ")}
         </span>
         <span className="mt-2 block text-sm text-muted">
-          ETA: {formatEta(agent.eta)} · {agent.phone}
+          ETA: {formatEta(agent.eta)}
+          {agent.phone ? ` · ${agent.phone}` : ""}
         </span>
       </span>
     </label>

@@ -64,7 +64,12 @@ export interface DeliveryAgent {
   name: string;
   city: string;
   regionsServed: string[];
-  phone: string;
+  /**
+   * Optional, and absent for every seeded courier as of 2026-08-31: the
+   * numbers that used to be here were invented. `AgentCard` and
+   * `AgentChoice` render nothing rather than a dead `tel:` link.
+   */
+  phone?: string;
   eta: DeliveryEta;
   verified: boolean;
 }

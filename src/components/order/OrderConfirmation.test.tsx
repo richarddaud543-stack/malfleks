@@ -10,6 +10,21 @@ import {
 } from "@/lib/order";
 import OrderConfirmation from "./OrderConfirmation";
 
+/**
+ * A phone number for the fixture to use, never from the catalogue.
+ *
+ * These tests used to read numbers out of `src/data` — `+255 22 286 0000` for
+ * the branch, `+255 68 000 0003` for the courier. Every one of those was
+ * invented and all of them were deleted on 2026-08-31, which broke four tests
+ * that were otherwise testing something real.
+ *
+ * The lesson is the smaller one: a test about *rendering a number when one
+ * exists* should own the number it renders. Coupling it to seed data made a
+ * catalogue correction look like a regression in the confirmation screen.
+ */
+const FIXTURE_BRANCH_PHONE = "+255 22 000 0000";
+const FIXTURE_AGENT_PHONE = "+255 68 111 1111";
+
 function store(kind: "brand" | "agent" | "brand-no-phone") {
   const productId =
     kind === "agent"
@@ -21,13 +36,22 @@ function store(kind: "brand" | "agent" | "brand-no-phone") {
         : "toyota-corolla";
   const product = getProductById(productId) as Product;
   const brand = getBrandById(product.brandId) as Brand;
-  const branch = getBranchById(product.branchId) as Branch;
-  const agent =
+  const catalogueBranch = getBranchById(product.branchId) as Branch;
+  // The "brand" case is specifically about a branch that *does* publish a
+  // number, so give it one rather than hoping the catalogue still does.
+  const branch: Branch =
+    kind === "brand"
+      ? { ...catalogueBranch, phone: FIXTURE_BRANCH_PHONE }
+      : catalogueBranch;
+  const catalogueAgent =
     kind === "agent"
       ? (resolveDeliveryRoute(branch).agents.find(
           (a) => a.id === "arusha-swift-couriers"
         ) as DeliveryAgent)
       : null;
+  const agent: DeliveryAgent | null = catalogueAgent
+    ? { ...catalogueAgent, phone: FIXTURE_AGENT_PHONE }
+    : null;
 
   const request = createOrderRequest({
     product,
@@ -90,7 +114,7 @@ describe("OrderConfirmation", () => {
     // Named both in the summary and in the "what happens next" steps.
     expect(screen.getAllByText(/Arusha Swift Couriers/)).toHaveLength(2);
     // The whole point of the agent route: a number the customer can call.
-    expect(screen.getByText(/\+255 68 000 0003/)).toBeVisible();
+    expect(screen.getByText(new RegExp(FIXTURE_AGENT_PHONE.replace(/\+/g, "\\+")))).toBeVisible();
   });
 
   // The whole flow exists to hand the customer to the branch, so the last

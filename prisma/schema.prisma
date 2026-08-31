@@ -150,7 +150,12 @@ model DeliveryAgent {
   name String
   city String
 
-  phone    String
+  // Optional since 2026-08-31. Every seeded courier number was invented
+  // (+255 68 000 0001..0005, a counting sequence) and two of them sat on
+  // records flagged `verified`. Rather than publish a number nobody can
+  // answer, the column now permits absence and the UI says so plainly —
+  // the same choice `Branch.phone` already made.
+  phone    String?
   verified Boolean
 
   // Days from pickup, `0` meaning same day; `etaMaxDays` is inclusive. This

@@ -546,11 +546,15 @@ describe("createOrderRequest", () => {
       requestedAt: "2026-08-14T09:00:00.000Z",
     };
 
+    // The phone is supplied here rather than read from the catalogue. It used
+    // to assert `+255 22 286 0000` from `toyota-dar`, which was an invented
+    // number and was deleted on 2026-08-31 — breaking a test whose actual
+    // subject is the *conditional*, not any particular number.
     const withPhone = createOrderRequest({
       ...seed,
       product: corolla,
       brand: brand("toyota"),
-      branch: branch("toyota-dar"),
+      branch: { ...branch("toyota-dar"), phone: "+255 22 000 0000" },
     });
     const withoutPhone = createOrderRequest({
       ...seed,
@@ -559,7 +563,7 @@ describe("createOrderRequest", () => {
       branch: branch("toyota-arusha"),
     });
 
-    expect(withPhone.branch.phone).toBe("+255 22 286 0000");
+    expect(withPhone.branch.phone).toBe("+255 22 000 0000");
     expect(withoutPhone.branch).not.toHaveProperty("phone");
   });
 

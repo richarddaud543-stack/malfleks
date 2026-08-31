@@ -17,11 +17,25 @@ export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
           </span>
         )}
       </div>
-      <div className="mt-4 flex items-center justify-between text-sm">
+      <div className="mt-4 flex items-center justify-between gap-3 text-sm">
         <span className="text-muted">ETA: {formatEta(agent.eta)}</span>
-        <a href={`tel:${agent.phone}`} className="font-medium text-accent hover:underline">
-          {agent.phone}
-        </a>
+        {/*
+          A courier with no published number renders no link at all — not a
+          dead `tel:` and not a placeholder. This mirrors what
+          `OrderConfirmation` already does for a branch without a phone, and
+          it exists because the numbers that used to sit here were invented.
+          Telling someone to call a number nobody answers is worse than
+          telling them we do not have one.
+        */}
+        {agent.phone ? (
+          <a href={`tel:${agent.phone}`} className="font-medium text-accent hover:underline">
+            {agent.phone}
+          </a>
+        ) : (
+          <span className="text-right text-xs text-muted">
+            No published number — arranged through the branch
+          </span>
+        )}
       </div>
     </div>
   );
