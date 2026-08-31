@@ -59,14 +59,16 @@ model Branch {
   name        String
   city        String
   region      String
-  addressLine String
+  // Nullable since 2026-08-31: present only when confirmed against a
+  // primary source. See src/data/SOURCES.md.
+  addressLine String?
 
   // The TS type pins this to the literal "Tanzania"; the default keeps that
   // true for hand-inserted rows without blocking a future second market.
   country String @default("Tanzania")
 
   phone String?
-  hours String
+  hours String?
 
   // Drives the core routing rule: brand fleet if true, otherwise a local agent.
   deliveryOffered Boolean

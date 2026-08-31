@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { formatEta, formatTZS } from "./format";
+import { describeBranchLocation, formatEta, formatTZS } from "./format";
 import { deliveryAgents } from "@/data";
 
 // Intl.NumberFormat inserts a non-breaking space between symbol and amount —
@@ -46,6 +46,59 @@ describe("formatEta", () => {
   it("produces a non-empty label for every seeded courier", () => {
     for (const agent of deliveryAgents) {
       expect(formatEta(agent.eta).trim().length).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * The sentence two product pages print when an order is blocked, telling the
+ * customer where to go instead.
+ *
+ * It used to be built inline as `{name} is at {addressLine}, open {hours}`.
+ * Both fields became optional on 2026-08-31 when the invented addresses and
+ * opening hours were removed, and that template degrades into
+ * "Toyota Tanzania — Arusha is at , open ." — which reads as a broken page
+ * rather than as a fact we do not have.
+ */
+describe("describeBranchLocation", () => {
+  it("uses the street address and hours when both are known", () => {
+    expect(
+      describeBranchLocation({
+        name: "iStore Tanzania — Mikocheni",
+        city: "Dar es Salaam",
+        addressLine: "194 Chato Street, Mikocheni, Dar es Salaam",
+        hours: "Mon–Sat 09:00–18:00",
+      })
+    ).toBe(
+      "iStore Tanzania — Mikocheni is at 194 Chato Street, Mikocheni, Dar es Salaam, open Mon–Sat 09:00–18:00"
+    );
+  });
+
+  // The case the helper exists for.
+  it("falls back to the city when there is no confirmed address", () => {
+    expect(
+      describeBranchLocation({ name: "Toyota Tanzania — Arusha", city: "Arusha" })
+    ).toBe("Toyota Tanzania — Arusha is in Arusha");
+  });
+
+  it("drops the hours clause rather than leaving it empty", () => {
+    const sentence = describeBranchLocation({
+      name: "CMC Ford — Dodoma",
+      city: "Dodoma",
+    });
+    expect(sentence).not.toMatch(/open\s*$/);
+    expect(sentence).not.toContain(", open");
+  });
+
+  it("never produces a dangling preposition or empty clause", () => {
+    for (const branch of [
+      { name: "A", city: "Dar es Salaam" },
+      { name: "B", city: "Mwanza", addressLine: "1 Test Road" },
+      { name: "C", city: "Dodoma", hours: "Mon–Fri" },
+    ]) {
+      const sentence = describeBranchLocation(branch);
+      expect(sentence, sentence).not.toMatch(/is at ,|is at $|open $|, ,/);
+      expect(sentence).toContain(branch.name);
     }
   });
 });

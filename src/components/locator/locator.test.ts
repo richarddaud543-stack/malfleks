@@ -75,9 +75,13 @@ describe("filterBranches", () => {
   });
 
   it("matches a free-text query against the branch name", () => {
-    // "Kariakoo" only appears in one branch's own name, not any brand or city.
-    const results = filterBranches(data, withFilters({ q: "Kariakoo" }));
-    expect(results.map((e) => e.branch.id)).toEqual(["oraimo-dar"]);
+    // "Elite" appears in one branch's own name and in no brand or city, so a
+    // hit proves the query reached the branch name rather than something else.
+    // This used to search "Kariakoo", which stopped identifying a branch on
+    // 2026-08-31: branch names that encoded an unconfirmed street were renamed
+    // to their city, because the street was never checked.
+    const results = filterBranches(data, withFilters({ q: "Elite" }));
+    expect(results.map((e) => e.branch.id)).toEqual(["apple-elite-dar"]);
   });
 
   it("matches a free-text query against the brand name, case-insensitively", () => {
@@ -147,7 +151,7 @@ describe("getLocatorCities", () => {
   });
 
   it("recounts markers against a free-text search, same as it does for brand", () => {
-    const cities = getLocatorCities(data, [], "Kariakoo");
+    const cities = getLocatorCities(data, [], "Elite");
     const byName = Object.fromEntries(cities.map((c) => [c.name, c]));
     expect(byName["Dar es Salaam"].branchCount).toBe(1);
     expect(byName["Mwanza"].branchCount).toBe(0);
@@ -170,10 +174,10 @@ describe("getBrandOptions", () => {
   });
 
   it("recounts brand chips against a free-text search", () => {
-    const options = getBrandOptions(data, null, "Kariakoo");
-    const oraimo = options.find((o) => o.brand.id === "oraimo");
+    const options = getBrandOptions(data, null, "Elite");
+    const apple = options.find((o) => o.brand.id === "apple");
     const toyota = options.find((o) => o.brand.id === "toyota");
-    expect(oraimo?.count).toBe(1);
+    expect(apple?.count).toBe(1);
     expect(toyota?.count).toBe(0);
   });
 });

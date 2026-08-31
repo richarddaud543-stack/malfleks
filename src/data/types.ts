@@ -17,10 +17,23 @@ export interface Branch {
   name: string;
   city: string;
   region: string;
-  addressLine: string;
+  /**
+   * Optional since 2026-08-31. A street address is only present when it has
+   * been confirmed against a primary source — the brand's own site or a
+   * document from the business. The addresses that used to fill this field
+   * were plausible street names nobody had checked, and the one that could
+   * finally be checked (iStore) turned out to be wrong: the catalogue said
+   * Mlimani City, their own contact page says Mikocheni.
+   *
+   * A branch without one still knows its brand, city and delivery status,
+   * which are all true. The UI says the address should be confirmed with the
+   * brand rather than printing a guess.
+   */
+  addressLine?: string;
   country: "Tanzania";
   phone?: string;
-  hours: string;
+  /** Optional, and absent unless confirmed — see `addressLine`. */
+  hours?: string;
   deliveryOffered: boolean;
   verified: boolean;
   /**

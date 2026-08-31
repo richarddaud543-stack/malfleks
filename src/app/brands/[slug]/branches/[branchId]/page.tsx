@@ -41,7 +41,7 @@ export async function generateMetadata({
     return { title: "Branch not found" };
   }
 
-  const description = `${brand.name} — ${branch.addressLine}. ${
+  const description = `${brand.name} — ${branch.addressLine ?? branch.city}. ${
     branch.deliveryOffered ? "Offers brand delivery." : "Connects to a local delivery agent."
   }`;
 
@@ -84,8 +84,17 @@ export default async function BranchPage({
             <h1 className="mt-1 font-display text-3xl font-medium tracking-tight sm:text-4xl">
               {branch.name}
             </h1>
-            <p className="mt-2 text-muted">{branch.addressLine}</p>
-            <p className="mt-1 text-sm text-muted">{branch.hours}</p>
+            <p className="mt-2 text-muted">{branch.addressLine ?? branch.city}</p>
+            {branch.hours && (
+              <p className="mt-1 text-sm text-muted">{branch.hours}</p>
+            )}
+            {!branch.addressLine && (
+              <p className="mt-2 max-w-prose text-sm text-muted">
+                We don&apos;t have a confirmed street address for this branch.
+                Contact {brand.name} to check where it is and when it opens
+                before travelling.
+              </p>
+            )}
             {branch.phone && (
               <a
                 href={`tel:${branch.phone}`}

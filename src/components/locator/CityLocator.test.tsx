@@ -164,13 +164,13 @@ describe("CityLocator", () => {
     render(<CityLocator data={data} />);
 
     const search = screen.getByRole("searchbox", { name: /search branches/i });
-    fireEvent.change(search, { target: { value: "Kariakoo" } });
+    fireEvent.change(search, { target: { value: "Elite" } });
 
     expect(screen.getByRole("status")).toHaveTextContent(
       "1 branch across Tanzania"
     );
-    expect(branchNames()).toEqual(["Oraimo Store — Kariakoo"]);
-    expect(window.location.search).toBe("?q=Kariakoo");
+    expect(branchNames()).toEqual(["Elite Digital — Apple Authorized Reseller"]);
+    expect(window.location.search).toBe("?q=Elite");
   });
 
   it("joins the search query with the city and brand filters already selected", () => {
@@ -190,7 +190,7 @@ describe("CityLocator", () => {
     render(<CityLocator data={data} />);
 
     const search = screen.getByRole("searchbox", { name: /search branches/i });
-    fireEvent.change(search, { target: { value: "Kariakoo" } });
+    fireEvent.change(search, { target: { value: "Elite" } });
     expect(branchNames()).toHaveLength(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Clear search" }));

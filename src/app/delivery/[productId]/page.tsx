@@ -9,7 +9,7 @@ import {
 } from "@/server/repositories";
 import OrderRequestForm from "@/components/order/OrderRequestForm";
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { formatTZS } from "@/lib/format";
+import { describeBranchLocation, formatTZS } from "@/lib/format";
 import {
   deliveryRouteLabel,
   orderBlockReason,
@@ -139,7 +139,7 @@ export default async function DeliveryPage({
           </h2>
           <p className="mt-3 text-sm text-muted">{blockReason}</p>
           <p className="mt-3 text-sm text-muted">
-            {branch.name} is at {branch.addressLine}, open {branch.hours}
+            {describeBranchLocation(branch)}
             {branch.phone ? ` · ${branch.phone}` : ""}.
           </p>
           <Link

@@ -31,3 +31,32 @@ export function formatEta({ minDays, maxDays }: DeliveryEta): string {
   if (minDays === 0) return `Today – ${day(maxDays)}`;
   return `${minDays}–${maxDays} days`;
 }
+
+/**
+ * One sentence describing where a branch is, using only what is actually known.
+ *
+ * Two pages used to build this inline as:
+ *
+ * ```tsx
+ * {branch.name} is at {branch.addressLine}, open {branch.hours}
+ * ```
+ *
+ * That was fine while every branch carried an address and opening hours. Both
+ * became optional on 2026-08-31, when the invented ones were removed — and the
+ * template above degrades into "Toyota Tanzania — Arusha is at , open ." which
+ * is worse than saying nothing, because it looks like a bug rather than a gap.
+ *
+ * The rule here is that each clause appears only when its fact exists, and the
+ * city always does. A branch we know least about still produces a true
+ * sentence.
+ */
+export function describeBranchLocation(branch: {
+  name: string;
+  city: string;
+  addressLine?: string;
+  hours?: string;
+}): string {
+  const where = branch.addressLine ?? `in ${branch.city}`;
+  const at = branch.addressLine ? `is at ${where}` : `is ${where}`;
+  return branch.hours ? `${branch.name} ${at}, open ${branch.hours}` : `${branch.name} ${at}`;
+}

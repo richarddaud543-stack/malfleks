@@ -65,11 +65,24 @@ export default function LocatorBranchCard({
             {brand.name}
           </p>
           <h3 className="font-display mt-0.5 font-medium">{branch.name}</h3>
-          <p className="mt-1 text-sm text-muted">{branch.addressLine}</p>
-          <p className="mt-0.5 text-xs text-muted">{branch.hours}</p>
-          {!branch.verified && (
+          {branch.addressLine ? (
+            <p className="mt-1 text-sm text-muted">{branch.addressLine}</p>
+          ) : (
+            <p className="mt-1 text-sm text-muted">{branch.city}</p>
+          )}
+          {branch.hours && (
+            <p className="mt-0.5 text-xs text-muted">{branch.hours}</p>
+          )}
+          {/*
+            This used to read "Illustrative location for this prototype",
+            which stopped being true the day the site went live. A visitor
+            deciding whether to cross Dar es Salaam needs to know the exact
+            address is not published, not that a developer called it a
+            prototype.
+          */}
+          {!branch.addressLine && (
             <p className="mt-2 text-[11px] text-muted/70">
-              * Illustrative location for this prototype
+              Exact address not published — confirm with {brand.name} first
             </p>
           )}
         </div>

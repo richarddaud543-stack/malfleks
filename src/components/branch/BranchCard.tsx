@@ -19,14 +19,18 @@ export default function BranchCard({
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display font-medium">{branch.name}</h3>
-          <p className="mt-1 text-sm text-muted">{branch.addressLine}</p>
-          <p className="mt-1 text-xs text-muted">{branch.hours}</p>
+          <p className="mt-1 text-sm text-muted">
+            {branch.addressLine ?? branch.city}
+          </p>
+          {branch.hours && (
+            <p className="mt-1 text-xs text-muted">{branch.hours}</p>
+          )}
         </div>
         <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
       </div>
-      {!branch.verified && (
+      {!branch.addressLine && (
         <p className="mt-3 text-[11px] text-muted">
-          * Illustrative location for this prototype
+          Exact address not published — confirm with the brand first
         </p>
       )}
     </Link>

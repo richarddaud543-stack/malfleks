@@ -74,10 +74,10 @@ export function mapBranch(row: BranchRow): Branch {
     name: row.name,
     city: row.city,
     region: row.region,
-    addressLine: row.addressLine,
+    addressLine: orUndefined(row.addressLine),
     country: toCountry(row.country, row.id),
     phone: orUndefined(row.phone),
-    hours: row.hours,
+    hours: orUndefined(row.hours),
     deliveryOffered: row.deliveryOffered,
     verified: row.verified,
     // Spread rather than `coords: undefined`, so a branch without coordinates
