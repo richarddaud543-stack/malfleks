@@ -4,8 +4,9 @@ import {
   getAllBrands,
   getAllProducts,
 } from "@/server/repositories";
+import { resolveSiteUrl } from "@/lib/site-url";
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+const siteUrl = resolveSiteUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [brands, branches, products] = await Promise.all([
