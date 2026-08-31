@@ -1,13 +1,23 @@
 # Backend foundation
 
-Soko's catalogue currently lives in hand-written TypeScript arrays under `src/data/`.
-This document covers the database that will eventually replace them: the Prisma
-schema, how to run it locally, how to move it to Postgres, and what is left to do
-before the site actually reads from it.
+This document covers the database the site runs on: the Prisma schema, how to run
+it locally, and the reasoning behind the shape it has.
 
-**Status: the site does not use the database yet.** `src/data/` is still the only
-thing any page imports. Everything described here runs alongside it. That is
-deliberate — see [Remaining cutover work](#remaining-cutover-work).
+**Status, corrected 2026-08-31: the site reads from Postgres, in production.**
+The header of this file previously said *"the site does not use the database
+yet"* and described `src/data/` as the only thing any page imports. Both were
+false long before they were fixed. The catalogue is served from Supabase
+Postgres to the live site at `soko-richarddaud543-stack.vercel.app` — verified by
+fetching `/brands` anonymously and getting all six brands with their real branch
+counts. `src/data/` survives only as the seed's input; see
+[Remaining cutover work](#remaining-cutover-work) for exactly which imports are
+left and why.
+
+**Postgres is the only provider.** SQLite was the original one and is referred to
+in the past tense throughout. There is no fallback: `resolveDatabaseUrl()` throws
+when `DATABASE_URL` is unset, deliberately, because manufacturing a connection
+string that cannot work made every downstream tool report the symptom instead of
+the cause.
 
 ---
 
@@ -209,7 +219,7 @@ tabs racing a decision on the same row. `src/server/orders/status.ts` holds
 `updateMany` with the valid source statuses in the WHERE, never `update` by
 id — and `Order.decidedBy`/`decidedAt`/`decisionNote` mirror
 `PartnerApplication.reviewedBy`/`reviewedAt`/`decisionNote` field for field.
-A real-SQLite integration test (`status.integration.test.ts`) proves the
+A real-database integration test (`status.integration.test.ts`) proves the
 guard: two concurrent `Promise.all` calls at the same target — the "two tabs
 both click Confirm" scenario — resolve to exactly one success, never both.
 Migration: `20260825164357_add_order_status_workflow`, three new nullable
@@ -295,13 +305,22 @@ From a fresh clone:
 ```bash
 npm install          # also runs `prisma generate` via postinstall
 npm run db:setup     # apply migrations, then seed from src/data
-npm test             # 553 tests over 42 files, incl. suites against a real DB
+npm test             # 582 tests over 46 files, incl. suites against a real DB
 ```
 
-`npm run db:setup` is `prisma migrate deploy && prisma db seed`. No `.env` is
-required: with `DATABASE_URL` unset the app falls back to a SQLite file at
-`prisma/dev.db` (see `src/server/db/database-url.ts`). Copy `.env.example` to
-`.env` only if you want to point somewhere else.
+`npm run db:setup` is `prisma migrate deploy && prisma db seed`.
+
+**A `.env` with `DATABASE_URL` is required** — copy `.env.example` and point it
+at a Postgres server. There is no fallback of any kind. This used to say that an
+unset variable fell back to a SQLite file at `prisma/dev.db`; that fallback was
+deleted with the provider, and `resolveDatabaseUrl()` now throws a message naming
+the variable, where it goes, and what it should look like.
+
+The integration suites need a Postgres server too, via `TEST_DATABASE_URL` —
+they isolate themselves per suite with a dedicated schema rather than a temp
+file. Note that **Vitest does not read `.env`**; `vitest.config.mts` loads it
+explicitly, because Next reads it for dev/build and `prisma.config.ts` reads it
+for the CLI, and neither of those covers the test runner.
 
 | Script | What it does |
 | --- | --- |
@@ -313,8 +332,9 @@ required: with `DATABASE_URL` unset the app falls back to a SQLite file at
 | `npm run db:setup` | `db:deploy` + `db:seed` |
 | `npm run db:studio` | Prisma Studio |
 
-The SQLite file and its WAL sidecars are gitignored (`*.db`, `*.db-*`). Prisma
-Client generates into `node_modules/@prisma/client`, which is already ignored.
+Prisma Client generates into `node_modules/@prisma/client`, which is already
+ignored. (`*.db` and `*.db-*` remain in `.gitignore` as leftovers from the SQLite
+era; harmless, and cheaper to leave than to explain.)
 
 ---
 
@@ -362,16 +382,21 @@ One real limit: Postgres `INTEGER` is 32-bit, capping a price at ~2.15 billion
 TZS (roughly USD 800k). The current catalogue tops out at 245,000,000 TZS
 (BMW X5), so there is ample headroom, but if Soko ever lists property, plant or
 fleet orders, widen `priceTZS` to `BigInt` **before** that data arrives —
-narrowing later is a data migration, widening now is one line. SQLite's INTEGER
-is already 64-bit, so this only bites on Postgres.
+narrowing later is a data migration, widening now is one line. This limit is
+real now: it was theoretical while the provider was SQLite, whose INTEGER is
+64-bit.
 
 ### `specs` became a table, not a JSON column
 
-`Product.specs` is `Record<string, string>` in TypeScript. Prisma has no
-portable map type: `Json` is not supported on SQLite, and `String[]` scalar
-lists are Postgres/CockroachDB-only. Rather than pick a type that would have to
-change when the provider changes, specs are stored as rows in `ProductSpec`
-(`@@id([productId, key])`).
+`Product.specs` is `Record<string, string>` in TypeScript. Prisma had no
+portable map type at the time: `Json` was unsupported on SQLite, and `String[]`
+scalar lists are Postgres/CockroachDB-only. Rather than pick a type that would
+have to change when the provider changed, specs are stored as rows in
+`ProductSpec` (`@@id([productId, key])`).
+
+That constraint is gone now that Postgres is the only provider — `Json` is
+available, and `SavedOrderRequest.payload` uses it. The join table stays anyway,
+for the three reasons below, which never depended on the provider.
 
 This costs a join and buys three things: the schema is provider-neutral, specs
 become queryable (`where: { specs: { some: { key: "Drive", value: "4x4" } } }`
@@ -403,11 +428,15 @@ repository return shapes stay byte-identical to the static ones.
 ### Text columns instead of enums
 
 `Brand.category` (`"automotive" | "electronics" | "telecom"`) and
-`Branch.country` (`"Tanzania"`) are TypeScript literal unions. SQLite has no
-enum type, so both are `TEXT`. The union is re-established in
+`Branch.country` (`"Tanzania"`) are TypeScript literal unions. They are `TEXT`
+because SQLite had no enum type. The union is re-established in
 `src/server/db/mappers.ts`, which throws on an unexpected value rather than
-silently widening the type for every downstream consumer. On Postgres these can
-become real enums (see below).
+silently widening the type for every downstream consumer.
+
+On Postgres these could become real enums. They have not been, and the runtime
+narrowing in `mappers.ts` would still be worth keeping if they were — a value
+that reaches the mapper from outside a migration is exactly the case an enum
+does not catch.
 
 ### `Product.brandId` stays denormalised
 
@@ -508,7 +537,7 @@ Two behaviours worth calling out because they are easy to break:
   matching it will be a deliberate change to both, not an accident in one.
 
 `src/server/db/client.ts` builds the client lazily and caches it on `globalThis`
-so Next dev's module reloading does not leak SQLite handles. Lazy construction is
+so Next dev's module reloading does not leak connections. Lazy construction is
 also what lets the tests bind a fresh database without mocking anything.
 
 These modules are server-only by convention, not enforcement — importing
@@ -520,9 +549,9 @@ files.
 ## Tests
 
 `src/server/repositories/repositories.test.ts` (21 tests) runs against a real
-SQLite database in a temp directory. Nothing is mocked. Per run it:
+Postgres database. Nothing is mocked. Per run it:
 
-1. points `DATABASE_URL` at a fresh temp file and resets the cached client;
+1. points the client at a **dedicated schema** and resets the cached client;
 2. applies the **committed migrations** with `prisma migrate deploy` — not
    `db push` from the schema, so a migration that has drifted from the schema
    fails the test suite rather than production;
@@ -538,47 +567,82 @@ seed idempotency (row counts and full result sets unchanged after a second run).
 The file opens with `// @vitest-environment node` because the project's Vitest
 default is `jsdom`, which Prisma cannot run in.
 
+### The schema isolation is load-bearing, and it is not what it looks like
+
+Per-suite isolation used to be a temp SQLite file. On Postgres it is a schema,
+and getting that right took a measurement rather than a guess:
+**`?schema=` in the connection string is ignored by a Prisma driver adapter.**
+Prisma's own connection layer reads that parameter; the adapter hands the string
+straight to `pg`, which has no such thing. Seven suites that believed they were
+isolated were all reading and writing `public` — proved by pointing a client at
+an empty schema and watching it return `public`'s six brands.
+
+The fix in `src/server/db/client.ts` sets **both** the Prisma `{ schema }` option
+and the session `search_path`:
+
+```ts
+new PrismaPg(
+  { connectionString: url, options: `-c search_path=${schema},public` },
+  { schema },
+)
+```
+
+Either one alone leaves a hole. If you touch that function, re-run the suites and
+check they still fail when pointed at an empty schema — a passing suite is not
+evidence of isolation here.
+
 ---
 
-## Switching to Postgres
+## The move to Postgres — done 2026-08-27/28
 
-The schema was written to make this a provider change, not a rewrite. Nothing in
-it uses a SQLite-only or Postgres-only feature.
+**This section used to be a six-step plan.** It is now a record, for the same
+reason the cutover section below was rewritten: a document that describes
+finished work as pending sends someone hunting for a job that is already done.
 
-1. **Install the adapter**: `npm i @prisma/adapter-pg pg` (and `npm i -D @types/pg`).
-2. **`prisma/schema.prisma`** — one line:
-   ```prisma
-   datasource db {
-     provider = "postgresql"
-   }
-   ```
-   (In Prisma 7 the `url` no longer lives here; see below.)
-3. **`src/server/db/client.ts`** — one line: swap
-   `new PrismaBetterSqlite3({ url })` for `new PrismaPg({ connectionString: url })`.
-4. **`DATABASE_URL`** — set it to a Postgres URL. `prisma.config.ts` already
-   passes it to the CLI and `resolveDatabaseUrl()` already prefers the env var;
-   only the SQLite *fallback* in `src/server/db/database-url.ts` becomes
-   meaningless and should be deleted so a missing URL fails loudly.
-5. **Regenerate migrations.** SQLite migration SQL is not valid Postgres. Delete
-   `prisma/migrations/` and run `prisma migrate dev --name init` against an empty
-   Postgres database. This is safe precisely because the database holds nothing
-   but seeded catalogue data — do it before any real data exists.
-6. **Re-run the seed**: `npm run db:seed`.
+The schema was written to make this a provider change rather than a rewrite, and
+that held — no model, relation, index, repository function or mapper changed.
+What actually happened:
 
-No model, relation, index or repository function changes. The mappers do not
-change either.
+1. `@prisma/adapter-pg` installed; `datasource db` in `prisma/schema.prisma` is
+   `provider = "postgresql"` with no `url` (Prisma 7 moved it to
+   `prisma.config.ts`).
+2. `src/server/db/client.ts` builds a `PrismaPg` adapter. It still imports
+   `PrismaBetterSqlite3` and `assertProviderMatches` rejects a SQLite URL with a
+   clear error, because **the generated client is bound to its schema's
+   provider** — handing a Postgres string to a SQLite client is a confusing
+   crash at first query rather than an error at startup.
+3. The SQLite migrations were deleted and replaced by
+   `20260827000000_init_postgres`, generated against an empty database. Safe
+   precisely because nothing but seeded catalogue data existed.
+4. The SQLite fallback in `src/server/db/database-url.ts` was deleted.
+   `resolveDatabaseUrl()` throws when `DATABASE_URL` is unset, and the message
+   names the variable, the file it belongs in, and the shape it should take —
+   including the Windows trap where Notepad silently saves `.env.txt`.
 
-Optional once on Postgres, each a small deliberate follow-up rather than a
-requirement:
+### Three things that bit, worth not repeating
 
-- turn `Brand.category` into a real `enum` and drop the runtime narrowing in
-  `mappers.ts`;
+- **The direct Supabase host is IPv6-only on the free tier**, and most home and
+  mobile ISPs — Tanzanian ones included — are IPv4-only. Use the **session
+  pooler** (port 5432) for migrations and the **transaction pooler** (port 6543)
+  for the deployed app. Nothing about this is in the error message you get.
+- **`prisma generate` must not require a URL.** `postinstall` runs it on every
+  `npm install`, including on a fresh clone and on the migration runner whose
+  whole job is to supply the URL to a later step. `prisma.config.ts` therefore
+  sets `datasource.url` only when `DATABASE_URL` is non-empty.
+- **Production's tables were created outside Prisma**, through the Supabase API,
+  so no `_prisma_migrations` table existed and `migrate deploy` refused with
+  P3005. It was baselined with `migrate resolve --applied` after comparing all 13
+  tables column-for-column against the init migration.
+
+### Optional follow-ups, each deliberate rather than owed
+
+- turn `Brand.category` into a real `enum` — but keep the runtime narrowing;
 - widen `priceTZS` to `BigInt` if the catalogue will ever exceed ~2.15bn TZS
-  (see above) — note this changes the TS type to `bigint`, so do it with intent;
-- add a trigram/full-text index for search instead of the in-memory scoring in
+  (see above) — this changes the TS type to `bigint`, so do it with intent;
+- add a trigram or full-text index for search instead of the in-memory scoring in
   `src/lib/search.ts`;
-- `AgentRegion` could collapse into a `String[]` column, but there is no reason
-  to — the join table indexes better.
+- `AgentRegion` could collapse into a `String[]` column now that the provider
+  supports it, but there is no reason to — the join table indexes better.
 
 ---
 

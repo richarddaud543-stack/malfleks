@@ -49,17 +49,18 @@ Your Supabase project (**eu-west-1**, Postgres **17.6**, ref `nnrcjeowivnbzdkwxx
 was paused; it is now `ACTIVE_HEALTHY` and **already migrated and seeded**:
 
 ```
-tables 13 · foreign keys 12 · indexes 39
-brands 6 · branches 19 · products 38 · specs 89 · couriers 5 · regions 8
+tables 15 · brands 6 · branches 19 · products 38 · couriers 5
 own fleet 6 of 19 · verified 12 of 19 · prices 2,000 – 245,000,000 TZS
 ```
 
-Every figure matches the SQLite source exactly. **You do not need to run
-`prisma migrate deploy` against it** — that step is done.
+Counts re-verified against the live database on 2026-08-31. It was 13 tables
+until `SavedOrderRequest` and Prisma's own `_prisma_migrations` were added.
+**You do not need to run `prisma migrate deploy` against it** — that step is
+done.
 
 ### Row Level Security — leave it alone
 
-Supabase auto-enabled RLS on all 13 tables, with **no policies**. For Soko that
+Supabase auto-enabled RLS on all 15 tables, with **no policies**. For Soko that
 is exactly right and not an oversight to fix:
 
 - The app reaches Postgres through **Prisma as the `postgres` role**, which

@@ -80,6 +80,38 @@ jobs:
 
       - run: npm ci
 
+      # Runs #2 and #3 failed here in a way worth designing out permanently.
+      #
+      # `prisma.config.ts` only sets `datasource.url` when `DATABASE_URL` is
+      # non-empty - it has to, because `npm ci` runs `prisma generate`, which
+      # never connects and must not demand a URL. The cost of that is this: with
+      # the secret unset or wrong, Prisma falls back to the `url` in
+      # `schema.prisma` and every step below quietly aims at `localhost:5432`. A
+      # runner has no database, so it fails - but it fails as `P1001 Can't reach
+      # database server`, which reads like a network problem with Supabase
+      # rather than a missing secret. Worse, `migrate status || true` swallowed
+      # the first sighting of it entirely.
+      #
+      # Measured 2026-08-29: both runs died this way, and the secret turned out
+      # to hold the local development string from `.env.example` line 11.
+      #
+      # So: check before anything else touches a database, and name the actual
+      # cause. The secret is only ever compared, never echoed.
+      - name: Require a database URL
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::The DATABASE_URL repository secret is empty or unset. Prisma would fall back to the schema default (localhost:5432) and report a connection error that looks like a Supabase outage. Set it under Settings -> Secrets and variables -> Actions, named exactly DATABASE_URL, using the session pooler string (port 5432, user postgres.nnrcjeowivnbzdkwxxrm)."
+            exit 1
+          fi
+          case "$DATABASE_URL" in
+            *localhost*|*127.0.0.1*)
+              echo "::error::DATABASE_URL points at localhost. A GitHub runner has no database of its own, so this would either fail or, worse, succeed against something that is not production."
+              exit 1
+              ;;
+          esac
+          echo "DATABASE_URL is set and is not a local address."
       # `migrate status` before anything mutating, so the log records what the
       # database looked like going in. When a migration goes wrong, this is the
       # line you want and cannot reconstruct afterwards.
