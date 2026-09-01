@@ -30,14 +30,39 @@ import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
  * and the details are one click away in `/admin` behind a real session. A
  * notification is a nudge, not a copy of the record.
  *
- * ## Configuring it
+ * ## Two providers, and why
  *
- * `RESEND_API_KEY` from resend.com. Optionally `SOKO_NOTIFY_EMAIL` to send
- * somewhere other than the published contact address, and `RESEND_FROM` once a
- * domain is verified. Without a verified domain Resend accepts
- * `onboarding@resend.dev` as the sender but will only deliver to the address
- * that owns the Resend account — which is exactly the case here, since these
- * go to Soko's own inbox.
+ * Soko is run from Tanzania, and on 2026-09-01 the owner could not open
+ * resend.com at all: `ERR_CONNECTION_TIMED_OUT`. The cause was specific and
+ * measurable — resend.com resolves to `76.76.21.22` (Vercel's legacy anycast
+ * address) on every public resolver, and that one address does not route from
+ * that network. `api.resend.com`, `github.com`, `vercel.com` and Soko's own
+ * deployment were all reachable at the same moment. Nothing was wrong with
+ * Resend; one IP on one path was unreachable, and it happened to be the one
+ * serving the signup page.
+ *
+ * That is not a fixable bug, and it is not rare either — a marketplace built in
+ * a country with filtered or partial routing should not have a single
+ * third-party dashboard as a hard dependency. So this module speaks to two
+ * providers and picks whichever one has a key:
+ *
+ *   * `RESEND_API_KEY` — Resend. Sends from `onboarding@resend.dev` with no
+ *     domain set up, but only to the address that owns the account, which is
+ *     exactly this case.
+ *   * `BREVO_API_KEY` — Brevo. Its dashboard *was* reachable from that network
+ *     when Resend's was not, its free tier is 300 emails a day, and it needs
+ *     the sender address verified once by clicking a link.
+ *
+ * Resend wins if both are set, for no better reason than that it was here
+ * first — two configured providers means somebody is mid-migration, and
+ * sending twice would be worse than either choice.
+ *
+ * The API hosts only ever have to be reachable **from the deployment**, not
+ * from whoever is signing up: these calls run on Vercel. The signup page is the
+ * only part that has to open in the owner's own browser.
+ *
+ * `SOKO_NOTIFY_EMAIL` overrides where they go; `NOTIFY_FROM` (or the older
+ * `RESEND_FROM`) overrides the sender once a domain is verified.
  */
 
 /** Where notifications go. Overridable, but never empty. */
@@ -47,13 +72,57 @@ export function notifyAddress(env: Record<string, string | undefined> = process.
   return env.SOKO_NOTIFY_EMAIL?.trim() || SOKO_CONTACT_EMAIL;
 }
 
-/** Who they come from. `onboarding@resend.dev` works before a domain exists. */
-export function notifySender(env: Record<string, string | undefined> = process.env): string {
-  return env.RESEND_FROM?.trim() || "Soko <onboarding@resend.dev>";
+/** Which provider to use, or `null` when none is configured. */
+export type NotifyProvider = "resend" | "brevo";
+
+export function notifyProvider(
+  env: Record<string, string | undefined> = process.env,
+): NotifyProvider | null {
+  // `?.trim() ||` rather than `??` throughout this file: an env var set to ""
+  // is the empty-string trap that cost this project three deployments, and it
+  // looks identical to a set one in a dashboard. `??` does not catch it.
+  if (env.RESEND_API_KEY?.trim()) return "resend";
+  if (env.BREVO_API_KEY?.trim()) return "brevo";
+  return null;
 }
 
-export function isEmailConfigured(env: Record<string, string | undefined> = process.env): boolean {
-  return (env.RESEND_API_KEY?.trim() ?? "") !== "";
+/**
+ * Who they come from.
+ *
+ * The default only works on Resend — `onboarding@resend.dev` is Resend's own
+ * shared sender. Brevo has no equivalent: it requires a sender you have
+ * verified, so a Brevo deployment must set `NOTIFY_FROM` to that address. The
+ * error surfaces as `rejected` rather than silence, which is the right shape
+ * for a setting somebody forgot.
+ */
+export function notifySender(
+  env: Record<string, string | undefined> = process.env,
+): string {
+  return (
+    env.NOTIFY_FROM?.trim() ||
+    env.RESEND_FROM?.trim() ||
+    "Soko <onboarding@resend.dev>"
+  );
+}
+
+export function isEmailConfigured(
+  env: Record<string, string | undefined> = process.env,
+): boolean {
+  return notifyProvider(env) !== null;
+}
+
+/**
+ * Split `"Soko <hello@example.com>"` into a name and an address.
+ *
+ * Resend takes the combined form; Brevo wants `{ name, email }`. Parsing here
+ * means one `NOTIFY_FROM` works for both and nobody has to remember which
+ * provider wants which shape.
+ */
+export function parseSender(value: string): { name?: string; email: string } {
+  const match = /^\s*(.*?)\s*<\s*([^>]+)\s*>\s*$/.exec(value);
+  if (!match) return { email: value.trim() };
+  const name = match[1].replace(/^"|"$/g, "").trim();
+  return name ? { name, email: match[2].trim() } : { email: match[2].trim() };
 }
 
 export type NotifyResult =
@@ -72,26 +141,58 @@ export async function sendNotification(
   body: string,
   env: Record<string, string | undefined> = process.env,
 ): Promise<NotifyResult> {
-  if (!isEmailConfigured(env)) return { sent: false, reason: "not-configured" };
+  const provider = notifyProvider(env);
+  if (!provider) return { sent: false, reason: "not-configured" };
+
+  const to = notifyAddress(env);
+  const from = parseSender(notifySender(env));
+
+  // Typed explicitly: an inferred union of two object literals gives each
+  // branch `undefined`-valued keys from the other, which `HeadersInit` rejects.
+  const request: {
+    url: string;
+    headers: Record<string, string>;
+    body: unknown;
+  } =
+    provider === "resend"
+      ? {
+          url: "https://api.resend.com/emails",
+          headers: {
+            Authorization: `Bearer ${env.RESEND_API_KEY?.trim()}`,
+            "Content-Type": "application/json",
+          },
+          body: {
+            from: from.name ? `${from.name} <${from.email}>` : from.email,
+            to: [to],
+            subject,
+            text: body,
+          },
+        }
+      : {
+          url: "https://api.brevo.com/v3/smtp/email",
+          headers: {
+            "api-key": env.BREVO_API_KEY?.trim() ?? "",
+            "Content-Type": "application/json",
+            accept: "application/json",
+          },
+          body: {
+            sender: from,
+            to: [{ email: to }],
+            subject,
+            textContent: body,
+          },
+        };
 
   try {
-    const response = await fetch("https://api.resend.com/emails", {
+    const response = await fetch(request.url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.RESEND_API_KEY?.trim()}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: notifySender(env),
-        to: [notifyAddress(env)],
-        subject,
-        text: body,
-      }),
+      headers: request.headers,
+      body: JSON.stringify(request.body),
     });
 
-    // A rejected key or an unverified sender comes back as a 4xx with a JSON
-    // body. Distinguished from a network failure because they need different
-    // fixes — one is a setting, the other is a retry.
+    // A rejected key, or a sender the provider will not send as, comes back as
+    // a 4xx with a JSON body. Distinguished from a network failure because the
+    // two need different fixes — one is a setting, the other is a retry.
     if (!response.ok) return { sent: false, reason: "rejected" };
     return { sent: true };
   } catch {

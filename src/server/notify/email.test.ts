@@ -4,8 +4,10 @@ import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
 import {
   isEmailConfigured,
   notifyAddress,
+  notifyProvider,
   notifySender,
   orderRequestMessage,
+  parseSender,
   partnerApplicationMessage,
   sendNotification,
 } from "./email";
@@ -59,6 +61,72 @@ describe("configuration", () => {
   it("has a sender that works before any domain is verified", () => {
     expect(notifySender({})).toContain("resend.dev");
   });
+
+  it("prefers NOTIFY_FROM, and still honours the older RESEND_FROM", () => {
+    expect(notifySender({ NOTIFY_FROM: "Soko <hello@soko.co.tz>" })).toBe(
+      "Soko <hello@soko.co.tz>",
+    );
+    expect(notifySender({ RESEND_FROM: "Soko <old@soko.co.tz>" })).toBe(
+      "Soko <old@soko.co.tz>",
+    );
+    // Both set means a migration in progress; the new name wins.
+    expect(
+      notifySender({ NOTIFY_FROM: "a@b.c", RESEND_FROM: "d@e.f" }),
+    ).toBe("a@b.c");
+  });
+});
+
+/**
+ * Two providers exist because on 2026-09-01 the owner's network could not reach
+ * resend.com at all — that one IP did not route, while api.resend.com,
+ * github.com and Soko's own deployment all did. A marketplace run from a
+ * country with partial routing should not have one third-party dashboard as a
+ * hard dependency.
+ */
+describe("choosing a provider", () => {
+  it("chooses nothing when neither key is set", () => {
+    expect(notifyProvider({})).toBeNull();
+    expect(notifyProvider({ RESEND_API_KEY: "", BREVO_API_KEY: "  " })).toBeNull();
+  });
+
+  it("chooses whichever one has a key", () => {
+    expect(notifyProvider({ RESEND_API_KEY: "re_1" })).toBe("resend");
+    expect(notifyProvider({ BREVO_API_KEY: "xkeysib_1" })).toBe("brevo");
+  });
+
+  it("prefers Resend when both are set, rather than sending twice", () => {
+    expect(
+      notifyProvider({ RESEND_API_KEY: "re_1", BREVO_API_KEY: "xkeysib_1" }),
+    ).toBe("resend");
+  });
+
+  it("counts either key as configured", () => {
+    expect(isEmailConfigured({ BREVO_API_KEY: "xkeysib_1" })).toBe(true);
+  });
+});
+
+describe("parseSender", () => {
+  // Resend takes "Name <addr>"; Brevo wants { name, email }. One env var, two
+  // shapes, so the split has to be right.
+  it("splits a name and an address", () => {
+    expect(parseSender("Soko <hello@soko.co.tz>")).toEqual({
+      name: "Soko",
+      email: "hello@soko.co.tz",
+    });
+  });
+
+  it("handles a bare address", () => {
+    expect(parseSender("hello@soko.co.tz")).toEqual({
+      email: "hello@soko.co.tz",
+    });
+  });
+
+  it("tolerates quotes and stray whitespace", () => {
+    expect(parseSender('  "Soko Tanzania"  <  hello@soko.co.tz  >  ')).toEqual({
+      name: "Soko Tanzania",
+      email: "hello@soko.co.tz",
+    });
+  });
 });
 
 describe("sendNotification", () => {
@@ -89,6 +157,40 @@ describe("sendNotification", () => {
     expect(body.to).toEqual(["ops@example.com"]);
     expect(body.subject).toBe("Subject here");
     expect(body.text).toBe("Body here");
+  });
+
+  it("posts the Brevo shape to Brevo when that is the configured provider", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response("{}", { status: 201 }));
+
+    const result = await sendNotification("Subject here", "Body here", {
+      BREVO_API_KEY: "xkeysib_1",
+      NOTIFY_FROM: "Soko <hello@soko.co.tz>",
+      SOKO_NOTIFY_EMAIL: "ops@example.com",
+    });
+
+    expect(result).toEqual({ sent: true });
+    const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.brevo.com/v3/smtp/email");
+    // Brevo authenticates with its own header, not a bearer token.
+    expect((init.headers as Record<string, string>)["api-key"]).toBe("xkeysib_1");
+    const body = JSON.parse(String(init.body));
+    expect(body.sender).toEqual({ name: "Soko", email: "hello@soko.co.tz" });
+    expect(body.to).toEqual([{ email: "ops@example.com" }]);
+    expect(body.textContent).toBe("Body here");
+  });
+
+  it("treats Brevo's 201 as sent", async () => {
+    // Resend answers 200 and Brevo answers 201. Checking `response.ok` rather
+    // than a literal 200 is what makes one code path serve both.
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("{}", { status: 201 }),
+    );
+
+    await expect(
+      sendNotification("s", "b", { BREVO_API_KEY: "xkeysib_1" }),
+    ).resolves.toEqual({ sent: true });
   });
 
   it("reports a rejected key without throwing", async () => {
