@@ -38,8 +38,14 @@ export default function Footer() {
         </div>
 
         <div className="mt-10 border-t border-foreground/10 pt-6 text-xs text-muted">
-          Prototype build. Brand logos are trademarks of their respective
-          owners, used here for identification only.
+          {/*
+            This said "Prototype build" until 2026-08-31, on a site the public
+            could already reach. The trademark sentence is the part that
+            matters and it stays; the word prototype was telling visitors the
+            wrong thing about whether this is real.
+          */}
+          Brand logos are trademarks of their respective owners, used here for
+          identification only. Soko takes no payment and holds no stock.
         </div>
       </div>
     </footer>
