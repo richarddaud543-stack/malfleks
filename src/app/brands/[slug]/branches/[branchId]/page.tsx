@@ -106,10 +106,17 @@ export default async function BranchPage({
           </div>
           <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
         </div>
+        {/*
+          This read "illustrative for this prototype" until 2026-08-31. The
+          site is live and a visitor deciding whether to travel is not helped
+          by knowing a developer called it a prototype — they need to know the
+          location has not been confirmed, and what to do instead.
+        */}
         {!branch.verified && (
-          <p className="mt-3 text-xs text-muted">
-            * This branch location is illustrative for this prototype and
-            has not been independently verified.
+          <p className="mt-3 max-w-prose text-xs text-muted">
+            We have not confirmed this branch&apos;s location against
+            {" "}{brand.name}&apos;s own records. Check with them before
+            travelling.
           </p>
         )}
       </ScrollReveal>
