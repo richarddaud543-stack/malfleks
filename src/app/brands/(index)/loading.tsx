@@ -1,15 +1,21 @@
 /**
- * Route-specific replacement for the root `src/app/loading.tsx` skeleton
- * (Atlas's file, generic across every route) — this one mirrors `BrandCard`
- * and `BrandCatalog`'s actual anatomy instead of a blank rounded box, so the
- * loading state previews the shape of what's arriving (logo tile, heading,
- * category eyebrow, delivery-mix pill, two lines of description) rather than
- * just a generic placeholder. Skeleton screens that echo the real layout
- * reduce perceived layout shift versus a content-agnostic block.
+ * The skeleton for the `/brands` listing.
  *
- * `animate-pulse` is Tailwind's own utility; its `prefers-reduced-motion`
- * guard lives once, app-wide, in `globals.css` rather than repeated here —
- * see the comment there.
+ * It mirrors `BrandCard`/`BrandCatalog`'s actual anatomy — logo tile, heading,
+ * category eyebrow, delivery-mix pill, two lines of description — rather than a
+ * generic rounded box, so the loading state previews the shape of what is
+ * arriving and there is less perceived layout shift when it does.
+ *
+ * **It lives in the `(index)` route group for a reason.** A `loading.tsx` is a
+ * Suspense boundary, and a boundary at `src/app/brands/` covered
+ * `/brands/[slug]` and the branch pages too — which meant those pages had begun
+ * streaming, and committed a `200`, before their `notFound()` could run. A
+ * missing brand answered "Brand not found" over a success status. The route
+ * group takes this file out of their ancestry without changing a single URL.
+ * See `src/app/agents/loading.tsx` for the full note.
+ *
+ * `animate-pulse` is Tailwind's own utility; its `prefers-reduced-motion` guard
+ * lives once, app-wide, in `globals.css` rather than repeated here.
  */
 export default function BrandsLoading() {
   return (
