@@ -1,17 +1,6 @@
-export type ProductIconKey =
-  | "sedan"
-  | "suv"
-  | "pickup"
-  | "van"
-  | "smartphone"
-  | "tablet"
-  | "laptop"
-  | "earbuds"
-  | "powerbank"
-  | "smartwatch"
-  | "router"
-  | "simcard"
-  | "speaker";
+import { type ProductIconKey } from "@/lib/product-icons";
+
+export type { ProductIconKey };
 
 interface ProductIconProps {
   icon: string;

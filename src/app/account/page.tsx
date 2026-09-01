@@ -5,6 +5,7 @@ import {
   listOrderRequestsForCustomer,
   type SavedOrderRequest,
 } from "@/server/orders/saved-requests";
+import { partnerForUser } from "@/server/partners/portal";
 import SavedRequestCard from "@/components/account/SavedRequestCard";
 
 export const metadata: Metadata = {
@@ -40,6 +41,19 @@ export default async function AccountPage() {
   // covering.
   const session = await requireSession();
 
+  // How an approved partner finds their portal. There is no link to /partner
+  // anywhere public — the route is noindex and out of the sitemap — so without
+  // this a partner would be told they were approved and given nowhere to go.
+  // `null` for the overwhelming majority of visitors, which is the normal case
+  // rather than an error.
+  let partner: Awaited<ReturnType<typeof partnerForUser>> = null;
+  try {
+    partner = await partnerForUser(session.uid);
+  } catch {
+    // The portal link is a convenience; failing to read it must not take this
+    // page down with it.
+  }
+
   let requests: SavedOrderRequest[];
   let unavailable = false;
   try {
@@ -64,6 +78,24 @@ export default async function AccountPage() {
         no stock — a reference is what you quote to the branch to talk about the
         same request.
       </p>
+
+      {partner && (
+        <div className="glass-card mt-8 rounded-2xl px-6 py-5">
+          <h2 className="font-display text-lg font-medium">
+            You manage {partner.displayName}
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            Your listings and everything waiting on Soko live on your partner
+            page.
+          </p>
+          <Link
+            href="/partner"
+            className="btn-pill btn-ink mt-5 inline-block px-5 py-2 text-sm"
+          >
+            Open your partner page
+          </Link>
+        </div>
+      )}
 
       {unavailable ? (
         <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
