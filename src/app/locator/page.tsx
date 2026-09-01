@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import LocatorExplorer from "@/components/locator/LocatorExplorer";
+import EmptyCatalogue from "@/components/marketplace/EmptyCatalogue";
 import {
   buildLocatorData,
   getLocatorCities,
@@ -47,6 +48,16 @@ export async function generateMetadata(): Promise<Metadata> {
     .sort((a, b) => b.branchCount - a.branchCount)
     .map((c) => c.name);
 
+  if (data.branches.length === 0) {
+    // With no branches there are no cities either, and the sentence below
+    // renders as "Find all 0 brand branches across  on one map".
+    return {
+      title: "Branch locator",
+      description:
+        "Soko's map fills up as real branches join — every brand at once, with the delivery agents covering each city.",
+    };
+  }
+
   return {
     title: "Branch locator",
     description:
@@ -84,17 +95,22 @@ export default async function LocatorPage() {
             <span className="font-accent-serif text-accent italic">near me</span>
           </h1>
           <p className="mt-2 max-w-xl text-muted">
-            Every brand branch in Tanzania on one map. Pick a city to see who
-            has a counter there — and which courier covers it when the brand
-            doesn&apos;t deliver itself.
+            {data.branches.length === 0
+              ? "Every brand branch in Tanzania will appear on one map here, with the courier that covers each city when the brand doesn't deliver itself."
+              : "Every brand branch in Tanzania on one map. Pick a city to see who has a counter there — and which courier covers it when the brand doesn't deliver itself."}
           </p>
         </ScrollReveal>
 
         <div className="mt-12">
-          {/* useSearchParams needs a Suspense boundary to keep this route static. */}
-          <Suspense fallback={<LocatorSkeleton />}>
-            <LocatorExplorer data={data} />
-          </Suspense>
+          {data.branches.length === 0 ? (
+            // An empty map with no pins looks broken rather than new.
+            <EmptyCatalogue looking="branches" />
+          ) : (
+            /* useSearchParams needs a Suspense boundary to keep this route static. */
+            <Suspense fallback={<LocatorSkeleton />}>
+              <LocatorExplorer data={data} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

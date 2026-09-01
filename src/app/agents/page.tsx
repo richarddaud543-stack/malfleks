@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getAllDeliveryAgents } from "@/server/repositories";
 import AgentCard from "@/components/delivery/AgentCard";
+import EmptyCatalogue from "@/components/marketplace/EmptyCatalogue";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
 export const metadata = {
@@ -65,6 +66,14 @@ export default async function AgentsPage({
       </ScrollReveal>
 
       <ScrollReveal delay={0.15}>
+        {deliveryAgents.length === 0 ? (
+          // No couriers at all is a different thing from none in this city,
+          // and "No agents found for this city yet" would quietly imply the
+          // rest of Tanzania is covered.
+          <div className="mt-8">
+            <EmptyCatalogue looking="couriers" />
+          </div>
+        ) : (
         <div className="panel mt-8 p-4 sm:p-8">
           <div className="space-y-4">
             {filtered.length > 0 ? (
@@ -80,6 +89,7 @@ export default async function AgentsPage({
             )}
           </div>
         </div>
+        )}
       </ScrollReveal>
     </div>
   );

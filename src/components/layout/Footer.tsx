@@ -27,12 +27,21 @@ export default function Footer() {
             </ul>
           </div>
 
+          {/*
+            This column listed "Automotive / Electronics / Telecom" as plain
+            text until 2026-09-01 — three categories that were never links and
+            that described the seeded placeholder catalogue rather than
+            anything a visitor could reach. With the catalogue emptied they
+            described nothing at all. Categories now come from what partners
+            actually list, so the space goes to the pages every site owes its
+            visitors and this one did not have.
+          */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Categories</h3>
+            <h3 className="text-sm font-semibold text-foreground">Soko</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li>Automotive</li>
-              <li>Electronics</li>
-              <li>Telecom</li>
+              <li><Link href="/contact" className="transition-colors hover:text-foreground">Contact</Link></li>
+              <li><Link href="/terms" className="transition-colors hover:text-foreground">Terms of use</Link></li>
+              <li><Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>
             </ul>
           </div>
         </div>

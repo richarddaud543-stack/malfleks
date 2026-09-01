@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import ScrollReveal from "@/components/motion/ScrollReveal";
+import EmptyCatalogue from "@/components/marketplace/EmptyCatalogue";
 import SearchExplorer from "@/components/search/SearchExplorer";
 import { buildListings } from "@/lib/search";
 import {
@@ -15,8 +16,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "Search",
     description:
-      `Search ${products.length} products across every brand, branch and city on Soko — ` +
-      "filter by brand, category, city, price and delivery method.",
+      // "Search 0 products" is worse than saying nothing about the count.
+      products.length === 0
+        ? "Soko's catalogue is still filling up — real shops in Tanzania list their own products here, each with its own delivery method."
+        : `Search ${products.length} products across every brand, branch and city on Soko — ` +
+          "filter by brand, category, city, price and delivery method.",
   };
 }
 
@@ -57,17 +61,24 @@ export default async function SearchPage() {
             </span>
           </h1>
           <p className="mt-2 max-w-xl text-muted">
-            Every product from every brand branch across Tanzania, in one place.
-            Filter by city to see what is near you, or by delivery to see who
-            brings it to your door themselves.
+            {catalogue.length === 0
+              ? "Every product from every brand branch across Tanzania will be searchable here, with the delivery method shown on each one."
+              : "Every product from every brand branch across Tanzania, in one place. Filter by city to see what is near you, or by delivery to see who brings it to your door themselves."}
           </p>
         </ScrollReveal>
 
         <div className="mt-10">
-          {/* useSearchParams needs a Suspense boundary to keep this route static. */}
-          <Suspense fallback={<SearchSkeleton />}>
-            <SearchExplorer catalogue={catalogue} />
-          </Suspense>
+          {catalogue.length === 0 ? (
+            // A search box over nothing is a cruel joke: every query returns
+            // "no results", which reads as "we don't have that" rather than
+            // "we don't have anything yet".
+            <EmptyCatalogue looking="products" />
+          ) : (
+            /* useSearchParams needs a Suspense boundary to keep this route static. */
+            <Suspense fallback={<SearchSkeleton />}>
+              <SearchExplorer catalogue={catalogue} />
+            </Suspense>
+          )}
         </div>
       </div>
     </div>

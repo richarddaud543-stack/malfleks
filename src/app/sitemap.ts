@@ -30,6 +30,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // private page, same as /order/confirmation. Listing a noindex URL in a
     // sitemap tells crawlers two opposite things.
     { url: `${siteUrl}/sign-in`, changeFrequency: "yearly", priority: 0.3 },
+    // Rarely changed, and the pages a visitor looks for when deciding whether
+    // to trust the site with a phone number and an address.
+    { url: `${siteUrl}/contact`, changeFrequency: "yearly", priority: 0.4 },
+    { url: `${siteUrl}/terms`, changeFrequency: "yearly", priority: 0.2 },
+    { url: `${siteUrl}/privacy`, changeFrequency: "yearly", priority: 0.2 },
   ];
 
   const brandRoutes: MetadataRoute.Sitemap = brands.map((brand) => ({

@@ -47,6 +47,11 @@ export async function submitOrder(
     const outcome = await createOrder(input, session?.uid ?? null);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
+    // See `notifyOfOrder`: announced, never awaited for correctness. The
+    // order is written; the customer's confirmation does not depend on an
+    // email API being reachable.
+    await notifyOfOrder(outcome.value.reference);
+
     return { ok: true, reference: outcome.value.reference };
   } catch {
     // The browser's own copy is already written by the time this runs (see
@@ -141,5 +146,33 @@ export async function markOrderFulfilled(
     return { ok: true };
   } catch {
     return { ok: false, reason: "unavailable" };
+  }
+}
+
+/**
+ * Announce a new order request to Soko's own inbox.
+ *
+ * Its own try/catch, inside the caller's try, so that a mail failure can never
+ * be mistaken for an order failure — the customer has a reference and the row
+ * is committed by the time this runs.
+ *
+ * The email carries the reference and a link, not the customer's name, phone
+ * number or address. Those live in `/admin/orders` behind a session; putting
+ * them in an inbox copies personal data somewhere with a much longer memory
+ * and much weaker access control, for no operational gain.
+ */
+async function notifyOfOrder(reference: string): Promise<void> {
+  try {
+    const { orderRequestMessage, sendNotification } = await import(
+      "@/server/notify/email"
+    );
+    const { resolveSiteUrl } = await import("@/lib/site-url");
+    const { subject, body } = orderRequestMessage({
+      reference,
+      siteUrl: resolveSiteUrl(),
+    });
+    await sendNotification(subject, body);
+  } catch {
+    // The order is saved. Nothing here is worth failing it for.
   }
 }

@@ -1,0 +1,36 @@
+-- Empty the seeded catalogue.
+--
+-- Every brand, branch, product and courier in production up to this point came
+-- from `src/data` — the editorial placeholder set written while the site was
+-- being built. None of those businesses agreed to be listed. The addresses were
+-- unverified, and the courier phone numbers counted upwards from
+-- +255 68 000 0001. Soko is now open to real partners, and a marketplace that
+-- shows a customer a shop that does not exist has not launched early, it has
+-- lied. So the catalogue starts empty and fills the only honest way: a business
+-- applies, a person checks them, an admin publishes their products.
+--
+-- Safety of these deletes, checked against the schema rather than assumed:
+--
+--   * Brand -> Branch, Product, ProductSpec and BrandLocatorRow-style children
+--     are ON DELETE CASCADE, so deleting brands takes the catalogue with it.
+--   * Order.productId / brandId / branchId / agentId are ON DELETE SET NULL.
+--     Existing orders keep their rows, their snapshot columns (which store the
+--     product name, price and branch as they were at the time) and their
+--     history. Nothing a customer placed is lost or altered.
+--   * ProductSubmission.branchId / brandId are plain columns with no foreign
+--     key, so partner submissions are untouched.
+--   * Partner rows are untouched. An approved partner whose `branchId` pointed
+--     at a seeded branch keeps the value; `canPublish` already refuses to
+--     publish to a branch that is not there, and an admin re-wires them.
+--
+-- This is deliberately a migration rather than a script: it must run exactly
+-- once, on every environment, in the same order as the schema changes around
+-- it — and it must be recorded, because "who emptied the catalogue" should
+-- have an answer in the ledger rather than in somebody's shell history.
+--
+-- CI still seeds this data into a throwaway localhost database for the e2e
+-- specs (see .github/workflows/ci.yml), which is exactly what `src/data` is
+-- for now: fixtures, not a catalogue.
+
+DELETE FROM "DeliveryAgent";
+DELETE FROM "Brand";

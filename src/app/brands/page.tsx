@@ -1,4 +1,5 @@
 import BrandCatalog from "@/components/brand/BrandCatalog";
+import EmptyCatalogue from "@/components/marketplace/EmptyCatalogue";
 import { groupBranchesByBrand } from "@/components/brand/BrandGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { getAllBranches, getAllBrands } from "@/server/repositories";
@@ -23,13 +24,20 @@ export default async function BrandsPage() {
           All brands
         </h1>
         <p className="mt-3 max-w-xl text-lg text-muted">
-          Every brand on Soko has its own branches across Tanzania, each
-          with its own delivery status.
+          {brands.length === 0
+            ? "Brands list their own branches here, each with its own delivery status."
+            : "Every brand on Soko has its own branches across Tanzania, each with its own delivery status."}
         </p>
       </ScrollReveal>
-      <div className="panel mt-10 p-4 sm:p-8">
-        <BrandCatalog brands={brands} branchesByBrandId={branchesByBrandId} />
-      </div>
+      {brands.length === 0 ? (
+        <div className="mt-10">
+          <EmptyCatalogue looking="brands" />
+        </div>
+      ) : (
+        <div className="panel mt-10 p-4 sm:p-8">
+          <BrandCatalog brands={brands} branchesByBrandId={branchesByBrandId} />
+        </div>
+      )}
     </div>
   );
 }

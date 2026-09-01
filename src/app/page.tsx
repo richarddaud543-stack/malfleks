@@ -4,6 +4,7 @@ import SceneRule from "@/components/home/scene/SceneRule";
 import SceneRail from "@/components/home/scene/SceneRail";
 import SceneCities from "@/components/home/scene/SceneCities";
 import SceneClose from "@/components/home/scene/SceneClose";
+import SceneOpening from "@/components/home/scene/SceneOpening";
 import { getFeatured } from "@/components/home/featured";
 import {
   getAllBranches,
@@ -43,6 +44,18 @@ export default async function Home() {
     getAllProducts(),
     getAllDeliveryAgents(),
   ]);
+
+  // Every scene below counts, marches or pins catalogue rows. With none, they
+  // render as blank bands and the home page reads as a failed load — so the
+  // empty marketplace gets its own page rather than a hollowed-out version of
+  // this one. See `SceneOpening`.
+  if (brands.length === 0) {
+    return (
+      <div data-scene="night">
+        <SceneOpening />
+      </div>
+    );
+  }
 
   // Picked server-side so the browser receives the chosen items rather than
   // the whole catalogue it chose them from.
