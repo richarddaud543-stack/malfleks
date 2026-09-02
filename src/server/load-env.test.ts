@@ -23,7 +23,7 @@ import { loadDotEnv } from "../../scripts/load-env.mjs";
  * is about bytes that no editor displays.
  */
 
-const KEYS = ["SOKO_TEST_FIRST", "SOKO_TEST_SECOND", "SOKO_TEST_QUOTED"] as const;
+const KEYS = ["MALFLEKS_TEST_FIRST", "MALFLEKS_TEST_SECOND", "MALFLEKS_TEST_QUOTED"] as const;
 
 let dir: string;
 
@@ -32,62 +32,62 @@ function writeEnv(contents: string, { bom }: { bom: boolean }): void {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(path.join(tmpdir(), "soko-env-"));
+  dir = mkdtempSync(path.join(tmpdir(), "malfleks-env-"));
   for (const key of KEYS) delete process.env[key];
-  delete process.env["﻿SOKO_TEST_FIRST"];
+  delete process.env["﻿MALFLEKS_TEST_FIRST"];
 });
 
 afterEach(() => {
   rmSync(dir, { recursive: true, force: true });
   for (const key of KEYS) delete process.env[key];
-  delete process.env["﻿SOKO_TEST_FIRST"];
+  delete process.env["﻿MALFLEKS_TEST_FIRST"];
 });
 
 describe("loadDotEnv", () => {
   it("loads a plain file", () => {
-    writeEnv('SOKO_TEST_FIRST="one"\nSOKO_TEST_SECOND="two"\n', { bom: false });
+    writeEnv('MALFLEKS_TEST_FIRST="one"\nMALFLEKS_TEST_SECOND="two"\n', { bom: false });
     loadDotEnv(dir);
 
-    expect(process.env.SOKO_TEST_FIRST).toBe("one");
-    expect(process.env.SOKO_TEST_SECOND).toBe("two");
+    expect(process.env.MALFLEKS_TEST_FIRST).toBe("one");
+    expect(process.env.MALFLEKS_TEST_SECOND).toBe("two");
   });
 
   // The bug.
   it("finds the first variable even when the file starts with a BOM", () => {
-    writeEnv('SOKO_TEST_FIRST="one"\nSOKO_TEST_SECOND="two"\n', { bom: true });
+    writeEnv('MALFLEKS_TEST_FIRST="one"\nMALFLEKS_TEST_SECOND="two"\n', { bom: true });
     loadDotEnv(dir);
 
-    expect(process.env.SOKO_TEST_FIRST).toBe("one");
+    expect(process.env.MALFLEKS_TEST_FIRST).toBe("one");
     // Proving the asymmetry that makes this so confusing to diagnose: without
     // the fix, this one passes and the one above does not.
-    expect(process.env.SOKO_TEST_SECOND).toBe("two");
+    expect(process.env.MALFLEKS_TEST_SECOND).toBe("two");
   });
 
   it("does not disturb a value the shell already exported", () => {
-    process.env.SOKO_TEST_FIRST = "from-the-shell";
-    writeEnv('SOKO_TEST_FIRST="from-the-file"\n', { bom: true });
+    process.env.MALFLEKS_TEST_FIRST = "from-the-shell";
+    writeEnv('MALFLEKS_TEST_FIRST="from-the-file"\n', { bom: true });
     loadDotEnv(dir);
 
     // CI and one-off runs point the suites at a throwaway database this way.
     // A BOM must not turn that precedence around.
-    expect(process.env.SOKO_TEST_FIRST).toBe("from-the-shell");
+    expect(process.env.MALFLEKS_TEST_FIRST).toBe("from-the-shell");
   });
 
   it("keeps a connection string's own characters intact", () => {
     // A password can contain almost anything; the BOM strip must take exactly
     // one character off the key and nothing off the value.
-    writeEnv('SOKO_TEST_QUOTED="postgresql://u:p%40ss@h:5432/postgres?x=1"\n', {
+    writeEnv('MALFLEKS_TEST_QUOTED="postgresql://u:p%40ss@h:5432/postgres?x=1"\n', {
       bom: true,
     });
     loadDotEnv(dir);
 
-    expect(process.env.SOKO_TEST_QUOTED).toBe(
+    expect(process.env.MALFLEKS_TEST_QUOTED).toBe(
       "postgresql://u:p%40ss@h:5432/postgres?x=1",
     );
   });
 
   it("is silent when there is no .env at all", () => {
     expect(() => loadDotEnv(dir)).not.toThrow();
-    expect(process.env.SOKO_TEST_FIRST).toBeUndefined();
+    expect(process.env.MALFLEKS_TEST_FIRST).toBeUndefined();
   });
 });

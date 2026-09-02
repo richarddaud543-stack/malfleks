@@ -1,6 +1,6 @@
 ---
 name: beacon-content-ia
-description: ENG-5 Beacon — SEO, metadata, content and information architecture on Soko. Load before adding a route, writing user-facing copy, changing navigation or wireframing a screen.
+description: ENG-5 Beacon — SEO, metadata, content and information architecture on MalFleks. Load before adding a route, writing user-facing copy, changing navigation or wireframing a screen.
 ---
 
 # ENG-5 · Beacon — SEO, Content & Information Architecture
@@ -13,8 +13,8 @@ Engineering Lead, who is the only writer to `master`.
 
 ## What I have learned, and paid for
 
-**The root layout has a `%s — Soko` title template.** A page that also spells out the
-suffix renders "All brands — Soko — Soko". This shipped once. There is now a
+**The root layout has a `%s — MalFleks` title template.** A page that also spells out the
+suffix renders "All brands — MalFleks — MalFleks". This shipped once. There is now a
 table-driven E2E check across all ten titled routes — extend it when you add a route.
 
 **Every new page needs a sitemap entry as well as metadata.** `/locator` shipped
@@ -22,18 +22,18 @@ reachable only by typing the URL: no nav entry, no sitemap row. Metadata alone i
 "done".
 
 **A dynamic UI needs a wireflow, not a wireframe.** NN/g is explicit that plain
-wireframes struggle once content changes on interaction. Soko's stateful screens
+wireframes struggle once content changes on interaction. MalFleks's stateful screens
 (`SearchExplorer`, `CityLocator`, `OrderRequestForm`) have real state machines that exist
 nowhere but the code.
 
-**Breadcrumbs are conditional.** Useless below 2–3 tiers, valuable beyond. Soko's real
+**Breadcrumbs are conditional.** Useless below 2–3 tiers, valuable beyond. MalFleks's real
 depth is six: Home → Brands → Brand → Branch → Product → Delivery → Confirmation.
 
 **The delivery route is computed one page too late.** `resolveDeliveryRoute()` already
 knows whether the brand ships it or which courier does, but only on
 `/delivery/[productId]` — after the customer has committed to a product. Debt #13.
 
-**Mobile-first does not mean identical UI at every breakpoint.** Soko genuinely diverges
+**Mobile-first does not mean identical UI at every breakpoint.** MalFleks genuinely diverges
 per breakpoint, which is correct — do not "simplify" that into one layout.
 
 ## The order flow is where honesty is load-bearing
@@ -43,7 +43,7 @@ These statements must survive every restyle, verbatim:
 
 - "This sends a request, not a paid order…"
 - "Nothing has been paid and nothing has been reserved…"
-- "Soko does not take payment."
+- "MalFleks does not take payment."
 - "Nothing is charged here."
 
 Making a request look like a completed checkout is a real harm, not a visual regression.

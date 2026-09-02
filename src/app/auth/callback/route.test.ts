@@ -28,7 +28,7 @@ const { GET } = await import("./route");
  */
 
 function request(query: string): Request {
-  return new Request(`https://soko.example/auth/callback${query}`);
+  return new Request(`https://malfleks.example/auth/callback${query}`);
 }
 
 /** Where a `Response` redirect actually points. */
@@ -47,47 +47,47 @@ describe("open redirects", () => {
   // The case the whole file exists for.
   it("refuses a protocol-relative next, which looks like a path", async () => {
     const response = await GET(request("?code=abc&next=//evil.example") as never);
-    expect(location(response)).toBe("https://soko.example/account");
+    expect(location(response)).toBe("https://malfleks.example/account");
   });
 
   it("refuses an absolute URL to another origin", async () => {
     const response = await GET(request("?code=abc&next=https://evil.example/steal") as never);
-    expect(location(response)).toBe("https://soko.example/account");
+    expect(location(response)).toBe("https://malfleks.example/account");
   });
 
   it("refuses the backslash form some browsers normalise to //", async () => {
     const response = await GET(request("?code=abc&next=/%5Cevil.example") as never);
-    expect(location(response)).toBe("https://soko.example/account");
+    expect(location(response)).toBe("https://malfleks.example/account");
   });
 
   it("honours an ordinary same-site path", async () => {
     const response = await GET(request("?code=abc&next=/admin/orders") as never);
-    expect(location(response)).toBe("https://soko.example/admin/orders");
+    expect(location(response)).toBe("https://malfleks.example/admin/orders");
   });
 
   it("falls back to /account when there is no next at all", async () => {
     const response = await GET(request("?code=abc") as never);
-    expect(location(response)).toBe("https://soko.example/account");
+    expect(location(response)).toBe("https://malfleks.example/account");
   });
 });
 
 describe("failure paths", () => {
   it("reports a declined consent screen as cancelled, and exchanges nothing", async () => {
     const response = await GET(request("?error=access_denied") as never);
-    expect(location(response)).toBe("https://soko.example/sign-in?error=cancelled");
+    expect(location(response)).toBe("https://malfleks.example/sign-in?error=cancelled");
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
   it("sends a request with no code back to sign-in", async () => {
     const response = await GET(request("") as never);
-    expect(location(response)).toBe("https://soko.example/sign-in?error=failed");
+    expect(location(response)).toBe("https://malfleks.example/sign-in?error=failed");
     expect(exchangeCodeForSession).not.toHaveBeenCalled();
   });
 
   it("says unconfigured rather than throwing when there is no client", async () => {
     createServerSupabase.mockResolvedValue(null);
     const response = await GET(request("?code=abc") as never);
-    expect(location(response)).toBe("https://soko.example/sign-in?error=unconfigured");
+    expect(location(response)).toBe("https://malfleks.example/sign-in?error=unconfigured");
   });
 
   // An expired or already-used code. Supabase reports it as an error rather
@@ -96,7 +96,7 @@ describe("failure paths", () => {
   it("sends a refused exchange back to sign-in", async () => {
     exchangeCodeForSession.mockResolvedValue({ error: new Error("invalid grant") });
     const response = await GET(request("?code=stale&next=/admin") as never);
-    expect(location(response)).toBe("https://soko.example/sign-in?error=failed");
+    expect(location(response)).toBe("https://malfleks.example/sign-in?error=failed");
   });
 });
 

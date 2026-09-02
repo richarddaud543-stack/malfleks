@@ -11,7 +11,7 @@ import type { ListedOrder } from "@/server/orders/list-orders";
  * the largest thing on the card after the product.
  *
  * There are no status buttons here. Moving an order between pending, confirmed,
- * cancelled and fulfilled is Soko admin's, through the guarded transitions in
+ * cancelled and fulfilled is MalFleks admin's, through the guarded transitions in
  * `src/server/orders/status.ts`; giving a partner the same buttons would need
  * that module to learn who is allowed to move what, and inventing that here
  * would be a security decision made by a component. The status is shown so the

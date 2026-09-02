@@ -1,5 +1,5 @@
 /**
- * The one address Soko publishes, in one place.
+ * The one address MalFleks publishes, in one place.
  *
  * It appears on the terms, the privacy notice and the contact page, and it is
  * where partner applications and order requests are announced. Three copies of
@@ -10,4 +10,4 @@
  * deployment is a privacy notice that can silently stop naming anywhere to
  * write to, which is the one thing a privacy notice must always do.
  */
-export const SOKO_CONTACT_EMAIL = "richarddaud543@gmail.com";
+export const MALFLEKS_CONTACT_EMAIL = "richarddaud543@gmail.com";

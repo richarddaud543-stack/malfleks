@@ -1,4 +1,4 @@
-# Soko Ltd — Engineering Standards Handbook
+# MalFleks Ltd — Engineering Standards Handbook
 
 The shared record of how this team works and what it has learned. Every engineer
 here starts each assignment without memory of previous ones, so anything learned
@@ -62,7 +62,7 @@ principles: a measured ratio is worth more than "check contrast".
 ## Roster and reporting lines
 
 ```
-Soko Ltd — Engineering
+MalFleks Ltd — Engineering
 └── Engineering Lead — assigns, reviews, integrates; sole writer to master
     ├── ENG-1 · Atlas     — Frontend & 3D (pages, components, motion, R3F)
     ├── ENG-2 · Mercury   — Data & business logic (src/data, src/lib, routing rules)
@@ -80,7 +80,7 @@ Beacon keeps structure — IA, wireframes, metadata, content — and Prism owns 
 
 Vault and Ledger were added 2026-08-15, each because the project acquired a real
 problem nobody owned. Firebase landed with no Security Rules and no App Check, and
-"whoever touches it next" is not an owner. Soko is a marketplace that takes no money
+"whoever touches it next" is not an owner. MalFleks is a marketplace that takes no money
 yet, in a market whose payment rails are mobile money rather than cards — that is a
 speciality, not a ticket.
 
@@ -106,7 +106,7 @@ Established by the 2026-08-13 standards pass and non-negotiable for new work:
   not, because a check nobody has to run by hand is a check that cannot be
   forgotten.
 - Every new page ships with page-specific `metadata`/`generateMetadata` (the root
-  layout uses a `%s — Soko` title template) and a sitemap entry.
+  layout uses a `%s — MalFleks` title template) and a sitemap entry.
 - Every new feature ships with at least one real test. Behaviour, not
   implementation detail; no assertions that are trivially true.
 - Accessibility is part of done, not a follow-up: real labels, keyboard
@@ -138,9 +138,9 @@ ever pays down.
 | 12 | No cross-route view transitions — the icon tile on a card and the same product's page have no visual relationship | Low. Pure craft, but it is the one page-to-page gap the current stack cannot close | **Done** (2026-08-15, `7d79c19`), and this row was simply never updated — found still marked open on 2026-08-22 and corrected then. `ProductCard`, `ListingCard` and `src/app/products/[id]/page.tsx` share a `product-${id}` name; `enter`/`exit` are scoped to a `product-view` transition type rather than left on the zero-config morph, so an unrelated same-page transition cannot fire them, and `update="none"` keeps an in-place re-render from picking up the browser's default move. `ProductShowcase` is documented as needing to stay a single stable root because of it. The reduced-motion guard is in `globals.css`: these pseudo-elements run outside React, so `useReducedMotion()` never sees them |
 | 13 | The delivery route is computed only on `/delivery/[productId]`, one page after the customer decides | Medium. `resolveDeliveryRoute()` already answers "brand fleet or which courier" — the answer just arrives after the choice it should inform | **Done** (2026-08-17). `previewDelivery()` wraps the same `resolveDeliveryRoute`/`orderBlockReason` pair — one rule, two altitudes — and `DeliveryRouteLine` renders it on the search card and the product page. An unorderable product now says so on its own page instead of after the click. Deliberate non-goal: **no delivery-speed search facet.** Only couriers publish an ETA, so filtering on speed would silently hide every brand-fleet listing; the honest move is to show the number, not to filter on one we only have half of |
 | 14 | **Two persistence stacks, neither read by a page**: Prisma 7 + SQLite (`src/server/`, `prisma/`) and the Firebase SDK wired to `v-mall-f37c6` | Was high — the expensive kind of ambiguity, since both looked equally live | **Decided 2026-08-15 by the owner: Prisma owns the catalogue, Firebase is scoped to Auth and Analytics.** Recorded with full reasoning in [`docs/backend.md`](backend.md#decision-prisma-owns-the-catalogue-firebase-is-scoped-to-auth-and-analytics). No Firestore reads or writes; no second source of truth for catalogue data. **Closed structurally 2026-08-28**: Auth moved to Supabase, Analytics and App Check were removed with no replacement, and the Firebase SDKs were uninstalled. There is one persistence stack, so the ambiguity this row was opened for cannot recur |
-| 15 | Firebase Analytics runs for every visitor with no consent gate | Medium, jurisdiction-dependent. Analytics sets identifiers on load; Soko's market is Tanzania but the site is reachable anywhere | **Done** (2026-08-17). `src/lib/consent.ts` holds the rule, `ConsentBanner` asks it, and the footer's `ConsentPreferencesButton` takes it back on every page. Five E2E cases assert that an undecided visitor generates **zero** requests to Google's endpoints. The gate is "never call `initAnalytics`" rather than Google's consent mode, because consent mode's `denied` still sends cookieless pings — that is *less* collection, not none. Two limits worth stating plainly: withdrawing does not unload a gtag already running in that tab (nothing in the SDK unloads it), which is exactly why the default has to be off; and `setConsent` denies the three ad types permanently, because the Analytics SDK's own default is every consent type **granted**. **Retired 2026-08-28**: Analytics went with Firebase, and the consent feature built to gate it (`src/lib/consent.ts`, `src/components/consent/`) was deleted with it rather than left standing over nothing — a banner asking permission for collection that no longer happens is a lie in the other direction. Everything in this row is preserved as the reasoning to reuse if any analytics ever returns; the conclusion — the gate is "never load it", not the vendor's own consent mode — is the part that would still hold |
+| 15 | Firebase Analytics runs for every visitor with no consent gate | Medium, jurisdiction-dependent. Analytics sets identifiers on load; MalFleks's market is Tanzania but the site is reachable anywhere | **Done** (2026-08-17). `src/lib/consent.ts` holds the rule, `ConsentBanner` asks it, and the footer's `ConsentPreferencesButton` takes it back on every page. Five E2E cases assert that an undecided visitor generates **zero** requests to Google's endpoints. The gate is "never call `initAnalytics`" rather than Google's consent mode, because consent mode's `denied` still sends cookieless pings — that is *less* collection, not none. Two limits worth stating plainly: withdrawing does not unload a gtag already running in that tab (nothing in the SDK unloads it), which is exactly why the default has to be off; and `setConsent` denies the three ad types permanently, because the Analytics SDK's own default is every consent type **granted**. **Retired 2026-08-28**: Analytics went with Firebase, and the consent feature built to gate it (`src/lib/consent.ts`, `src/components/consent/`) was deleted with it rather than left standing over nothing — a banner asking permission for collection that no longer happens is a lie in the other direction. Everything in this row is preserved as the reasoning to reuse if any analytics ever returns; the conclusion — the gate is "never load it", not the vendor's own consent mode — is the part that would still hold |
 | 16 | No Firebase Security Rules or App Check in the repo | Was downgraded by the #14 decision on the reasoning that it "becomes relevant again only if Auth stores user documents". **That condition was met on 2026-08-16** when Auth shipped with saved order requests | **Done** (2026-08-16, Vault). `firestore.rules` is default-deny with owner-only reads and no client writes at all; 13 assertions run against the real emulator (`npm run test:rules`, own CI job with a pinned JDK), and both directions were checked by injecting the two classic mistakes and watching the suite fail. App Check is wired (`initAppCheck`, reCAPTCHA v3) but **enforcement is an operator action in the console and has not been turned on** — Google's guidance is monitor-only first. See [`docs/auth.md`](auth.md). **Retired 2026-08-28, not completed**: rules, the emulator suite and App Check were deleted with Firebase, and the open half of this row — App Check enforcement as an unclicked console action — is void rather than outstanding, because there is no Firebase project in front of the app to enforce anything on. Do not read this as "App Check is on". The thing the rules file guaranteed, cross-customer isolation on saved order requests, is the one part carried forward, and it is now a Postgres integration test |
-| 20 | Saved order requests are the first customer PII Soko stores at rest — name, phone and delivery address, per request, in Firestore | Medium. The feature requires it, but no retention policy exists, and rules forbid client deletes so a customer cannot remove their own record | **Half done** (2026-08-22). The **delete path is built**: `deleteOrderRequest` goes through the Admin SDK like the write does, so `firestore.rules` keeps denying client deletes unchanged, and `DeleteSavedRequest` puts an inline two-step confirm (not `window.confirm()`) on every card in `/account`. Made it a **hard delete against Vault's soft-delete proposal**: the "an order request is evidence" reasoning in `firestore.rules` assumes a counterparty, and Soko transmits nothing to the branch and charges nothing, so a retained shell settles no dispute and only means the deletion is not quite one. Reversible in one function if a branch is ever actually told. A security property found on the way and now tested: `collection.doc("a/b/c")` is legal Firestore and addresses a nested document, so a browser-supplied id is validated as a 20-char auto id (`isValidRequestId`) before anything touches the network. **Still open — and deliberately not decided here: the retention policy.** How long an untouched request lives before it expires, and whether closing an account purges the subcollection, are the owner's calls; a number invented by an engineer would read as policy to whoever found it next. No TTL or scheduled purge is built. **Moved store 2026-08-28, still half done.** The PII is now columns on `SavedOrderRequest` in Postgres, not documents in Firestore. Three details in this row are history rather than current mechanism: the write and delete no longer go through the Admin SDK, `firestore.rules` no longer exists to keep denying client deletes, and `isValidRequestId` is gone because the path-injection it guarded against is a Firestore property — a foreign id now matches zero rows. The hard-delete decision, the two-step inline confirm in `/account` and the unanswered retention question are all unchanged, and the last one is still the owner's |
+| 20 | Saved order requests are the first customer PII MalFleks stores at rest — name, phone and delivery address, per request, in Firestore | Medium. The feature requires it, but no retention policy exists, and rules forbid client deletes so a customer cannot remove their own record | **Half done** (2026-08-22). The **delete path is built**: `deleteOrderRequest` goes through the Admin SDK like the write does, so `firestore.rules` keeps denying client deletes unchanged, and `DeleteSavedRequest` puts an inline two-step confirm (not `window.confirm()`) on every card in `/account`. Made it a **hard delete against Vault's soft-delete proposal**: the "an order request is evidence" reasoning in `firestore.rules` assumes a counterparty, and MalFleks transmits nothing to the branch and charges nothing, so a retained shell settles no dispute and only means the deletion is not quite one. Reversible in one function if a branch is ever actually told. A security property found on the way and now tested: `collection.doc("a/b/c")` is legal Firestore and addresses a nested document, so a browser-supplied id is validated as a 20-char auto id (`isValidRequestId`) before anything touches the network. **Still open — and deliberately not decided here: the retention policy.** How long an untouched request lives before it expires, and whether closing an account purges the subcollection, are the owner's calls; a number invented by an engineer would read as policy to whoever found it next. No TTL or scheduled purge is built. **Moved store 2026-08-28, still half done.** The PII is now columns on `SavedOrderRequest` in Postgres, not documents in Firestore. Three details in this row are history rather than current mechanism: the write and delete no longer go through the Admin SDK, `firestore.rules` no longer exists to keep denying client deletes, and `isValidRequestId` is gone because the path-injection it guarded against is a Firestore property — a foreign id now matches zero rows. The hard-delete decision, the two-step inline confirm in `/account` and the unanswered retention question are all unchanged, and the last one is still the owner's |
 | 21 | The save-order-request action has a ceiling (200 per customer) but no rate limit | Low–medium. Bounds total damage, not burst rate; Firestore's free tier was 20,000 writes/day project-wide | Open, raised by Vault. **The proposed fix no longer exists** (2026-08-28): it was App Check *enforcement* plus a per-uid rate limit, and App Check went with Firebase, so the half that was built is now the half that is gone. The ceiling of 200 is still there and still bounds total damage rather than burst rate. What replaces App Check on a Supabase-and-Postgres stack has not been decided, and the quota it was protecting is now our own database rather than a vendor's free tier |
 
 ## Role research
@@ -318,7 +318,7 @@ starts**, because scroll animation over unloaded images reads as broken, not pre
 
 Two things worth taking seriously. First, the honest counter-case: immersive formats are
 wrong for audiences hunting specific information and for teams without capacity to
-maintain them — they age fast and then damage the brand. Soko is a marketplace, so the
+maintain them — they age fast and then damage the brand. MalFleks is a marketplace, so the
 3D belongs in the hero and the product showcase, not in the search results or the order
 form, which is where it currently sits. Second, **almost none of these reference builds
 address keyboard navigation, screen readers or `prefers-reduced-motion`.** We already do.
@@ -335,8 +335,8 @@ Reading the Lenis docs prompted a check of how in-page anchors behave under smoo
 scroll. `anchors` defaults to `false`, so the **skip-to-content link scrolled the page
 but left focus on `<body>`** — the next Tab went straight back to the nav the user had
 just skipped, which makes the link worse than useless. `<main>` now carries
-`tabIndex={-1}`. While verifying it in the browser, the tab read `All brands — Soko —
-Soko`: two pages hardcoded the suffix that the root layout's `%s — Soko` template
+`tabIndex={-1}`. While verifying it in the browser, the tab read `All brands — MalFleks —
+MalFleks`: two pages hardcoded the suffix that the root layout's `%s — MalFleks` template
 already appends. Both now have E2E regression tests in `e2e/smoke.spec.ts`.
 
 The lesson worth keeping: both bugs were invisible to the test suite and to every
@@ -506,7 +506,7 @@ types, and it turns a public button into metered spend an attacker controls via 
 pumping. Meanwhile **90.59% of mobile browsing in Tanzania is Android** (Statcounter,
 July 2026), where a Google account is part of device setup. The order form *already*
 validates a TZ mobile number, so phone auth would also conflate "the number the driver
-calls" with "the number that owns the account". **Phone becomes right when Soko takes
+calls" with "the number that owns the account". **Phone becomes right when MalFleks takes
 money** — mobile-money identity is the MSISDN — and nothing here blocks it: everything
 past the identity provider is provider-agnostic.
 
@@ -523,7 +523,7 @@ Four things worth carrying beyond this assignment:
 Firebase it was a custom claim. Under Supabase it is `app_metadata.admin === true`, and
 it must never be read from `user_metadata` — that bag is populated from what the client
 passes and stays editable by the account holder afterwards, so an admin check against it
-is a self-service promotion. `SOKO_ADMIN_EMAILS` remains the bootstrap allowlist, read
+is a self-service promotion. `MALFLEKS_ADMIN_EMAILS` remains the bootstrap allowlist, read
 per request, because nothing inside the app should be able to mint the first admin.
 
 **A security suite that skips is worse than no suite.** The rules tests needed the

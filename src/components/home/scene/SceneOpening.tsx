@@ -6,7 +6,7 @@ import Link from "next/link";
  * The five-scene home (`SceneOverture` → `SceneClose`) is built on the
  * catalogue: it counts branches, marches logos across a marquee and pins a
  * rail of products. With an empty catalogue every one of those renders as a
- * blank band, and the first impression of Soko becomes a page that failed to
+ * blank band, and the first impression of MalFleks becomes a page that failed to
  * load. So the empty state is not a degraded version of that page — it is a
  * different page, which says the true thing plainly and asks for the one
  * action that can change it.
@@ -27,7 +27,7 @@ export default function SceneOpening() {
       />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        <p className="scene-eyebrow">Soko — Tanzania</p>
+        <p className="scene-eyebrow">MalFleks — Tanzania</p>
 
         <h1 className="scene-display-sm mt-6">
           One marketplace for real shops,{" "}
@@ -38,7 +38,7 @@ export default function SceneOpening() {
           className="mx-auto mt-7 max-w-xl text-lg leading-relaxed"
           style={{ color: "var(--scene-muted)" }}
         >
-          Soko puts branches from every brand in one place and answers the
+          MalFleks puts branches from every brand in one place and answers the
           question a listing usually leaves out: who actually delivers this, the
           shop&apos;s own van or a courier who covers your city.
         </p>
@@ -58,7 +58,7 @@ export default function SceneOpening() {
             marketplaces do. But an address nobody has checked sends someone
             across a city for nothing, and a phone number that rings nowhere is
             worse than none at all. Every branch here will be one a person at
-            Soko has spoken to.
+            MalFleks has spoken to.
           </p>
           <p
             className="mt-3 text-sm leading-relaxed"
@@ -70,7 +70,7 @@ export default function SceneOpening() {
 
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
           <Link href="/apply" className="scene-cta px-8 py-4 text-sm">
-            List your shop on Soko
+            List your shop on MalFleks
           </Link>
           <Link href="/search" className="scene-chip px-8 py-4 text-sm">
             See the marketplace

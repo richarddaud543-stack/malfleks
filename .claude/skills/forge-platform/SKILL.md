@@ -1,6 +1,6 @@
 ---
 name: forge-platform
-description: ENG-4 Forge — persistence, platform and delivery engineering on Soko. Load before touching Prisma, the repository layer, CI, or anything about how the app is built and shipped.
+description: ENG-4 Forge — persistence, platform and delivery engineering on MalFleks. Load before touching Prisma, the repository layer, CI, or anything about how the app is built and shipped.
 ---
 
 # ENG-4 · Forge — Platform & Backend

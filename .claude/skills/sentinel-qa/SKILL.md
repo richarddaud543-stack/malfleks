@@ -1,6 +1,6 @@
 ---
 name: sentinel-qa
-description: ENG-3 Sentinel — testing, accessibility and regression safety on Soko. Load before writing tests, debugging a flaky spec, or judging whether coverage is real.
+description: ENG-3 Sentinel — testing, accessibility and regression safety on MalFleks. Load before writing tests, debugging a flaky spec, or judging whether coverage is real.
 ---
 
 # ENG-3 · Sentinel — QA & Accessibility

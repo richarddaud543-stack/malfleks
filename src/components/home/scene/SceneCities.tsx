@@ -8,7 +8,7 @@ import { usePrefersReducedMotion, useSceneReveal } from "./useSceneTimeline";
 /**
  * Scene 04 — the four cities.
  *
- * Soko is a Tanzanian marketplace and the old home page never said so past
+ * MalFleks is a Tanzanian marketplace and the old home page never said so past
  * the first paragraph. This scene is the place claim: four cities, what is
  * actually in each, and how many of those branches carry their own goods.
  *

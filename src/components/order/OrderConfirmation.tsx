@@ -142,7 +142,7 @@ export default function OrderConfirmation() {
           <h2 className="font-display text-lg font-medium">What happens next</h2>
           <ol className="mt-4 space-y-4">
             <Step n={1}>
-              Nothing has been paid and nothing has been reserved. Soko has no
+              Nothing has been paid and nothing has been reserved. MalFleks has no
               order system behind it yet, so this request has not been
               transmitted to anyone — it is yours to take to the branch.
             </Step>
@@ -192,7 +192,7 @@ export default function OrderConfirmation() {
             </Step>
             <Step n={3}>
               Payment and delivery charges are agreed directly with{" "}
-              {brandDelivered ? "the branch" : "the branch and the agent"}. Soko
+              {brandDelivered ? "the branch" : "the branch and the agent"}. MalFleks
               does not take payment.
             </Step>
           </ol>

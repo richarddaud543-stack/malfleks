@@ -57,7 +57,7 @@ describe("validatePartnerApplication — a brand branch", () => {
   });
 
   it("accepts a brand the catalogue has never heard of", () => {
-    // The whole point of `brandOther`: a real shop selling a brand Soko has not
+    // The whole point of `brandOther`: a real shop selling a brand MalFleks has not
     // added yet must still be able to apply, and the admin resolves it later.
     const result = validatePartnerApplication(
       input({ brandId: "", brandOther: "Sayona Electronics" }),
@@ -130,14 +130,14 @@ describe("validatePartnerApplication — a courier", () => {
 });
 
 describe("validatePartnerApplication — shared rules", () => {
-  it("accepts every city Soko serves", () => {
+  it("accepts every city MalFleks serves", () => {
     for (const city of SERVED_CITIES) {
       const result = validatePartnerApplication(input({ city }), BRAND_IDS);
       expect(result.ok, `${city} should be accepted`).toBe(true);
     }
   });
 
-  it("refuses a city Soko does not cover", () => {
+  it("refuses a city MalFleks does not cover", () => {
     const result = validatePartnerApplication(input({ city: "Mbeya" }), BRAND_IDS);
     expect(result.ok).toBe(false);
     if (result.ok) return;

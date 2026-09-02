@@ -8,7 +8,7 @@ import {
 } from "@/app/actions/notification-test";
 
 /**
- * The state of Soko's notifications, and a button that proves it.
+ * The state of MalFleks's notifications, and a button that proves it.
  *
  * Shown to admins only. The status line comes from the server so it reflects
  * the deployment rather than what anyone remembers configuring — an
@@ -30,7 +30,7 @@ const FAILURE: Record<string, { title: string; detail: string }> = {
   "not-configured": {
     title: "No provider configured",
     detail:
-      "Neither BREVO_API_KEY nor RESEND_API_KEY is set on this deployment — or one is set to an empty string, which looks identical in the dashboard. Soko is running normally and simply sending nothing.",
+      "Neither BREVO_API_KEY nor RESEND_API_KEY is set on this deployment — or one is set to an empty string, which looks identical in the dashboard. MalFleks is running normally and simply sending nothing.",
   },
   rejected: {
     title: "The provider refused it",

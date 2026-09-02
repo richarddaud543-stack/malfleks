@@ -16,7 +16,7 @@ started writing a real `Order` row to the database. Before that, an order reques
 in the browser, held in `sessionStorage`, and transmitted nowhere — and the confirmation
 screen said so, in plain words, deliberately.
 
-That copy is now false. Somewhere on this site, Soko is telling customers their request
+That copy is now false. Somewhere on this site, MalFleks is telling customers their request
 goes nowhere while the server writes it to a table an admin reads. That is the exact
 category of defect this role exists to catch, and it is worse than a missing meta tag by
 several orders of magnitude.
@@ -46,7 +46,7 @@ Walk every surface a customer touches in the order flow and reconcile the words 
 what the system now actually does.
 
 **What is now true and must be said:** the request is recorded. It persists beyond the
-browser tab. A Soko admin can see it. It has a status that a person will move.
+browser tab. A MalFleks admin can see it. It has a status that a person will move.
 
 **What is still not true and must never be implied:** no money has moved. No payment has
 been taken or authorised. The branch has **not** been notified — nothing is transmitted to
@@ -72,7 +72,7 @@ anywhere, that is a defect — report it immediately rather than fixing it yours
 
 `/apply` shipped 2026-08-23 telling applicants an admin will review their application. The
 admin queue shipped the same day, so that is now accurate — confirm it, and confirm the
-page does not promise a reply timeframe Soko has no mechanism to keep. Check
+page does not promise a reply timeframe MalFleks has no mechanism to keep. Check
 `src/app/apply/page.tsx` and `src/components/apply/PartnerApplicationForm.tsx`.
 
 ### 3. IA and metadata for the new routes
@@ -81,7 +81,7 @@ Atlas is building `/partner` and extending `/admin` this round (ATLAS-11). Land 
 structure ahead of the pages so the routes are right the first time:
 
 - Every new route gets page-specific `metadata` or `generateMetadata`, using the root
-  layout's `%s — Soko` title template. That is the standing baseline.
+  layout's `%s — MalFleks` title template. That is the standing baseline.
 - `/partner/**` and `/admin/**` are **`noindex`, and absent from `src/app/sitemap.ts`** —
   same treatment `/account` already has. Verify `/account`'s treatment is actually correct
   while you are in there rather than assuming it.

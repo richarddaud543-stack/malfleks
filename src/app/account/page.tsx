@@ -11,7 +11,7 @@ import SavedRequestCard from "@/components/account/SavedRequestCard";
 export const metadata: Metadata = {
   title: "Your order requests",
   description:
-    "Order requests saved to your Soko account, with the reference to quote to the branch.",
+    "Order requests saved to your MalFleks account, with the reference to quote to the branch.",
   // One person's private page. It is not in the sitemap either, matching
   // /order/confirmation — a noindex URL advertised in a sitemap is a
   // contradiction, not thoroughness.
@@ -74,7 +74,7 @@ export default async function AccountPage() {
         Your order requests
       </h1>
       <p className="mt-3 max-w-xl text-muted">
-        Requests you made while signed in. Soko still takes no payment and holds
+        Requests you made while signed in. MalFleks still takes no payment and holds
         no stock — a reference is what you quote to the branch to talk about the
         same request.
       </p>
@@ -85,7 +85,7 @@ export default async function AccountPage() {
             You manage {partner.displayName}
           </h2>
           <p className="mt-2 text-sm text-muted">
-            Your listings and everything waiting on Soko live on your partner
+            Your listings and everything waiting on MalFleks live on your partner
             page.
           </p>
           <Link

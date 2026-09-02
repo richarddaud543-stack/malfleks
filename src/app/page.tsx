@@ -22,7 +22,7 @@ import {
  * direction, choreography and restraint — "scene logic, not page logic" —
  * explicitly *not* effect count. So the page argues one idea, in order:
  *
- *   01 Overture  — what Soko is, in the founder's own words
+ *   01 Overture  — what MalFleks is, in the founder's own words
  *   02 The rule  — `deliveryOffered`, the boolean the whole product turns on
  *   03 Catalogue — a scroll-linked rail; the only pinned effect on the page
  *   04 Where     — four cities, every number derived from the real data

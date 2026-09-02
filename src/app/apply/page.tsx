@@ -6,7 +6,7 @@ import { getAllBrands } from "@/server/repositories";
 export const metadata: Metadata = {
   title: "Become a partner",
   description:
-    "Apply to sell through Soko as a brand branch, or to carry deliveries as a local courier in Dar es Salaam, Arusha, Mwanza or Dodoma.",
+    "Apply to sell through MalFleks as a brand branch, or to carry deliveries as a local courier in Dar es Salaam, Arusha, Mwanza or Dodoma.",
 };
 
 /**
@@ -51,10 +51,10 @@ export default async function ApplyPage() {
             Sell or deliver with us
           </p>
           <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
-            Become a Soko partner
+            Become a MalFleks partner
           </h1>
           <p className="mt-3 text-muted">
-            Soko connects real shops in Tanzania to customers, and gets the goods
+            MalFleks connects real shops in Tanzania to customers, and gets the goods
             there — either on the brand&apos;s own van, or with a local courier.
             If you run a branch or carry deliveries, this is where you start.
           </p>
@@ -71,7 +71,7 @@ export default async function ApplyPage() {
               {
                 n: "2",
                 title: "We check it by hand",
-                body: "Someone at Soko reads every application. Nothing is approved automatically.",
+                body: "Someone at MalFleks reads every application. Nothing is approved automatically.",
               },
               {
                 n: "3",
@@ -105,7 +105,7 @@ export default async function ApplyPage() {
             reply that no system is yet able to send. */}
         <ScrollReveal delay={0.24}>
           <p className="mt-8 text-xs text-muted">
-            Soko is still being built. Applications are recorded and reviewed by
+            MalFleks is still being built. Applications are recorded and reviewed by
             a person — we are not yet able to approve partners the same day, and
             there is no automatic email confirming this.
           </p>

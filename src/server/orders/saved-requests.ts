@@ -44,7 +44,7 @@ import {
  *
  * This remains an **addition** on top of every order request also being
  * persisted as an `Order` (`./create-order.ts`), not a replacement for it. The
- * distinction is lifecycle: an `Order` is Soko's operational record and must
+ * distinction is lifecycle: an `Order` is MalFleks's operational record and must
  * survive, while this is the customer's own copy and the whole point of it is
  * that they can delete it. `prisma/schema.prisma` says the same on the model.
  *

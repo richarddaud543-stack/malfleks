@@ -4,7 +4,7 @@
 -- from `src/data` — the editorial placeholder set written while the site was
 -- being built. None of those businesses agreed to be listed. The addresses were
 -- unverified, and the courier phone numbers counted upwards from
--- +255 68 000 0001. Soko is now open to real partners, and a marketplace that
+-- +255 68 000 0001. MalFleks is now open to real partners, and a marketplace that
 -- shows a customer a shop that does not exist has not launched early, it has
 -- lied. So the catalogue starts empty and fills the only honest way: a business
 -- applies, a person checks them, an admin publishes their products.

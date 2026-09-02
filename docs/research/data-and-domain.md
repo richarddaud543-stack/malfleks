@@ -22,7 +22,7 @@ marker; there simply isn't a video source to mark.
   product/variant/SKU splits are actually implemented, useful as "how a production catalogue engine
   does this," not as a spec to copy.
 - **what3words' own writing on African deployments** — practitioner material on the addressing problem
-  in the geography Soko targets, not just the general "geocoding is hard" take.
+  in the geography MalFleks targets, not just the general "geocoding is hard" take.
 - **Chris Krycho, Khalil Stemmler, DevIQ on "make illegal states unrepresentable"** (the phrase
   traces to Yaron Minsky) — direct treatments of the type-system principle, in TypeScript specifically
   for the first two.
@@ -57,10 +57,10 @@ siblings — [Baymard, ecommerce filter UI](https://baymard.com/learn/ecommerce-
 Real multi-vendor marketplaces separate the *product* from a seller's *commercial offer* on it — a
 single-vendor store can conflate the two, a marketplace can't —
 [Evinent, multi-vendor catalog management](https://evinent.com/blog/multi-vendor-catalog-management-scale).
-Fulfillment splits into seller-fulfilled vs. platform/3PL-fulfilled, the same binary Soko encodes as
+Fulfillment splits into seller-fulfilled vs. platform/3PL-fulfilled, the same binary MalFleks encodes as
 brand-fleet vs. local-agent; once orders can span multiple sellers, partial fulfillment and partial
 cancellation become first-class problems — [Walmart Marketplace fulfillment guide](https://www.spscommerce.com/community/articles/setting-up-shipping-on-walmart-marketplace).
-Soko doesn't have multi-line, multi-seller orders yet (one product per order request), so this is a
+MalFleks doesn't have multi-line, multi-seller orders yet (one product per order request), so this is a
 "watch for it," not a current gap.
 
 ### Address & location data quality
@@ -81,7 +81,7 @@ invalid states instead of a runtime check catching them later; discriminated uni
 mechanism for it — [DevIQ](https://deviq.com/principles/make-illegal-states-unrepresentable/),
 [Chris Krycho, in TypeScript specifically](https://v5.chriskrycho.com/journal/making-illegal-states-unrepresentable-in-ts/).
 
-## 3. Audit of Soko's data and logic
+## 3. Audit of MalFleks's data and logic
 
 ### Money — correct, and correct for a more specific reason than I expected
 
@@ -116,7 +116,7 @@ fix is moving the scan off the client before it's 100x longer, not a smarter sco
 
 Facet counting (`countBy`, `src/lib/search.ts:241-257`) already excludes each dimension's own filter so
 a checked box doesn't zero its own siblings — precisely the failure mode Baymard's research names, and
-Soko avoids it.
+MalFleks avoids it.
 
 ### Domain types — model the current fixtures well, with two gaps that will bite before "100x"
 
@@ -133,12 +133,12 @@ Soko avoids it.
    above: a literal union of known cities, or a standing data-integrity test, would catch it at build
    or test time instead of at checkout.
 2. **`DeliveryAgent.etaEstimate` is free text** (`src/data/types.ts:54`) — `"Same-day"`, `"1–2 days"`,
-   `"1 day"`. Fine for display, but not sortable or comparable. If Soko ever wants to route to the
+   `"1 day"`. Fine for display, but not sortable or comparable. If MalFleks ever wants to route to the
    fastest or cheapest agent — arguably the actual value the "agent" side of the product rule is
    supposed to deliver — there's no structured field to compute that from today.
 3. **`Branch.country: "Tanzania"` is a single-value literal.** This is the type system doing its job —
    you cannot construct a non-Tanzania branch — and I'm naming it only because it's the one place in
-   the domain model that would need a real type change, not a config tweak, if Soko ever expanded
+   the domain model that would need a real type change, not a config tweak, if MalFleks ever expanded
    beyond one country.
 4. Worth flagging forward rather than as a defect: `Product` has no variant concept — an iPhone in two
    storage sizes would be two full `Product` rows with duplicated name/description, not a
@@ -175,7 +175,7 @@ is a UI-sequencing problem, not a data-layer one: `resolveDeliveryRoute` could b
 - I assumed TZS, like most currencies, has cents in active use, and read "store whole shillings" as a
   pragmatic simplification for a prototype — something to flag as a risk to revisit. The research
   showed the opposite: TZS formally subdivides into 100 cents (ISO 4217 exponent 2), but no cent coins
-  have circulated for years — the smallest coin is 50/=, the smallest note 500/=. Soko's integer-shilling
+  have circulated for years — the smallest coin is 50/=, the smallest note 500/=. MalFleks's integer-shilling
   model isn't a simplification against a "more correct" ISO standard; it's the accurate model of how the
   currency is actually transacted. I no longer think this is a risk worth flagging.
 - I expected the missing BM25/TF-IDF scoring to be the headline search finding. It's a non-issue at

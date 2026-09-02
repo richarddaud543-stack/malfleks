@@ -146,7 +146,7 @@ export async function markOrderFulfilled(
 }
 
 /**
- * Announce a new order request to Soko's own inbox.
+ * Announce a new order request to MalFleks's own inbox.
  *
  * Its own try/catch, inside the caller's try, so that a mail failure can never
  * be mistaken for an order failure — the customer has a reference and the row

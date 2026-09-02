@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
+import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Privacy",
   description:
-    "What Soko collects, who sees it, where it is stored, and how to have it deleted.",
+    "What MalFleks collects, who sees it, where it is stored, and how to have it deleted.",
 };
 
 /**
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
       <ScrollReveal>
-        <p className="font-accent-serif text-xl italic text-accent">Soko</p>
+        <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
@@ -71,7 +71,7 @@ export default function PrivacyPage() {
             <strong className="text-foreground">
               We never collect payment details.
             </strong>{" "}
-            Soko takes no payment, so there is no card number, no mobile money
+            MalFleks takes no payment, so there is no card number, no mobile money
             account and no bank detail anywhere in this system.
           </p>
         </section>
@@ -87,13 +87,13 @@ export default function PrivacyPage() {
             other requests, and no other branch sees any of it.
           </p>
           <p className="mt-2">
-            Soko&apos;s administrators can see order requests and partner
+            MalFleks&apos;s administrators can see order requests and partner
             applications, because a person reviews them. A partner sees only
             their own listings and the requests sent to their own branch.
           </p>
           <p className="mt-2">
             We do not sell your details, and we do not pass them to advertisers.
-            There is no advertising on Soko and no analytics or tracking scripts
+            There is no advertising on MalFleks and no analytics or tracking scripts
             of any kind.
           </p>
         </section>
@@ -131,10 +131,10 @@ export default function PrivacyPage() {
           <p className="mt-2">
             Write to{" "}
             <a
-              href={`mailto:${SOKO_CONTACT_EMAIL}`}
+              href={`mailto:${MALFLEKS_CONTACT_EMAIL}`}
               className="text-accent underline decoration-border underline-offset-4"
             >
-              {SOKO_CONTACT_EMAIL}
+              {MALFLEKS_CONTACT_EMAIL}
             </a>{" "}
             from the address you signed in with and say what you want removed —
             a single order request, or your account and everything attached to
@@ -152,7 +152,7 @@ export default function PrivacyPage() {
             Cookies
           </h2>
           <p className="mt-2">
-            Soko sets cookies for one purpose: keeping you signed in. There are
+            MalFleks sets cookies for one purpose: keeping you signed in. There are
             no advertising or tracking cookies, which is why this site has no
             cookie banner asking you to accept any.
           </p>

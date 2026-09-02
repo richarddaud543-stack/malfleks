@@ -37,14 +37,14 @@ describe("SubmissionTable", () => {
     render(<SubmissionTable submissions={[]} />);
 
     expect(screen.getByText("Nothing listed yet")).toBeVisible();
-    expect(screen.getByText(/until Soko publishes it/)).toBeVisible();
+    expect(screen.getByText(/until MalFleks publishes it/)).toBeVisible();
   });
 
-  it("shows a pending listing as waiting on Soko, not as live", () => {
+  it("shows a pending listing as waiting on MalFleks, not as live", () => {
     render(<SubmissionTable submissions={[base]} />);
 
-    expect(screen.getByText("Waiting on Soko")).toBeVisible();
-    expect(screen.queryByText("Live on Soko")).not.toBeInTheDocument();
+    expect(screen.getByText("Waiting on MalFleks")).toBeVisible();
+    expect(screen.queryByText("Live on MalFleks")).not.toBeInTheDocument();
     // No link either: there is no page for it yet, and offering one would be
     // a 404 dressed as progress.
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("SubmissionTable", () => {
       />,
     );
 
-    expect(screen.getByRole("link", { name: "See it on Soko" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "See it on MalFleks" })).toHaveAttribute(
       "href",
       "/products/sub-abc",
     );
@@ -117,7 +117,7 @@ describe("SubmissionTable", () => {
       />,
     );
 
-    expect(screen.getByText("Live on Soko")).toBeVisible();
+    expect(screen.getByText("Live on MalFleks")).toBeVisible();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 

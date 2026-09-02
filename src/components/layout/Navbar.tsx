@@ -26,7 +26,7 @@ export default function Navbar() {
           className="flex shrink-0 items-center gap-2 font-display text-lg font-medium tracking-tight"
         >
           <span className="inline-block h-2.5 w-2.5 rounded-full bg-lime" />
-          Soko<span className="text-accent">.</span>
+          MalFleks<span className="text-accent">.</span>
         </Link>
 
         <div className="hidden items-center gap-7 lg:flex">

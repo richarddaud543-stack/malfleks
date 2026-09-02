@@ -127,7 +127,7 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
       </p>
 
       <p className="mt-4 text-sm text-muted">
-        We use your Google account only to keep your order requests. Soko takes
+        We use your Google account only to keep your order requests. MalFleks takes
         no payment and asks for nothing else.
       </p>
 

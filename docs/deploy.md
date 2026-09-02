@@ -1,4 +1,4 @@
-# Getting Soko online
+# Getting MalFleks online
 
 Written 2026-08-27. This is the runbook for closing **debt #2** — no git remote,
 no deployment — and it is the only thing standing between the current build and
@@ -24,7 +24,7 @@ stop — that is not this document.
 
 ## 1. A git remote — done
 
-`https://github.com/richarddaud543-stack/soko.git` is the remote and `master` is
+`https://github.com/richarddaud543-stack/malfleks.git` is the remote and `master` is
 pushed. `.github/workflows/ci.yml` had never executed in its life; it now runs on
 every push and pull request.
 
@@ -60,7 +60,7 @@ done.
 
 ### Row Level Security — leave it alone
 
-Supabase auto-enabled RLS on all 15 tables, with **no policies**. For Soko that
+Supabase auto-enabled RLS on all 15 tables, with **no policies**. For MalFleks that
 is exactly right and not an oversight to fix:
 
 - The app reaches Postgres through **Prisma as the `postgres` role**, which
@@ -177,7 +177,7 @@ Both now **refuse against any host that is not localhost**, and the refusal
 prints the exact opt-in if you truly mean it:
 
 ```
-SOKO_DESTRUCTIVE_OK=db.nnrcjeowivnbzdkwxxrm.supabase.co npm run db:seed
+MALFLEKS_DESTRUCTIVE_OK=db.nnrcjeowivnbzdkwxxrm.supabase.co npm run db:seed
 ```
 
 Naming the host rather than a bare `=1` is deliberate: a blanket opt-in left
@@ -210,18 +210,18 @@ problem.
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://nnrcjeowivnbzdkwxxrm.supabase.co` | public identifier |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | from Supabase → Project Settings → API | public by design |
 | `NEXT_PUBLIC_SITE_URL` | your deployed origin, no trailing slash | optional, recommended |
-| `SOKO_ADMIN_EMAILS` | your address, comma-separated for more | bootstrap admin access |
+| `MALFLEKS_ADMIN_EMAILS` | your address, comma-separated for more | bootstrap admin access |
 
 **There is no secret in that list, and that is the change worth noticing.** The
 Firebase build needed `FIREBASE_SERVICE_ACCOUNT_KEY` — a private key granting
 full project access that bypassed both Security Rules and App Check, and whose
 most common failure was arriving with `\n` escaped rather than as real
-newlines. Supabase Auth needs nothing of the kind for what Soko does.
+newlines. Supabase Auth needs nothing of the kind for what MalFleks does.
 
 The one secret left anywhere is inside `DATABASE_URL`, and it was already there.
 
 > The Supabase **`service_role`** key must never be added here. It bypasses Row
-> Level Security completely, and Soko has no use for it: Prisma reaches Postgres
+> Level Security completely, and MalFleks has no use for it: Prisma reaches Postgres
 > as the `postgres` role, and Supabase is used for identity only.
 
 **One console step is not an environment variable and everyone forgets it.** In
@@ -256,9 +256,9 @@ In this order:
 
 ## 6. Give the admin console its own address
 
-Optional, and off until you switch it on. With `SOKO_ADMIN_HOST` unset the site
+Optional, and off until you switch it on. With `MALFLEKS_ADMIN_HOST` unset the site
 behaves exactly as it always has: `/admin` answers on whatever host is asking,
-protected by `SOKO_ADMIN_EMAILS` and the `app_metadata` flag and by nothing else.
+protected by `MALFLEKS_ADMIN_EMAILS` and the `app_metadata` flag and by nothing else.
 
 Set it and `/admin` stops existing on the shop. A customer who types the URL on
 the public site gets the same 404 as a misspelled brand slug — not a redirect to
@@ -269,9 +269,9 @@ Three steps, in this order, because the third one fails silently if you skip it:
 
 1. **Add the hostname to the same Vercel project.** Project -> Settings ->
    Domains -> Add. A free `*.vercel.app` name works and costs nothing:
-   `soko-admin.vercel.app`, if it is unclaimed. It serves the same deployment —
+   `malfleks-admin.vercel.app`, if it is unclaimed. It serves the same deployment —
    there is no second project, no second build, and nothing to keep in sync.
-2. **Set `SOKO_ADMIN_HOST`** to that hostname, for Production, and redeploy. The
+2. **Set `MALFLEKS_ADMIN_HOST`** to that hostname, for Production, and redeploy. The
    value is the bare host, no scheme and no path. The proxy inlines it at build
    time, which is why a redeploy is needed rather than just a save.
 3. **Add `https://<that host>/auth/callback`** under Supabase -> Authentication
@@ -292,7 +292,7 @@ Two things worth knowing before you rely on it:
 - **This is obscurity, not authorization.** `requireAdmin()` in the DAL and
   `adminSession()` in the actions are what actually decide who may read the
   queue, and they are unchanged. The hostname decides where the door is, not
-  who holds the key. Which is also why a blank `SOKO_ADMIN_HOST` fails *open*:
+  who holds the key. Which is also why a blank `MALFLEKS_ADMIN_HOST` fails *open*:
   a typo that locked you out of your own console would be a worse failure than
   the one this setting prevents.
 

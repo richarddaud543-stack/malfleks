@@ -11,7 +11,7 @@ import {
 } from "@/server/partners/portal";
 
 export const metadata: Metadata = {
-  title: "Your Soko listings",
+  title: "Your MalFleks listings",
   // One partner's private page, and — like `/admin` — a route that should not
   // announce itself. Absent from the sitemap too: a noindex URL advertised in
   // a sitemap tells crawlers two opposite things.
@@ -107,7 +107,7 @@ export default async function PartnerPage() {
           </h2>
           <p className="mt-2 text-sm text-muted">
             You can still see everything you have listed, but nothing new can be
-            submitted until Soko lifts the suspension. Contact us if you think
+            submitted until MalFleks lifts the suspension. Contact us if you think
             this is a mistake.
           </p>
         </div>
@@ -120,7 +120,7 @@ export default async function PartnerPage() {
           </h2>
           <p className="mt-2 max-w-prose text-sm text-muted">
             Being approved as a partner and appearing in the catalogue are two
-            separate steps, and a person at Soko does the second one by hand.
+            separate steps, and a person at MalFleks does the second one by hand.
             Until your branch is connected, you can prepare listings here but{" "}
             <strong>nothing you submit can be published</strong> — a product has
             to belong to a branch for an order to reach anyone. We&apos;ll be in
@@ -135,7 +135,7 @@ export default async function PartnerPage() {
             You aren&apos;t in the delivery routing yet
           </h2>
           <p className="mt-2 max-w-prose text-sm text-muted">
-            Customers can only pick a courier Soko has added to the delivery
+            Customers can only pick a courier MalFleks has added to the delivery
             routing, and that is a separate step from approving your account.
             Until it happens you will not be offered any jobs. We&apos;ll be in
             touch to confirm which cities you cover and how fast you deliver.
@@ -163,7 +163,7 @@ export default async function PartnerPage() {
             </h2>
             <dl className="grid gap-4 sm:grid-cols-3">
               <Count label="Waiting on review" value={counts.pending} />
-              <Count label="Live on Soko" value={counts.published} />
+              <Count label="Live on MalFleks" value={counts.published} />
               <Count label="Sent back" value={counts.rejected} />
             </dl>
           </section>

@@ -1,7 +1,7 @@
 # motion.dev and Watermelon UI — design research
 
 Prepared by ENG-6 (Prism), Visual & Graphic Design. Assignment: study
-[motion.dev](https://motion.dev) — the site for the `motion` library Soko
+[motion.dev](https://motion.dev) — the site for the `motion` library MalFleks
 already depends on — and apply what genuinely fits a comparison-shopping
 marketplace. Scope was extended mid-round to also evaluate
 [Watermelon UI](https://ui.watermelon.sh/), a copy-source component
@@ -35,7 +35,7 @@ The homepage's big, showy animated demos (the numbered 01–08 feature grid,
 described below) are the *marketing* surface; the actual UI chrome — nav
 links, the primary CTA — is close to motion-free. This directly informs the
 restraint principle applied throughout this round: hover/focus feedback on
-Soko's cards stayed duration-based CSS tweens (`.tint-glow`, `globals.css`);
+MalFleks's cards stayed duration-based CSS tweens (`.tint-glow`, `globals.css`);
 springs were reserved for things that react to continuous input (the product
 card's cursor tilt) or a genuine one-shot arrival (the product showcase's
 mount), never for a binary on/off state change.
@@ -65,7 +65,7 @@ Two things worth naming explicitly:
   family to the page's reading voice.
 - **The CTA button's emphasis comes from size + tracking + uppercase, not
   weight** — `font-weight: 400` on an 11px uppercase label with `1.32px`
-  letter-spacing reads as confident without being bold. Soko's own
+  letter-spacing reads as confident without being bold. MalFleks's own
   `.btn-pill` already does something similar (`font-weight: 600`, but at a
   larger, non-uppercase size) — a different but equally legitimate route to
   the same "confident, not shouty" target.
@@ -82,7 +82,7 @@ draws the eye without needing more than two colours anywhere on the page.
 One card (`03 Native gestures`) is a dashed-border box literally captioned
 `● hover / ● press / ● drag` — a legend explaining the three gesture states
 the library exposes, doubling as restrained decoration. That triad (hover /
-press / drag) is the same one this round applied to Soko's own cards as
+press / drag) is the same one this round applied to MalFleks's own cards as
 hover / focus / tap.
 
 ### 1.4 Focus state
@@ -116,20 +116,20 @@ Fetched `motion.dev/docs/react-transitions`, `/docs/react-gestures`,
 - `useReducedMotion()`: a hook returning the live boolean, reactive to
   setting changes.
 
-### 1.6 What would be wrong for Soko, and why
+### 1.6 What would be wrong for MalFleks, and why
 
 - **The zero-radius, hard-edged aesthetic itself.** It's a deliberate,
   consistent identity (`border-radius: var(--btn-radius, 0)` as a literal
-  token default) and it's excellent *for a developer tool*. Soko's whole
+  token default) and it's excellent *for a developer tool*. MalFleks's whole
   direction — pale-mint panels, `1.75rem`+ radii, soft `.glass-card`
   elevation — is the opposite bet, referencing beetogreen's warmth rather
   than an engineering spec sheet. Copying the sharp-corner language wholesale
   would fight the brand that's already been built and verified. What
   *carried over* is the underlying discipline (restraint, one accent per
   moment, a monospace reserved for meta-content), not the geometry.
-- **`MotionConfig`'s `reducedMotion` default is `"never"`.** If Soko ever
+- **`MotionConfig`'s `reducedMotion` default is `"never"`.** If MalFleks ever
   wraps a subtree in `MotionConfig`, the default does *not* protect a user
-  with the OS setting on — it must be set explicitly to `"user"`. Soko
+  with the OS setting on — it must be set explicitly to `"user"`. MalFleks
   currently avoids this trap structurally: every motion component in this
   codebase calls `useReducedMotion()` itself and branches explicitly
   (`ProductShowcase.tsx`, `ScrollReveal.tsx`, `ScrollStagger.tsx`, and now
@@ -172,7 +172,7 @@ built to be re-tokenised, not just skinned.
 
 Real component source, pulled from the live "view code" panel on
 `/components/card` (Card 12, an e-commerce product card — the closest
-analogue to Soko's `ProductCard`):
+analogue to MalFleks's `ProductCard`):
 
 ```tsx
 <div className="relative max-w-md overflow-hidden rounded-2xl shadow-lg">
@@ -221,7 +221,7 @@ widget, not a repeatable grid item).
   bold value" hierarchy is the right one, not a prompt to change it.
 - **A shape distinction between status badges and attribute chips.**
   Watermelon's outline badge for descriptive facts (size, colour) uses
-  `rounded-sm` — visibly less round than a state pill. Soko's own
+  `rounded-sm` — visibly less round than a state pill. MalFleks's own
   `DeliveryBadge` is a full `rounded-full` pill, and it is a *state*
   (delivers directly vs. doesn't), not a descriptive attribute — so the
   existing shape is the semantically correct one per this same convention,
@@ -229,7 +229,7 @@ widget, not a repeatable grid item).
   validation rather than silently skipped.
 - **Floating circular affordance over an image, translucent + blurred.** The
   `bg-white/85 backdrop-blur-sm` heart-toggle button is a clean pattern for
-  "an action that sits on top of imagery without a hard edge." Soko's own
+  "an action that sits on top of imagery without a hard edge." MalFleks's own
   card imagery is flat SVG icon tiles rather than photography, so this
   specific pattern had no direct application this round — noted for Atlas if
   a future surface (e.g. a product photo gallery) needs it.
@@ -238,25 +238,25 @@ widget, not a repeatable grid item).
 
 - **The Radix-backed complex primitives** (Dialog, Popover, Select, Sheet,
   Tooltip, Dropdown Menu — all present in the registry's sidebar). None of
-  Soko's card/badge/pill work needed them: Card and Badge are Watermelon's
+  MalFleks's card/badge/pill work needed them: Card and Badge are Watermelon's
   own plain presentational components with no Radix dependency. `grep`-ing
-  `package.json` confirmed Soko has **no Radix packages installed today**
+  `package.json` confirmed MalFleks has **no Radix packages installed today**
   (`@gsap/react`, `gsap`, `lenis`, `motion` are the only animation-adjacent
   dependencies). Installing Radix to adopt a component this round didn't
   need would be exactly the "report rather than install" case named in the
   brief — nothing here required it, so nothing was installed.
 - **The shadcn `Card`/`Badge`/`Button` composition wholesale.** Its own
   token names (`text-muted-foreground`, `bg-sky-600`, `border-border/70`)
-  are shadcn's defaults, not Soko's (`--muted`, `--accent`, `--border`).
+  are shadcn's defaults, not MalFleks's (`--muted`, `--accent`, `--border`).
   Pasting the JSX in raw would silently reintroduce exactly the untokenised,
   unverified-contrast risk this seat exists to prevent — `bg-sky-600` on the
   "Add to cart" button, for instance, has never been measured against any of
-  Soko's grounds. The *visual grammar* (hierarchy, spacing, the price/CTA
-  split) was extracted and hand-rebuilt against Soko's own tokens instead;
+  MalFleks's grounds. The *visual grammar* (hierarchy, spacing, the price/CTA
+  split) was extracted and hand-rebuilt against MalFleks's own tokens instead;
   no Watermelon source was pasted into this codebase.
 - **The animated-components "expandable card" widgets.** Dashboard-style,
   single-hero-card interactions (a card that grows, reveals a chart, morphs
-  into a detail view). Soko already has the equivalent finding on file from
+  into a detail view). MalFleks already has the equivalent finding on file from
   the prior design-galleries research (`docs/research/design-galleries.md`)
   against Codrops' clip-path grid effect: a comparison grid where a shopper
   is scanning many rows for the cheapest price/fastest delivery needs every
@@ -270,7 +270,7 @@ Sources: [Watermelon UI](https://ui.watermelon.sh/) ·
 [Animated cards](https://ui.watermelon.sh/animated-components/category/cards) ·
 [GitHub — watermelon-platform](https://github.com/WatermelonCorp/watermelon-platform)
 
-## 3. Applied to Soko this round
+## 3. Applied to MalFleks this round
 
 All changes are CSS/Motion using existing tokens — no new dependency, no
 Watermelon source pasted in.

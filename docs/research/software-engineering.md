@@ -125,7 +125,7 @@ capacity is the thing that doesn't scale with generation — is now something I'
 seen argued from four independent angles (Farley, Beck, Thoughtworks, DORA-adjacent
 benchmarking), which is enough to act on even without a single authoritative number.
 
-## 3. What this means for Soko
+## 3. What this means for MalFleks
 
 I read our own code before writing this section, and the research mostly sharpens
 arguments the debt register already makes rather than introducing new ones — which

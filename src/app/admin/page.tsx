@@ -43,7 +43,7 @@ export default async function AdminPage() {
 
   // Read on the server so the banner reflects this deployment rather than
   // anyone's memory of what they configured. Safe to show an admin: which
-  // provider, and the address Soko notifies — never the key.
+  // provider, and the address MalFleks notifies — never the key.
   const { isEmailConfigured, notifyAddress, notifyProvider } = await import(
     "@/server/notify/email"
   );

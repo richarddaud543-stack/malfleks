@@ -13,7 +13,7 @@ import {
  *
  * Every order request now gets one of these — signed in or anonymous — per
  * the owner's decision recorded in `docs/backend.md`'s third Decision block.
- * Soko's own record of an order, in Postgres: an order joins to product, branch,
+ * MalFleks's own record of an order, in Postgres: an order joins to product, branch,
  * brand and agent, and needs admin/business querying, which is the same
  * relational shape as the catalogue rather than the saved-order-requests
  * exception (`saved-requests.ts`, which stays as-is alongside this — a

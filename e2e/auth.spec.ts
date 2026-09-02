@@ -26,7 +26,7 @@ test.describe("signed out", () => {
     await page.goto("/sign-in");
 
     await expect(
-      page.getByRole("heading", { name: "Sign in to Soko", level: 1 })
+      page.getByRole("heading", { name: "Sign in to MalFleks", level: 1 })
     ).toBeVisible();
 
     const button = page.getByRole("button", { name: /Continue with Google/i });
@@ -50,7 +50,7 @@ test.describe("signed out", () => {
     // whether or not any proxy is configured.
     await expect(page).toHaveURL(/\/sign-in\?next=%2Faccount|\/sign-in\?next=\/account/);
     await expect(
-      page.getByRole("heading", { name: "Sign in to Soko", level: 1 })
+      page.getByRole("heading", { name: "Sign in to MalFleks", level: 1 })
     ).toBeVisible();
   });
 

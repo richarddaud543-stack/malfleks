@@ -22,7 +22,7 @@ export const dynamic = "force-dynamic";
 /**
  * The order queue — an admin-facing view onto every persisted `Order` row, so
  * someone can actually work the phone: call the customer, call the branch,
- * confirm price and availability. Soko's own copy on `OrderRequestForm` says
+ * confirm price and availability. MalFleks's own copy on `OrderRequestForm` says
  * it plainly: "This sends a request, not a paid order... the branch confirms
  * availability and price with you first." This page is where that call gets
  * made from.

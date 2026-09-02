@@ -24,7 +24,7 @@ function wrap(index: number, length: number): number {
 }
 
 /**
- * Soko's take on Spline's auto-cycling template showcase: instead of design
+ * MalFleks's take on Spline's auto-cycling template showcase: instead of design
  * templates, it cycles one real product from each brand on the platform —
  * the same "here's who's actually here, and what they sell" signal as the
  * brand grid above it, but slowed down to a single considered showcase

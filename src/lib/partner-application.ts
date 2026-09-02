@@ -1,7 +1,7 @@
 import { normalizePhone } from "./order";
 
 /**
- * Validating a brand branch's or a courier's application to join Soko.
+ * Validating a brand branch's or a courier's application to join MalFleks.
  *
  * Pure, and the same shape as `validateOrderRequest` in `order.ts`: strings in,
  * a per-field error record out, and a discriminated result so the success
@@ -17,7 +17,7 @@ import { normalizePhone } from "./order";
 
 export type PartnerKind = "brand" | "courier";
 
-/** The cities Soko serves. Every branch and courier record sits in one. */
+/** The cities MalFleks serves. Every branch and courier record sits in one. */
 export const SERVED_CITIES = [
   "Dar es Salaam",
   "Arusha",
@@ -123,7 +123,7 @@ export function validatePartnerApplication(
   if (city === "") {
     errors.city = "Choose the city you operate in.";
   } else if (!isServedCity(city)) {
-    errors.city = "Soko does not cover that city yet.";
+    errors.city = "MalFleks does not cover that city yet.";
   }
 
   // Brand applicants say whose brand this is; couriers carry for everyone, so

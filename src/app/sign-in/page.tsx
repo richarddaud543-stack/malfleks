@@ -7,7 +7,7 @@ import { isAuthConfigured } from "@/server/auth/config";
 export const metadata: Metadata = {
   title: "Sign in",
   description:
-    "Sign in to Soko to keep your order requests. Ordering never requires an account, and Soko takes no payment.",
+    "Sign in to MalFleks to keep your order requests. Ordering never requires an account, and MalFleks takes no payment.",
 };
 
 export default function SignInPage() {
@@ -37,7 +37,7 @@ export default function SignInPage() {
             Keep your requests
           </p>
           <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
-            Sign in to Soko
+            Sign in to MalFleks
           </h1>
           <p className="mt-3 text-muted">
             An order request lives in this browser tab and disappears when you

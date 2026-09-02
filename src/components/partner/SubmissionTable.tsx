@@ -13,14 +13,14 @@ import type { PartnerSubmission } from "@/server/partners/portal";
  * turned down, and `decisionNote` is the only place it exists. Dropping it
  * would leave them resubmitting the same thing forever.
  *
- * "Pending" is worded as *waiting on Soko*, not as a state of the product. A
+ * "Pending" is worded as *waiting on MalFleks*, not as a state of the product. A
  * partner reading "pending" about their own listing reasonably wonders what
  * they still have to do; the answer is nothing.
  */
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: "Waiting on Soko",
-  published: "Live on Soko",
+  pending: "Waiting on MalFleks",
+  published: "Live on MalFleks",
   rejected: "Sent back to you",
 };
 
@@ -41,7 +41,7 @@ export default function SubmissionTable({
         <p className="font-display text-lg font-medium">Nothing listed yet</p>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
           Products you submit appear here with what happened to them. Nothing
-          you submit is visible to customers until Soko publishes it.
+          you submit is visible to customers until MalFleks publishes it.
         </p>
       </div>
     );
@@ -94,7 +94,7 @@ export default function SubmissionTable({
             <p className="mt-4 border-l-2 border-red-600/40 pl-4 text-sm text-muted">
               {submission.decisionNote?.trim()
                 ? submission.decisionNote
-                : "Soko sent this back without leaving a reason. Contact us and we'll explain."}
+                : "MalFleks sent this back without leaving a reason. Contact us and we'll explain."}
             </p>
           )}
 
@@ -103,7 +103,7 @@ export default function SubmissionTable({
               href={`/products/${submission.publishedProductId}`}
               className="mt-4 inline-block text-sm text-accent underline decoration-border underline-offset-4"
             >
-              See it on Soko
+              See it on MalFleks
             </Link>
           )}
         </li>

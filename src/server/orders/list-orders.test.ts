@@ -122,7 +122,7 @@ describe("listOrders — filtering", () => {
   it("filters by agentId, which is what a courier's own job list is scoped to", async () => {
     // `/partner/orders` gives a courier partner exactly this filter, resolved
     // from their session. Without the WHERE clause a courier would see every
-    // customer's name, phone number and home address on Soko.
+    // customer's name, phone number and home address on MalFleks.
     const routedToAgent = await createOrder(
       input({
         productId: AGENT_ROUTED,

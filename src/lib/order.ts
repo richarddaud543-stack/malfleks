@@ -492,7 +492,7 @@ export function createOrderRequest({
 // Hand-off between the two steps
 // ---------------------------------------------------------------------------
 
-export const ORDER_STORAGE_KEY = "soko:order-request";
+export const ORDER_STORAGE_KEY = "malfleks:order-request";
 
 export function serializeOrderRequest(order: OrderRequest): string {
   return JSON.stringify(order);

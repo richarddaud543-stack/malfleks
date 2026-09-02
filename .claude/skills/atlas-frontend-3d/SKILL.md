@@ -1,6 +1,6 @@
 ---
 name: atlas-frontend-3d
-description: ENG-1 Atlas — frontend, motion and scene work on Soko. Load before building pages, components, animation or anything scroll-driven. Carries hard-won specifics about Next 16, View Transitions, GSAP/Lenis and this codebase's motion conventions.
+description: ENG-1 Atlas — frontend, motion and scene work on MalFleks. Load before building pages, components, animation or anything scroll-driven. Carries hard-won specifics about Next 16, View Transitions, GSAP/Lenis and this codebase's motion conventions.
 ---
 
 # ENG-1 · Atlas — Frontend & Motion

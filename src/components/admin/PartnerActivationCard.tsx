@@ -13,7 +13,7 @@ import type { ActivatablePartner } from "@/server/partners/activation";
 /**
  * The form that puts an approved partner into the catalogue.
  *
- * It asks for the things Soko must have confirmed rather than the things the
+ * It asks for the things MalFleks must have confirmed rather than the things the
  * applicant typed, and the ordering is deliberate: the address and the
  * "confirmed with the business" tick sit together, unticked, so publishing an
  * unverified address takes a decision rather than a default. That flag is what
@@ -31,7 +31,7 @@ const FAILURE: Record<string, string> = {
   "partner-suspended": "This account is suspended, so nothing can go live.",
   "already-live": "This partner is already in the catalogue.",
   "missing-field": "Something required came through empty.",
-  "unknown-city": "Soko doesn't serve that city yet.",
+  "unknown-city": "MalFleks doesn't serve that city yet.",
   "invalid-eta": "Delivery days must be whole numbers, smallest first.",
   "name-taken":
     "That name is already taken in the catalogue. Give it a distinct one.",

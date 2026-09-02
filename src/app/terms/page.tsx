@@ -2,59 +2,59 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
+import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Terms of use",
   description:
-    "What Soko does and does not do: we list branches and pass order requests to them. We take no payment, hold no stock and are not a party to the sale.",
+    "What MalFleks does and does not do: we list branches and pass order requests to them. We take no payment, hold no stock and are not a party to the sale.",
 };
 
 /**
  * Terms of use.
  *
  * Written to describe **what this site actually does**, which is narrower than
- * most marketplace terms and should stay that way: Soko takes no payment,
+ * most marketplace terms and should stay that way: MalFleks takes no payment,
  * holds no stock, and never becomes a party to the sale. An order request is
  * a message passed to a branch. Terms that implied otherwise would be the
  * document's own first lie, and would also be the thing a customer quotes back
  * when a deal goes wrong.
  *
  * Not legal advice and not drafted by a lawyer — it says plainly what happens.
- * If Soko starts holding money, this document has to be rewritten by someone
+ * If MalFleks starts holding money, this document has to be rewritten by someone
  * qualified before that ships.
  */
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
       <ScrollReveal>
-        <p className="font-accent-serif text-xl italic text-accent">Soko</p>
+        <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
         <p className="mt-3 text-sm text-muted">Last updated 1 September 2026.</p>
       </ScrollReveal>
 
-      <div className="prose-soko mt-10 space-y-8 text-sm leading-relaxed text-muted">
+      <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
         <section>
           <h2 className="font-display text-lg font-medium text-foreground">
-            What Soko is
+            What MalFleks is
           </h2>
           <p className="mt-2">
-            Soko lists shops and branches in Tanzania and shows what each one
+            MalFleks lists shops and branches in Tanzania and shows what each one
             sells, where it is, and how the goods would reach you — the
             branch&apos;s own delivery or a local courier. When you send an
-            order request, Soko passes your name, phone number and delivery
+            order request, MalFleks passes your name, phone number and delivery
             address to that branch, and gives you a reference number to quote.
           </p>
         </section>
 
         <section>
           <h2 className="font-display text-lg font-medium text-foreground">
-            What Soko is not
+            What MalFleks is not
           </h2>
           <p className="mt-2">
-            Soko is <strong>not a shop</strong>. We take no payment, hold no
+            MalFleks is <strong>not a shop</strong>. We take no payment, hold no
             stock, and are not a party to any sale. Price, availability,
             delivery and any refund are agreed between you and the branch. If a
             branch does not have what it listed, or the price has changed, that
@@ -89,7 +89,7 @@ export default function TermsPage() {
             Partners
           </h2>
           <p className="mt-2">
-            Businesses apply to be listed and a person at Soko reviews every
+            Businesses apply to be listed and a person at MalFleks reviews every
             application by hand. Approval is not automatic and being approved
             does not put a branch on the map — that is a separate step, taken
             once we have confirmed the address with the business.
@@ -107,7 +107,7 @@ export default function TermsPage() {
             Brand names and logos
           </h2>
           <p className="mt-2">
-            Brand names and logos shown on Soko are the trademarks of their
+            Brand names and logos shown on MalFleks are the trademarks of their
             owners and are used to identify the shops that sell those products.
             Their appearance here is not a claim of endorsement or partnership
             beyond what a listing says.
@@ -119,14 +119,14 @@ export default function TermsPage() {
             Changes and contact
           </h2>
           <p className="mt-2">
-            Soko is new and these terms will change as it grows. The date at the
+            MalFleks is new and these terms will change as it grows. The date at the
             top says when they last did. Questions, complaints and takedown
             requests go to{" "}
             <a
-              href={`mailto:${SOKO_CONTACT_EMAIL}`}
+              href={`mailto:${MALFLEKS_CONTACT_EMAIL}`}
               className="text-accent underline decoration-border underline-offset-4"
             >
-              {SOKO_CONTACT_EMAIL}
+              {MALFLEKS_CONTACT_EMAIL}
             </a>
             .
           </p>

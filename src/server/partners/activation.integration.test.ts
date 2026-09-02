@@ -226,7 +226,7 @@ describe("activateBrandPartner", () => {
     );
   });
 
-  it("refuses a city Soko does not serve rather than putting a pin in the sea", async () => {
+  it("refuses a city MalFleks does not serve rather than putting a pin in the sea", async () => {
     const partnerId = await approvedPartner("brand");
 
     expect(
@@ -383,7 +383,7 @@ describe("listActivatablePartners", () => {
 describe("slugify", () => {
   it("makes a URL-safe id from a business name", () => {
     expect(slugify("Kariakoo Electronics")).toBe("kariakoo-electronics");
-    expect(slugify("  Soko & Co.  ")).toBe("soko-co");
+    expect(slugify("  MalFleks & Co.  ")).toBe("malfleks-co");
   });
 
   it("returns an empty string when there is nothing to slug", () => {

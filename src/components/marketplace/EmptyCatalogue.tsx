@@ -4,13 +4,13 @@ import Link from "next/link";
  * What every catalogue surface shows before a single real shop has listed
  * anything.
  *
- * Soko launched with an empty catalogue on purpose. The 6 brands, 19 branches,
+ * MalFleks launched with an empty catalogue on purpose. The 6 brands, 19 branches,
  * 38 products and 5 couriers that used to be seeded here were **invented** —
  * plausible names, addresses nobody had confirmed and phone numbers that
  * counted upwards from `+255 68 000 0001`. A marketplace that shows a customer
  * a shop which does not exist has not launched early; it has lied. So the
  * catalogue was emptied and it fills up the only way it honestly can: a real
- * business applies, a person at Soko checks them, and their products appear.
+ * business applies, a person at MalFleks checks them, and their products appear.
  *
  * This component is what stands in the gap. It has one job beyond looking
  * unbroken — **an empty grid must not read as a failed page load.** A visitor
@@ -29,7 +29,7 @@ export default function EmptyCatalogue({
   return (
     <div className="glass-card rounded-2xl px-6 py-14 text-center sm:py-16">
       <p className="font-accent-serif text-lg italic text-accent">
-        Soko is new
+        MalFleks is new
       </p>
       <h2 className="mt-2 font-display text-2xl font-medium tracking-tight sm:text-3xl">
         No {looking} listed yet
@@ -37,13 +37,13 @@ export default function EmptyCatalogue({
       <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-muted">
         {filtered ? (
           <>
-            Nothing matches — and there is nothing to match yet. Soko lists only
+            Nothing matches — and there is nothing to match yet. MalFleks lists only
             businesses a person here has spoken to and checked, and we are
             still signing up the first of them.
           </>
         ) : (
           <>
-            Soko lists only businesses a person here has spoken to and checked,
+            MalFleks lists only businesses a person here has spoken to and checked,
             and we are still signing up the first of them. Nothing invented goes
             on this site, so until a real shop joins, this page stays empty.
           </>

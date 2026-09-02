@@ -148,7 +148,7 @@ export default function OrderRequestForm({
         // not depend on the backend write having succeeded.
       }
 
-      // The customer's own deletable copy, separate from Soko's record above.
+      // The customer's own deletable copy, separate from MalFleks's record above.
       try {
         const outcome = await saveOrderRequest({
           // Ids and the customer's own words only. Price, product name,

@@ -29,7 +29,7 @@ import { getPrisma } from "@/server/db/client";
  */
 
 /**
- * Approximate city-centre coordinates for the cities Soko serves.
+ * Approximate city-centre coordinates for the cities MalFleks serves.
  *
  * The locator needs a position or the branch does not appear on the map at all.
  * These are city centres, not shopfronts — public, checkable facts about where
@@ -85,7 +85,7 @@ export interface BrandActivationInput {
   /** True when the brand runs its own delivery; false routes to a courier. */
   deliveryOffered: boolean;
   /**
-   * Whether a person at Soko has confirmed this branch against the business's
+   * Whether a person at MalFleks has confirmed this branch against the business's
    * own records. Never inferred — the admin ticks it, and it is what the trust
    * badge on the branch page reports.
    */
@@ -242,7 +242,7 @@ export async function activateBrandPartner(
             // image is a worse first impression than initials.
             logo: "",
             accentColor: "#1f6f5c",
-            description: `${brandName} on Soko.`,
+            description: `${brandName} on MalFleks.`,
             sortOrder: (last?.sortOrder ?? -1) + 1,
           },
           select: { id: true },
@@ -262,7 +262,7 @@ export async function activateBrandPartner(
           brandId,
           name: branchName,
           city,
-          // Every city Soko serves is its own region. Kept as a column because
+          // Every city MalFleks serves is its own region. Kept as a column because
           // couriers are matched on it and a future district split needs it.
           region: city,
           addressLine: input.addressLine?.trim() || null,

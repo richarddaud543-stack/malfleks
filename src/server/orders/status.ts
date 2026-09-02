@@ -23,7 +23,7 @@ import { getPrisma } from "@/server/db/client";
  * cancelled`. Nothing moves out of `fulfilled` or `cancelled` — both are
  * terminal, and neither appears as a source in `ALLOWED_TRANSITIONS` below.
  *
- * Who moves it: Soko admin only, via `/admin/orders`, through the actions in
+ * Who moves it: MalFleks admin only, via `/admin/orders`, through the actions in
  * `src/app/actions/orders.ts`. There is no partner-facing order queue, and
  * none is faked here — `Partner`/`PartnerUser` records are not linked to
  * "their" orders anywhere in this codebase. Wiring that up is real future

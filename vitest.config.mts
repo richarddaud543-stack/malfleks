@@ -39,7 +39,7 @@ export default defineConfig({
     // Vitest's default `hookTimeout` is 10s. The integration suites spend their
     // `beforeAll` creating a schema and shelling out to `prisma migrate deploy`,
     // which is comfortably inside 10s against a local Postgres and comfortably
-    // outside it against a hosted one — and Soko's own `DATABASE_URL` points at
+    // outside it against a hosted one — and MalFleks's own `DATABASE_URL` points at
     // Supabase in eu-west-1. A timeout there is not a failing test; it is a
     // slow network reported as a bug, which is the most expensive kind of
     // false alarm. `testTimeout` is left at its default on purpose: an

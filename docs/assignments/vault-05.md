@@ -30,7 +30,7 @@ Into `docs/research/firebase-security.md`, primary sources:
 2. **App Check enforcement rollout** — Google's current recommended sequence, what the
    monitor-only metrics actually show, how long to watch, and how to roll back if
    legitimate traffic starts failing.
-3. **Per-uid rate limiting in a Next.js server action with no Redis.** Soko has one
+3. **Per-uid rate limiting in a Next.js server action with no Redis.** MalFleks has one
    SQLite/Postgres database and Firestore. What is the honest option set, and what does
    each cost? Be sceptical of anything in-memory: it does not survive a serverless cold
    start, and claiming it rate-limits anything would be exactly the kind of overstated

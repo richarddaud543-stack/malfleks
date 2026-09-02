@@ -26,17 +26,17 @@ function session(overrides: Partial<Session> = {}): Session {
 describe("adminEmailAllowlist", () => {
   it("is empty when the variable is unset — nobody is admin by default", () => {
     expect(adminEmailAllowlist({})).toEqual([]);
-    expect(adminEmailAllowlist({ SOKO_ADMIN_EMAILS: "" })).toEqual([]);
+    expect(adminEmailAllowlist({ MALFLEKS_ADMIN_EMAILS: "" })).toEqual([]);
   });
 
   it("splits, trims and lowercases", () => {
     expect(
-      adminEmailAllowlist({ SOKO_ADMIN_EMAILS: " Owner@Soko.co.tz , b@x.com " })
-    ).toEqual(["owner@soko.co.tz", "b@x.com"]);
+      adminEmailAllowlist({ MALFLEKS_ADMIN_EMAILS: " Owner@MalFleks.co.tz , b@x.com " })
+    ).toEqual(["owner@malfleks.co.tz", "b@x.com"]);
   });
 
   it("ignores empty entries from a trailing comma", () => {
-    expect(adminEmailAllowlist({ SOKO_ADMIN_EMAILS: "a@x.com,," })).toEqual([
+    expect(adminEmailAllowlist({ MALFLEKS_ADMIN_EMAILS: "a@x.com,," })).toEqual([
       "a@x.com",
     ]);
   });
@@ -87,21 +87,21 @@ describe("isAdminUser — who is let in", () => {
     expect(
       isAdminUser(
         session({ admin: true, email: null, emailVerified: false }),
-        { SOKO_ADMIN_EMAILS: "" }
+        { MALFLEKS_ADMIN_EMAILS: "" }
       )
     ).toBe(true);
   });
 
   it("admits an allowlisted, verified email", () => {
     expect(
-      isAdminUser(session(), { SOKO_ADMIN_EMAILS: "asha@example.com" })
+      isAdminUser(session(), { MALFLEKS_ADMIN_EMAILS: "asha@example.com" })
     ).toBe(true);
   });
 
   it("matches the allowlist case-insensitively", () => {
     expect(
       isAdminUser(session({ email: "Asha@Example.com" }), {
-        SOKO_ADMIN_EMAILS: "asha@example.com",
+        MALFLEKS_ADMIN_EMAILS: "asha@example.com",
       })
     ).toBe(true);
   });
@@ -109,7 +109,7 @@ describe("isAdminUser — who is let in", () => {
 
 describe("isAdminUser — who is kept out", () => {
   it("refuses a signed-out visitor", () => {
-    expect(isAdminUser(null, { SOKO_ADMIN_EMAILS: "asha@example.com" })).toBe(
+    expect(isAdminUser(null, { MALFLEKS_ADMIN_EMAILS: "asha@example.com" })).toBe(
       false
     );
   });
@@ -124,7 +124,7 @@ describe("isAdminUser — who is kept out", () => {
     // not need this, which is why the two branches differ.
     expect(
       isAdminUser(session({ emailVerified: false }), {
-        SOKO_ADMIN_EMAILS: "asha@example.com",
+        MALFLEKS_ADMIN_EMAILS: "asha@example.com",
       })
     ).toBe(false);
   });
@@ -132,7 +132,7 @@ describe("isAdminUser — who is kept out", () => {
   it("refuses a session with no email when the allowlist is the only route", () => {
     expect(
       isAdminUser(session({ email: null }), {
-        SOKO_ADMIN_EMAILS: "asha@example.com",
+        MALFLEKS_ADMIN_EMAILS: "asha@example.com",
       })
     ).toBe(false);
   });
@@ -148,7 +148,7 @@ describe("isAdminUser — who is kept out", () => {
     ]) {
       expect(
         isAdminUser(session({ email }), {
-          SOKO_ADMIN_EMAILS: "asha@example.com",
+          MALFLEKS_ADMIN_EMAILS: "asha@example.com",
         }),
         `${email} must not be treated as admin`
       ).toBe(false);

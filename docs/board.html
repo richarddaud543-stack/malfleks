@@ -1,4 +1,4 @@
-<title>Soko Engineering Board</title>
+<title>MalFleks Engineering Board</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400;500&family=Geist:wght@400;450;500&display=swap">
@@ -274,7 +274,7 @@ td p { margin:5px 0 0; color:var(--muted); font-size:12.5px; }
 .ledger th { background:var(--surface); font-family:"Geist Mono",monospace; font-size:10.5px; letter-spacing:.09em; text-transform:uppercase; color:var(--muted); font-weight:500; text-align:left; }
 .ledger td.amt { text-align:right; font-family:"Geist Mono",monospace; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ledger td.note { color:var(--muted); font-size:12.5px; }
-.ledger tr.soko td { background:var(--accent-soft); }
+.ledger tr.malfleks td { background:var(--accent-soft); }
 .ledger tr.total td { border-top:2px solid var(--line-strong); border-bottom:0; font-weight:500; }
 .ledger tr.total td.amt { color:var(--accent); }
 .ledger tr.check td { background:var(--mint); font-weight:500; }
@@ -358,10 +358,10 @@ html { scroll-behavior:smooth; }
 
 <header class="masthead">
   <div class="wrap masthead-inner">
-    <p class="eyebrow">Soko Ltd · Engineering</p>
+    <p class="eyebrow">MalFleks Ltd · Engineering</p>
     <h1>How this thing<br>gets built</h1>
     <p class="thesis">
-      Soko is a multi-brand marketplace for Tanzania. The product isn't the catalogue —
+      MalFleks is a multi-brand marketplace for Tanzania. The product isn't the catalogue —
       it's the <strong>routing decision</strong>: if a branch runs its own delivery, the
       customer gets the brand's fleet; if it doesn't, we connect them to a local courier.
       Everything on this page exists to serve that one rule.
@@ -413,7 +413,7 @@ html { scroll-behavior:smooth; }
       <p class="eyebrow">Orientation</p>
       <h2>The whole thing, on one branch at a time</h2>
       <p>
-        Every part of Soko and how it hangs together. Click a branch to open or close it,
+        Every part of MalFleks and how it hangs together. Click a branch to open or close it,
         drag to pan, scroll to zoom. A leaf with a coloured edge jumps to that section —
         and the colour tells you whether it is <strong>built</strong>, still only
         <strong>designed</strong>, or <strong>waiting on you</strong>.
@@ -586,7 +586,7 @@ html { scroll-behavior:smooth; }
       <h2>Brand → carrier → customer <span class="badge">design</span></h2>
       <p>
         Everything from here to the roadmap is <strong>a decision, not code</strong>. It is
-        written up in <code>docs/marketplace-model.md</code>. Phase 2 is the only one Soko
+        written up in <code>docs/marketplace-model.md</code>. Phase 2 is the only one MalFleks
         actually operates — and that is exactly where the money comes from.
       </p>
     </div>
@@ -597,7 +597,7 @@ html { scroll-behavior:smooth; }
         <h4>The brand branch</h4>
         <p>
           Owns the goods. Receives the order for the product <em>it</em> listed, and confirms
-          it is available at that price. Gets paid at the door, less Soko's 6%.
+          it is available at that price. Gets paid at the door, less MalFleks's 6%.
         </p>
       </div>
       <div class="ph mid">
@@ -614,7 +614,7 @@ html { scroll-behavior:smooth; }
         <h4>The customer</h4>
         <p>
           Pays a deposit at order time by mobile money, then the rest in cash at the door.
-          Never pays Soko twice, and never pays Soko for the goods.
+          Never pays MalFleks twice, and never pays MalFleks for the goods.
         </p>
       </div>
     </div>
@@ -634,7 +634,7 @@ html { scroll-behavior:smooth; }
 
     <div class="pipe">
       <div class="step"><span class="sn">Step 1</span><b>Apply externally</b><p>A branch or courier applies off-site. No self-serve form on the customer-facing website.</p></div>
-      <div class="step gatekeep"><span class="sn">Step 2</span><b>Admin approves</b><p>Soko's admin vets them and <em>creates their account</em>. They never register themselves.</p></div>
+      <div class="step gatekeep"><span class="sn">Step 2</span><b>Admin approves</b><p>MalFleks's admin vets them and <em>creates their account</em>. They never register themselves.</p></div>
       <div class="step"><span class="sn">Step 3</span><b>Branch submits</b><p>The branch sends products from its own partner page.</p></div>
       <div class="step gatekeep"><span class="sn">Step 4</span><b>Admin reviews</b><p>Submissions land in a queue and are monitored before anyone sees them.</p></div>
       <div class="step"><span class="sn">Step 5</span><b>Published</b><p>Only now does the product appear to customers — and orders route back to that exact branch.</p></div>
@@ -656,11 +656,11 @@ html { scroll-behavior:smooth; }
   <section id="money">
     <div class="sec-head planned">
       <p class="eyebrow">Revenue · designed, not built</p>
-      <h2>The deposit is exactly Soko's cut <span class="badge">design</span></h2>
+      <h2>The deposit is exactly MalFleks's cut <span class="badge">design</span></h2>
       <p>
-        This is the load-bearing decision. The customer's upfront deposit equals Soko's total
+        This is the load-bearing decision. The customer's upfront deposit equals MalFleks's total
         commission — <strong>nothing more</strong>. Everything else settles at the door between
-        the customer, the branch and the courier, and <span class="serif">Soko never touches
+        the customer, the branch and the courier, and <span class="serif">MalFleks never touches
         it.</span>
       </p>
     </div>
@@ -677,8 +677,8 @@ html { scroll-behavior:smooth; }
       <table class="ledger">
         <thead><tr><th>Payment amount (TZS)</th><th style="text-align:right">Platform fee</th><th style="text-align:right">Rate at top</th></tr></thead>
         <tbody>
-          <tr class="soko"><td>1,000 – 5,000</td><td class="amt">500</td><td class="amt">10.0%</td></tr>
-          <tr class="soko"><td>5,100 – 10,000</td><td class="amt">1,000</td><td class="amt">10.0%</td></tr>
+          <tr class="malfleks"><td>1,000 – 5,000</td><td class="amt">500</td><td class="amt">10.0%</td></tr>
+          <tr class="malfleks"><td>5,100 – 10,000</td><td class="amt">1,000</td><td class="amt">10.0%</td></tr>
           <tr><td>10,100 – 25,000</td><td class="amt">2,000</td><td class="amt">8.0%</td></tr>
           <tr><td>25,100 – 50,000</td><td class="amt">3,500</td><td class="amt">7.0%</td></tr>
           <tr><td>50,100 – 100,000</td><td class="amt">6,000</td><td class="amt">6.0%</td></tr>
@@ -703,7 +703,7 @@ html { scroll-behavior:smooth; }
       <p style="margin:9px 0 0;color:var(--muted);font-size:14px">
         On this catalogue the cap cuts fee revenue by <b>95%</b>: if all 38 products sold once,
         a 1,200,000 ceiling earns 17,701,500 TZS and this one earns 898,500. That is not a
-        mistake, it is a change of business model. Soko stops being a <b>commission</b> business
+        mistake, it is a change of business model. MalFleks stops being a <b>commission</b> business
         (revenue scales with order value) and becomes a <b>transaction-fee</b> business (revenue
         scales with order <em>count</em>). A car sale earns 40,000 TZS — about seven earbud
         sales. The upside is the reason to do it: at 0.016%, Toyota and BMW have no commercial
@@ -715,7 +715,7 @@ html { scroll-behavior:smooth; }
     <div class="rates" style="margin-top:20px">
       <div class="rate">
         <div class="pct" style="font-size:1.5rem">Per city</div>
-        <b>Soko sets the delivery fee</b>
+        <b>MalFleks sets the delivery fee</b>
         <p>Not the courier, not the branch. Four numbers — Dar, Arusha, Mwanza, Dodoma. It's all the current data supports: branch coordinates are approximate city-centre points.</p>
       </div>
       <div class="rate">
@@ -735,12 +735,12 @@ html { scroll-behavior:smooth; }
       <table class="ledger">
         <thead><tr><th>Movement</th><th style="text-align:right">TZS</th><th>What it is</th></tr></thead>
         <tbody>
-          <tr class="soko"><td><b>Customer pays now — deposit</b></td><td class="amt">19,000</td><td class="note">The 500,100–1,000,000 goods rung. Nothing else.</td></tr>
-          <tr><td>Customer pays at the door</td><td class="amt">996,000</td><td class="note">Cash or direct mobile money. Soko never handles it.</td></tr>
+          <tr class="malfleks"><td><b>Customer pays now — deposit</b></td><td class="amt">19,000</td><td class="note">The 500,100–1,000,000 goods rung. Nothing else.</td></tr>
+          <tr><td>Customer pays at the door</td><td class="amt">996,000</td><td class="note">Cash or direct mobile money. MalFleks never handles it.</td></tr>
           <tr class="total"><td>Order total to the customer</td><td class="amt">1,015,000</td><td class="note">1,000,000 goods + 15,000 delivery.</td></tr>
           <tr><td style="padding-top:20px">Of the 996,000 at the door — courier collects</td><td class="amt" style="padding-top:20px">15,000</td><td class="note" style="padding-top:20px">The full delivery fee, straight from the customer.</td></tr>
           <tr><td>— branch keeps</td><td class="amt">981,000</td><td class="note">Their 1,000,000 less the 19,000 rung.</td></tr>
-          <tr class="check"><td>15,000 + 981,000</td><td class="amt">996,000 ✓</td><td class="note">Exactly the cash at the door. Afterwards the courier owes Soko 1,500 on their page, netting 13,500 — so Soko earns 20,500, 93% of it secured before anyone moved.</td></tr>
+          <tr class="check"><td>15,000 + 981,000</td><td class="amt">996,000 ✓</td><td class="note">Exactly the cash at the door. Afterwards the courier owes MalFleks 1,500 on their page, netting 13,500 — so MalFleks earns 20,500, 93% of it secured before anyone moved.</td></tr>
         </tbody>
       </table>
     </div>
@@ -748,7 +748,7 @@ html { scroll-behavior:smooth; }
     <h3 style="margin:26px 0 12px;font-size:1.1rem">Goods revenue is secured upfront; delivery revenue is credit</h3>
     <div class="tablewrap">
       <table class="ledger">
-        <thead><tr><th>Order</th><th style="text-align:right">Deposit (secured)</th><th style="text-align:right">Courier owes</th><th style="text-align:right">Soko earns</th><th style="text-align:right">Secured</th></tr></thead>
+        <thead><tr><th>Order</th><th style="text-align:right">Deposit (secured)</th><th style="text-align:right">Courier owes</th><th style="text-align:right">MalFleks earns</th><th style="text-align:right">Secured</th></tr></thead>
         <tbody>
           <tr><td>Earbuds 65,000 + 2,500 delivery</td><td class="amt">6,000</td><td class="amt">500</td><td class="amt">6,500</td><td class="amt">92%</td></tr>
           <tr><td>Fridge 1,000,000 + 15,000</td><td class="amt">19,000</td><td class="amt">1,500</td><td class="amt">20,500</td><td class="amt">93%</td></tr>
@@ -761,8 +761,8 @@ html { scroll-behavior:smooth; }
       <div class="panel">
         <h4>Why this and not escrow <span class="tag">load-bearing</span></h4>
         <ul>
-          <li>Soko is <b>paid before it does anything</b>, and never chases a branch or courier.</li>
-          <li><b>No Bank of Tanzania licence.</b> Soko is a merchant of an aggregator (Selcom, Azampay) — they hold the licence. The Act licenses whoever <em>operates</em> the payment system.</li>
+          <li>MalFleks is <b>paid before it does anything</b>, and never chases a branch or courier.</li>
+          <li><b>No Bank of Tanzania licence.</b> MalFleks is a merchant of an aggregator (Selcom, Azampay) — they hold the licence. The Act licenses whoever <em>operates</em> the payment system.</li>
           <li>Cash on delivery, which still dominates the market, keeps working untouched.</li>
           <li>The deposit doubles as the <b>low-intent filter</b> the research says the industry uses: someone who won't send 19,000 was never going to accept the fridge.</li>
         </ul>
@@ -770,7 +770,7 @@ html { scroll-behavior:smooth; }
       <div class="panel">
         <h4>The courier ledger, and the real lever</h4>
         <ul>
-          <li>Delivery money never passes through Soko at all — the customer pays the courier at the door, and the courier owes Soko its rung afterwards.</li>
+          <li>Delivery money never passes through MalFleks at all — the customer pays the courier at the door, and the courier owes MalFleks its rung afterwards.</li>
           <li>They settle it on the page they registered on. <b>Goods revenue is secured; delivery revenue is a receivable</b> — small, 6–8% per order, but it is credit.</li>
           <li><b>The enforcement lever is job allocation, not invoicing</b> — an overdue courier stops being offered by <code>resolveDeliveryRoute()</code>.</li>
           <li>That has to be a stated rule with a grace period, visible on their page, or it reads as arbitrary.</li>
@@ -783,7 +783,7 @@ html { scroll-behavior:smooth; }
       <div class="tablewrap" style="margin-top:11px;border:0">
         <table class="ledger" style="min-width:480px">
           <tbody>
-            <tr><td><b>Branch declines</b> — out of stock, wrong price</td><td class="note">Full refund. Soko did not deliver a customer; keeping it would be indefensible.</td></tr>
+            <tr><td><b>Branch declines</b> — out of stock, wrong price</td><td class="note">Full refund. MalFleks did not deliver a customer; keeping it would be indefensible.</td></tr>
             <tr><td><b>Customer cancels before dispatch</b></td><td class="note">Full refund inside a short window, then non-refundable.</td></tr>
             <tr><td><b>Customer refuses at the door</b></td><td class="note">Non-refundable — this is exactly the behaviour the deposit exists to discourage, and a driver has already made the trip.</td></tr>
             <tr><td><b>Courier fails to deliver</b></td><td class="note">Full refund, and it counts against the courier.</td></tr>
@@ -840,7 +840,7 @@ html { scroll-behavior:smooth; }
           <h4>Money</h4>
           <p>
             An aggregator merchant account (your action, not code). A <b>pure fee module</b> —
-            goods, delivery and route in; deposit, payouts and Soko's cut out — tested the way
+            goods, delivery and route in; deposit, payouts and MalFleks's cut out — tested the way
             <code>buildListings</code> is, because money bugs are the worst kind. Integer TZS
             throughout with an explicit rounding rule. Deposit collected by mobile-money push to
             the phone already on the order.
@@ -1240,13 +1240,13 @@ html { scroll-behavior:smooth; }
         <p>Nothing stops someone applying as "Toyota Arusha". The catalogue already separates researched fact from placeholder with the <code>verified</code> flag; partner approval needs the same discipline. This is an ops process, not a code change.</p></div></div>
       <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
         <h4>Refund window, and who eats a refused delivery</h4>
-        <p>How long can a customer cancel and still get the deposit back? And when someone refuses at the door, does the wasted trip get billed to them, absorbed by Soko, or borne by the courier?</p></div></div>
+        <p>How long can a customer cancel and still get the deposit back? And when someone refuses at the door, does the wasted trip get billed to them, absorbed by MalFleks, or borne by the courier?</p></div></div>
       <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
         <h4>How long can a courier owe before losing jobs?</h4>
         <p>The 1,000 TZS is enforced by withholding work, which only works if the grace period is stated up front and visible on their page. And do already-accepted jobs still complete?</p></div></div>
       <div class="ask" style="border-left-color:var(--violet)"><div class="who">Model</div><div>
         <h4>Does the deposit apply to brand-fleet orders?</h4>
-        <p>No courier means no delivery payment through Soko and no delivery rung, so the deposit would be the goods rung alone. Confirm that's intended — it's 6 of 19 branches today.</p></div></div>
+        <p>No courier means no delivery payment through MalFleks and no delivery rung, so the deposit would be the goods rung alone. Confirm that's intended — it's 6 of 19 branches today.</p></div></div>
 
       <div class="ask"><div class="who">Debt&nbsp;#2</div><div>
         <h4>A git remote</h4>
@@ -1267,7 +1267,7 @@ html { scroll-behavior:smooth; }
 </footer>
 
 <script>
-const DATA = {"commits":[{"h":"d2946d7","d":"2026-08-23 12:17","s":"Put the whole project on one page","o":["beacon"],"a":1309,"r":0,"f":1},{"h":"1182952","d":"2026-08-22 10:10","s":"Let a customer take their own address back out","o":["vault","forge","beacon"],"a":447,"r":7,"f":8},{"h":"3ef8cd2","d":"2026-08-22 09:49","s":"Guard the two locator borders that actually fail contrast","o":["prism","sentinel","atlas"],"a":173,"r":31,"f":5},{"h":"a27989f","d":"2026-08-18 05:06","s":"Drop the two type imports the cutover left behind","o":["atlas"],"a":0,"r":1,"f":1},{"h":"0476bbf","d":"2026-08-17 21:06","s":"Mark debts 6 and 7 closed, and 8 half closed","o":["beacon"],"a":3,"r":3,"f":1},{"h":"3ee8077","d":"2026-08-17 21:05","s":"Read the catalogue from the database, not the bundle","o":["atlas","sentinel","forge"],"a":602,"r":248,"f":29},{"h":"84e246a","d":"2026-08-17 18:35","s":"Count no visit that has not said yes","o":["atlas","sentinel","vault"],"a":766,"r":10,"f":14},{"h":"22cc017","d":"2026-08-17 08:42","s":"Answer who delivers and how soon, before the click","o":["ledger","sentinel","prism"],"a":746,"r":50,"f":25},{"h":"d7998e5","d":"2026-08-16 22:32","s":"Integrate Vault: Firebase Auth, saved order requests, Security Rules","o":["lead"],"a":0,"r":0,"f":0},{"h":"92e7e34","d":"2026-08-16 22:22","s":"Add Firebase Auth, saved order requests, Security Rules and App Check","o":["vault","beacon","forge"],"a":5308,"r":52,"f":49},{"h":"5646de7","d":"2026-08-16 20:24","s":"Never tell a customer to call a number we don't have","o":["atlas","sentinel","ledger"],"a":77,"r":12,"f":3},{"h":"03db6a3","d":"2026-08-16 19:32","s":"Fix two locator search defects only visible on the page","o":["atlas"],"a":14,"r":2,"f":1},{"h":"bb362c8","d":"2026-08-16 19:03","s":"Make hover states work for keyboards, and search the locator map","o":["atlas","beacon","prism"],"a":1220,"r":100,"f":19},{"h":"437423a","d":"2026-08-16 19:03","s":"Stop linting Playwright's own HTML report","o":["lead"],"a":7,"r":0,"f":1},{"h":"725badc","d":"2026-08-16 13:58","s":"Make the roster real: eight agent definitions","o":["lead"],"a":374,"r":1,"f":9},{"h":"6e96741","d":"2026-08-16 09:40","s":"Bring Spline interaction vocabulary to the homepage","o":["atlas","sentinel"],"a":820,"r":60,"f":7},{"h":"bb8e6cd","d":"2026-08-16 09:40","s":"Convert search and the locator map to the light system","o":["atlas"],"a":27,"r":20,"f":5},{"h":"7066f1d","d":"2026-08-16 09:32","s":"Actually commit the skill files","o":["lead"],"a":487,"r":5,"f":9},{"h":"82ff0ef","d":"2026-08-16 09:31","s":"Give every engineer a skill file that compounds","o":["beacon"],"a":22,"r":0,"f":2},{"h":"4fd0a36","d":"2026-08-16 09:11","s":"Convert the order flow, agents and branch views to the light system","o":["prism","beacon","atlas"],"a":165,"r":90,"f":13},{"h":"e53d155","d":"2026-08-16 00:04","s":"Delete the WebGL blobs, and design the hero and showcase instead","o":["atlas","sentinel","prism"],"a":461,"r":990,"f":15},{"h":"5a38520","d":"2026-08-16 00:03","s":"Turn the palette light: white ground, mint panels, floating pill nav","o":["prism","atlas"],"a":202,"r":51,"f":5},{"h":"a7d2563","d":"2026-08-15 21:45","s":"Add GSAP and the official React hook package","o":["lead"],"a":20,"r":0,"f":2},{"h":"89e25aa","d":"2026-08-15 21:10","s":"Carry the serif-italic voice onto the last three routes","o":["atlas","beacon"],"a":34,"r":8,"f":3},{"h":"c4f0249","d":"2026-08-15 21:10","s":"Show how each brand delivers, before the click","o":["sentinel","prism"],"a":208,"r":1,"f":2},{"h":"7d79c19","d":"2026-08-15 21:09","s":"Morph a product card into its 3D showcase across the navigation","o":["sentinel","atlas","prism"],"a":242,"r":26,"f":5},{"h":"4d7696f","d":"2026-08-15 19:27","s":"Decide it: Prisma owns the catalogue, Firebase is Auth and Analytics","o":["beacon"],"a":40,"r":2,"f":2},{"h":"6d67651","d":"2026-08-15 19:08","s":"Hold the 3D showcase in view while the product details scroll","o":["atlas"],"a":6,"r":1,"f":1},{"h":"6ea4884","d":"2026-08-15 18:53","s":"Second learning round: five more Phase 0 reports, and two gaps closed","o":["beacon","sentinel"],"a":1478,"r":12,"f":8},{"h":"3eebd58","d":"2026-08-15 17:54","s":"Wire the Firebase client for project v-mall-f37c6","o":["mercury","sentinel","atlas"],"a":1178,"r":9,"f":8},{"h":"a72395d","d":"2026-08-15 17:15","s":"Integrate four Phase 0 research assignments, and fix the defect one found","o":["beacon","prism","sentinel"],"a":1209,"r":13,"f":10},{"h":"984cc43","d":"2026-08-14 22:23","s":"Make the skip link actually skip, and stop doubling page titles","o":["beacon","sentinel","atlas"],"a":137,"r":4,"f":5},{"h":"4a2cc5d","d":"2026-08-14 21:33","s":"Add CI, and stop the E2E suite racing itself","o":["forge","beacon","sentinel"],"a":125,"r":6,"f":5},{"h":"cabe532","d":"2026-08-14 21:25","s":"Carry branch coordinates through the persistence layer","o":["forge"],"a":21,"r":0,"f":4},{"h":"62e0633","d":"2026-08-14 21:13","s":"Integrate the persistence layer from ENG-4 . Forge","o":["lead"],"a":0,"r":0,"f":0},{"h":"a121e90","d":"2026-08-14 21:12","s":"Scope the order form's alert assertion to the form","o":["sentinel"],"a":5,"r":1,"f":1},{"h":"ff07b2a","d":"2026-08-14 21:03","s":"Integrate the order request flow from ENG-2 . Mercury","o":["lead"],"a":0,"r":0,"f":0},{"h":"7b06550","d":"2026-08-14 21:00","s":"Wire the locator into the site and fix its marker labels","o":["atlas","beacon"],"a":17,"r":4,"f":5},{"h":"f7a09cd","d":"2026-08-14 20:46","s":"Integrate the cross-brand branch locator from ENG-1 . Atlas","o":["lead"],"a":0,"r":0,"f":0},{"h":"46e7c73","d":"2026-08-14 16:53","s":"Register the client-bundle findings from Forge's review","o":["beacon"],"a":2,"r":0,"f":1},{"h":"e93d9fa","d":"2026-08-14 16:51","s":"Add Prisma schema, SQLite persistence, seed and repository layer","o":["forge","beacon"],"a":3994,"r":111,"f":16},{"h":"c659d78","d":"2026-08-14 16:50","s":"Add the order request flow, from delivery page to confirmation","o":["ledger","atlas","sentinel"],"a":2065,"r":19,"f":11},{"h":"cfe9e69","d":"2026-08-14 16:43","s":"Record the Lead's onboarding research and open a debt register","o":["beacon"],"a":55,"r":0,"f":1},{"h":"632c42a","d":"2026-08-14 16:42","s":"Add cross-brand branch locator at /locator","o":["atlas","sentinel","mercury"],"a":1304,"r":0,"f":14},{"h":"e9a6642","d":"2026-08-14 16:38","s":"Add the engineering standards handbook","o":["beacon"],"a":76,"r":0,"f":1},{"h":"31b6cdb","d":"2026-08-14 16:18","s":"Add faceted search across the whole catalogue","o":["atlas","sentinel","mercury"],"a":1385,"r":3,"f":13},{"h":"56dcd23","d":"2026-08-14 16:00","s":"Initial commit: Soko brand marketplace prototype","o":["atlas","mercury","prism"],"a":14384,"r":0,"f":73}],"edges":[{"a":"atlas","b":"sentinel","n":12},{"a":"atlas","b":"prism","n":7},{"a":"prism","b":"sentinel","n":6},{"a":"atlas","b":"beacon","n":5},{"a":"atlas","b":"mercury","n":4},{"a":"beacon","b":"forge","n":4},{"a":"beacon","b":"sentinel","n":4},{"a":"mercury","b":"sentinel","n":3},{"a":"ledger","b":"sentinel","n":3},{"a":"beacon","b":"prism","n":3},{"a":"atlas","b":"ledger","n":2},{"a":"forge","b":"sentinel","n":2},{"a":"beacon","b":"vault","n":2},{"a":"forge","b":"vault","n":2},{"a":"mercury","b":"prism","n":1},{"a":"ledger","b":"prism","n":1},{"a":"atlas","b":"vault","n":1},{"a":"sentinel","b":"vault","n":1},{"a":"atlas","b":"forge","n":1}],"totals":{"atlas":22,"mercury":4,"prism":10,"sentinel":18,"beacon":18,"ledger":3,"forge":6,"vault":3}};
+const DATA = {"commits":[{"h":"d2946d7","d":"2026-08-23 12:17","s":"Put the whole project on one page","o":["beacon"],"a":1309,"r":0,"f":1},{"h":"1182952","d":"2026-08-22 10:10","s":"Let a customer take their own address back out","o":["vault","forge","beacon"],"a":447,"r":7,"f":8},{"h":"3ef8cd2","d":"2026-08-22 09:49","s":"Guard the two locator borders that actually fail contrast","o":["prism","sentinel","atlas"],"a":173,"r":31,"f":5},{"h":"a27989f","d":"2026-08-18 05:06","s":"Drop the two type imports the cutover left behind","o":["atlas"],"a":0,"r":1,"f":1},{"h":"0476bbf","d":"2026-08-17 21:06","s":"Mark debts 6 and 7 closed, and 8 half closed","o":["beacon"],"a":3,"r":3,"f":1},{"h":"3ee8077","d":"2026-08-17 21:05","s":"Read the catalogue from the database, not the bundle","o":["atlas","sentinel","forge"],"a":602,"r":248,"f":29},{"h":"84e246a","d":"2026-08-17 18:35","s":"Count no visit that has not said yes","o":["atlas","sentinel","vault"],"a":766,"r":10,"f":14},{"h":"22cc017","d":"2026-08-17 08:42","s":"Answer who delivers and how soon, before the click","o":["ledger","sentinel","prism"],"a":746,"r":50,"f":25},{"h":"d7998e5","d":"2026-08-16 22:32","s":"Integrate Vault: Firebase Auth, saved order requests, Security Rules","o":["lead"],"a":0,"r":0,"f":0},{"h":"92e7e34","d":"2026-08-16 22:22","s":"Add Firebase Auth, saved order requests, Security Rules and App Check","o":["vault","beacon","forge"],"a":5308,"r":52,"f":49},{"h":"5646de7","d":"2026-08-16 20:24","s":"Never tell a customer to call a number we don't have","o":["atlas","sentinel","ledger"],"a":77,"r":12,"f":3},{"h":"03db6a3","d":"2026-08-16 19:32","s":"Fix two locator search defects only visible on the page","o":["atlas"],"a":14,"r":2,"f":1},{"h":"bb362c8","d":"2026-08-16 19:03","s":"Make hover states work for keyboards, and search the locator map","o":["atlas","beacon","prism"],"a":1220,"r":100,"f":19},{"h":"437423a","d":"2026-08-16 19:03","s":"Stop linting Playwright's own HTML report","o":["lead"],"a":7,"r":0,"f":1},{"h":"725badc","d":"2026-08-16 13:58","s":"Make the roster real: eight agent definitions","o":["lead"],"a":374,"r":1,"f":9},{"h":"6e96741","d":"2026-08-16 09:40","s":"Bring Spline interaction vocabulary to the homepage","o":["atlas","sentinel"],"a":820,"r":60,"f":7},{"h":"bb8e6cd","d":"2026-08-16 09:40","s":"Convert search and the locator map to the light system","o":["atlas"],"a":27,"r":20,"f":5},{"h":"7066f1d","d":"2026-08-16 09:32","s":"Actually commit the skill files","o":["lead"],"a":487,"r":5,"f":9},{"h":"82ff0ef","d":"2026-08-16 09:31","s":"Give every engineer a skill file that compounds","o":["beacon"],"a":22,"r":0,"f":2},{"h":"4fd0a36","d":"2026-08-16 09:11","s":"Convert the order flow, agents and branch views to the light system","o":["prism","beacon","atlas"],"a":165,"r":90,"f":13},{"h":"e53d155","d":"2026-08-16 00:04","s":"Delete the WebGL blobs, and design the hero and showcase instead","o":["atlas","sentinel","prism"],"a":461,"r":990,"f":15},{"h":"5a38520","d":"2026-08-16 00:03","s":"Turn the palette light: white ground, mint panels, floating pill nav","o":["prism","atlas"],"a":202,"r":51,"f":5},{"h":"a7d2563","d":"2026-08-15 21:45","s":"Add GSAP and the official React hook package","o":["lead"],"a":20,"r":0,"f":2},{"h":"89e25aa","d":"2026-08-15 21:10","s":"Carry the serif-italic voice onto the last three routes","o":["atlas","beacon"],"a":34,"r":8,"f":3},{"h":"c4f0249","d":"2026-08-15 21:10","s":"Show how each brand delivers, before the click","o":["sentinel","prism"],"a":208,"r":1,"f":2},{"h":"7d79c19","d":"2026-08-15 21:09","s":"Morph a product card into its 3D showcase across the navigation","o":["sentinel","atlas","prism"],"a":242,"r":26,"f":5},{"h":"4d7696f","d":"2026-08-15 19:27","s":"Decide it: Prisma owns the catalogue, Firebase is Auth and Analytics","o":["beacon"],"a":40,"r":2,"f":2},{"h":"6d67651","d":"2026-08-15 19:08","s":"Hold the 3D showcase in view while the product details scroll","o":["atlas"],"a":6,"r":1,"f":1},{"h":"6ea4884","d":"2026-08-15 18:53","s":"Second learning round: five more Phase 0 reports, and two gaps closed","o":["beacon","sentinel"],"a":1478,"r":12,"f":8},{"h":"3eebd58","d":"2026-08-15 17:54","s":"Wire the Firebase client for project v-mall-f37c6","o":["mercury","sentinel","atlas"],"a":1178,"r":9,"f":8},{"h":"a72395d","d":"2026-08-15 17:15","s":"Integrate four Phase 0 research assignments, and fix the defect one found","o":["beacon","prism","sentinel"],"a":1209,"r":13,"f":10},{"h":"984cc43","d":"2026-08-14 22:23","s":"Make the skip link actually skip, and stop doubling page titles","o":["beacon","sentinel","atlas"],"a":137,"r":4,"f":5},{"h":"4a2cc5d","d":"2026-08-14 21:33","s":"Add CI, and stop the E2E suite racing itself","o":["forge","beacon","sentinel"],"a":125,"r":6,"f":5},{"h":"cabe532","d":"2026-08-14 21:25","s":"Carry branch coordinates through the persistence layer","o":["forge"],"a":21,"r":0,"f":4},{"h":"62e0633","d":"2026-08-14 21:13","s":"Integrate the persistence layer from ENG-4 . Forge","o":["lead"],"a":0,"r":0,"f":0},{"h":"a121e90","d":"2026-08-14 21:12","s":"Scope the order form's alert assertion to the form","o":["sentinel"],"a":5,"r":1,"f":1},{"h":"ff07b2a","d":"2026-08-14 21:03","s":"Integrate the order request flow from ENG-2 . Mercury","o":["lead"],"a":0,"r":0,"f":0},{"h":"7b06550","d":"2026-08-14 21:00","s":"Wire the locator into the site and fix its marker labels","o":["atlas","beacon"],"a":17,"r":4,"f":5},{"h":"f7a09cd","d":"2026-08-14 20:46","s":"Integrate the cross-brand branch locator from ENG-1 . Atlas","o":["lead"],"a":0,"r":0,"f":0},{"h":"46e7c73","d":"2026-08-14 16:53","s":"Register the client-bundle findings from Forge's review","o":["beacon"],"a":2,"r":0,"f":1},{"h":"e93d9fa","d":"2026-08-14 16:51","s":"Add Prisma schema, SQLite persistence, seed and repository layer","o":["forge","beacon"],"a":3994,"r":111,"f":16},{"h":"c659d78","d":"2026-08-14 16:50","s":"Add the order request flow, from delivery page to confirmation","o":["ledger","atlas","sentinel"],"a":2065,"r":19,"f":11},{"h":"cfe9e69","d":"2026-08-14 16:43","s":"Record the Lead's onboarding research and open a debt register","o":["beacon"],"a":55,"r":0,"f":1},{"h":"632c42a","d":"2026-08-14 16:42","s":"Add cross-brand branch locator at /locator","o":["atlas","sentinel","mercury"],"a":1304,"r":0,"f":14},{"h":"e9a6642","d":"2026-08-14 16:38","s":"Add the engineering standards handbook","o":["beacon"],"a":76,"r":0,"f":1},{"h":"31b6cdb","d":"2026-08-14 16:18","s":"Add faceted search across the whole catalogue","o":["atlas","sentinel","mercury"],"a":1385,"r":3,"f":13},{"h":"56dcd23","d":"2026-08-14 16:00","s":"Initial commit: MalFleks brand marketplace prototype","o":["atlas","mercury","prism"],"a":14384,"r":0,"f":73}],"edges":[{"a":"atlas","b":"sentinel","n":12},{"a":"atlas","b":"prism","n":7},{"a":"prism","b":"sentinel","n":6},{"a":"atlas","b":"beacon","n":5},{"a":"atlas","b":"mercury","n":4},{"a":"beacon","b":"forge","n":4},{"a":"beacon","b":"sentinel","n":4},{"a":"mercury","b":"sentinel","n":3},{"a":"ledger","b":"sentinel","n":3},{"a":"beacon","b":"prism","n":3},{"a":"atlas","b":"ledger","n":2},{"a":"forge","b":"sentinel","n":2},{"a":"beacon","b":"vault","n":2},{"a":"forge","b":"vault","n":2},{"a":"mercury","b":"prism","n":1},{"a":"ledger","b":"prism","n":1},{"a":"atlas","b":"vault","n":1},{"a":"sentinel","b":"vault","n":1},{"a":"atlas","b":"forge","n":1}],"totals":{"atlas":22,"mercury":4,"prism":10,"sentinel":18,"beacon":18,"ledger":3,"forge":6,"vault":3}};
 
 const ENGINEERS = [
   { id:"atlas",    n:"Atlas",    eid:"ENG-1", role:"Frontend & Motion",       owns:"components/home · motion · search · locator",   d:"Pages, components, scroll-driven work, view transitions — anything visual that moves." },
@@ -1533,7 +1533,7 @@ function renderAll() { renderFilters(); renderLog(); renderEdges(); renderRoster
    whole thing stays keyboard-reachable and screen-readable — an SVG-only
    map would have needed every affordance rebuilt by hand.                */
 const MAP = {
-  id: "soko", label: "Soko", children: [
+  id: "malfleks", label: "MalFleks", children: [
     { id: "rule", label: "The rule", href: "#phases", st: "shipped", children: [
       { id: "r1", label: "Brand fleet · 6 of 19", st: "shipped", href: "#phases" },
       { id: "r2", label: "Local courier · 13 of 19", st: "shipped", href: "#phases" },
@@ -1572,7 +1572,7 @@ const MAP = {
     { id: "money", label: "The money", href: "#money", st: "design", children: [
       { id: "m1", label: "Goods ladder · cap 40,000", st: "design", href: "#money" },
       { id: "m2", label: "Delivery billed to courier", st: "design", href: "#money" },
-      { id: "m3", label: "Deposit = Soko's cut", st: "design", href: "#money" },
+      { id: "m3", label: "Deposit = MalFleks's cut", st: "design", href: "#money" },
       { id: "m4", label: "No escrow · no BOT licence", st: "design", href: "#money" },
       { id: "m5", label: "Bottom rung charges 25%", st: "owner", href: "#you" },
     ]},
@@ -1598,7 +1598,7 @@ const MAP = {
   if (!view || !stage || !svg) return;
 
   const ROW = 32, COL = 208, NODE_W = 186;
-  const open = new Set(["soko", "partner", "money", "blocked"]);
+  const open = new Set(["malfleks", "partner", "money", "blocked"]);
 
   function leaves(n) {
     if (!n.children || !open.has(n.id)) return 1;
@@ -1656,7 +1656,7 @@ const MAP = {
 
     for (const p of nodes) {
       if (p.depth === 0) continue;
-      const parent = p.depth === 1 ? by.get("soko") : findParent(p.n.id, nodes, by);
+      const parent = p.depth === 1 ? by.get("malfleks") : findParent(p.n.id, nodes, by);
       if (!parent) continue;
       const x1 = p.dir === 1
         ? (parent.depth === 0 ? parent.left + NODE_W / 2 : parent.left + NODE_W)
@@ -1761,7 +1761,7 @@ const MAP = {
     all(MAP); render(); recentre();
   });
   document.getElementById("map-collapse").addEventListener("click", () => {
-    open.clear(); open.add("soko"); render(); recentre();
+    open.clear(); open.add("malfleks"); render(); recentre();
   });
   document.getElementById("map-reset").addEventListener("click", recentre);
 

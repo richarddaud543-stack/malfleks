@@ -6,7 +6,7 @@ import { resolveDatabaseProvider, resolveDatabaseUrl } from "./database-url";
 // Next.js dev reloads modules on every edit. Without a global cache each reload
 // would build a new client and a new connection, and the old ones would leak.
 const globalForPrisma = globalThis as unknown as {
-  sokoPrisma?: PrismaClient;
+  malfleksPrisma?: PrismaClient;
 };
 
 /**
@@ -118,7 +118,7 @@ function postgresAdapter(url: string): PrismaPg {
  * to be undone to move back.
  */
 export function getPrisma(): PrismaClient {
-  if (!globalForPrisma.sokoPrisma) {
+  if (!globalForPrisma.malfleksPrisma) {
     const url = resolveDatabaseUrl();
     assertProviderMatches(url);
 
@@ -127,9 +127,9 @@ export function getPrisma(): PrismaClient {
         ? postgresAdapter(url)
         : new PrismaBetterSqlite3({ url });
 
-    globalForPrisma.sokoPrisma = new PrismaClient({ adapter });
+    globalForPrisma.malfleksPrisma = new PrismaClient({ adapter });
   }
-  return globalForPrisma.sokoPrisma;
+  return globalForPrisma.malfleksPrisma;
 }
 
 /**
@@ -137,7 +137,7 @@ export function getPrisma(): PrismaClient {
  * one-shot scripts that need to rebind to a different database.
  */
 export async function resetPrisma(): Promise<void> {
-  const existing = globalForPrisma.sokoPrisma;
-  globalForPrisma.sokoPrisma = undefined;
+  const existing = globalForPrisma.malfleksPrisma;
+  globalForPrisma.malfleksPrisma = undefined;
   await existing?.$disconnect();
 }

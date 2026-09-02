@@ -7,7 +7,7 @@ it locally, and the reasoning behind the shape it has.
 The header of this file previously said *"the site does not use the database
 yet"* and described `src/data/` as the only thing any page imports. Both were
 false long before they were fixed. The catalogue is served from Supabase
-Postgres to the live site at `soko-richarddaud543-stack.vercel.app` — verified by
+Postgres to the live site at `malfleks-richarddaud543-stack.vercel.app` — verified by
 fetching `/brands` anonymously and getting all six brands with their real branch
 counts. `src/data/` survives only as the seed's input; see
 [Remaining cutover work](#remaining-cutover-work) for exactly which imports are
@@ -206,7 +206,7 @@ and it was built by ENG-4 · Forge on 2026-08-25**:
 Transitions: `pending -> confirmed | cancelled`, `confirmed -> fulfilled |
 cancelled`. Nothing moves out of `fulfilled` or `cancelled`.
 
-**Soko admin only moves it, from `/admin/orders`.** There is no
+**MalFleks admin only moves it, from `/admin/orders`.** There is no
 partner-facing order queue, and none was faked in this round —
 `Partner`/`PartnerUser` records are not linked to "their" orders anywhere in
 this schema; wiring that up is real future scope.
@@ -285,10 +285,10 @@ gain rather than the tidy-up:
 
 **What is unchanged.** This is still an *addition* on top of every order request
 also being persisted as an `Order`, not a replacement for it, and the distinction
-is still lifecycle: an `Order` is Soko's operational record and must survive, while
+is still lifecycle: an `Order` is MalFleks's operational record and must survive, while
 this is the customer's own copy whose entire point is that they can delete it. The
 per-customer ceiling of 200 is unchanged, and so is the hard-delete decision
-recorded against debt #20 — a shell row settles no dispute when Soko has told the
+recorded against debt #20 — a shell row settles no dispute when MalFleks has told the
 branch nothing.
 
 **What this forbids is now structural rather than written down.** There is one
@@ -380,7 +380,7 @@ round-trip.
 
 One real limit: Postgres `INTEGER` is 32-bit, capping a price at ~2.15 billion
 TZS (roughly USD 800k). The current catalogue tops out at 245,000,000 TZS
-(BMW X5), so there is ample headroom, but if Soko ever lists property, plant or
+(BMW X5), so there is ample headroom, but if MalFleks ever lists property, plant or
 fleet orders, widen `priceTZS` to `BigInt` **before** that data arrives —
 narrowing later is a data migration, widening now is one line. This limit is
 real now: it was theoretical while the provider was SQLite, whose INTEGER is

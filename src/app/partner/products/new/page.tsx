@@ -40,7 +40,7 @@ export default async function NewProductPage() {
         List a product
       </h1>
       <p className="mt-3 max-w-prose text-muted">
-        This goes to Soko for review, not straight onto the site. Someone reads
+        This goes to MalFleks for review, not straight onto the site. Someone reads
         every listing before it appears — usually within a day. Describe the
         product the way you would to a customer standing in front of you.
       </p>

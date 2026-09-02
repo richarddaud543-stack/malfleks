@@ -12,7 +12,7 @@ import type { Brand, Branch } from "@/data";
  * icosahedron with brand logos billboarded in orbit around it) with an
  * editorial composition built entirely from real data: an oversized
  * headline, one unambiguous lime CTA, and a looping band of the six actual
- * brand logos on Soko underneath — the same "who's actually here" signal
+ * brand logos on MalFleks underneath — the same "who's actually here" signal
  * the WebGL scene was reaching for, minus the jelly globe.
  *
  * A client component (not `src/app/page.tsx` itself) purely so the ambient

@@ -78,7 +78,7 @@ describe("initials", () => {
   });
 
   it("ignores punctuation-only words rather than rendering a bracket", () => {
-    expect(initials("Soko & Co")).toBe("SC");
+    expect(initials("MalFleks & Co")).toBe("MC");
   });
 
   it("has something to draw even for a name of nothing", () => {

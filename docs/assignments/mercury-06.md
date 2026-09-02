@@ -11,7 +11,7 @@ You start this assignment cold. Everything you need is below or named below.
 
 ## Why you have this
 
-Soko cannot go live on invented data, and right now **7 of 19 branches and 3 of 5 couriers
+MalFleks cannot go live on invented data, and right now **7 of 19 branches and 3 of 5 couriers
 are `verified: false`** — plausible cities and addresses that nobody confirmed. Every branch
 in a city shares one approximate city-centre coordinate, so the locator map points at the
 middle of town rather than at a shop.
@@ -98,7 +98,7 @@ but the flag follows the *address* confirmation, not the coordinate.
 
 Ledger is building the fee module this round (LEDGER-03) and its per-city delivery fee
 table has four entries with no numbers in them. `docs/marketplace-model.md` decides that
-Soko sets these, but not what they are.
+MalFleks sets these, but not what they are.
 
 From your courier research, recommend a number for Dar es Salaam, Arusha, Mwanza and
 Dodoma, each with a stated basis — what couriers in that city actually charge for a

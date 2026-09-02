@@ -1,17 +1,17 @@
-# The marketplace model — how Soko makes money
+# The marketplace model — how MalFleks makes money
 
 Owner: the founder. Drafted 2026-08-23 from a design conversation, and it records
 **decisions and open questions**, not built code. Nothing in "What to build" exists yet.
 
 Read `docs/research/commerce-and-payments.md` first — Ledger's Phase 0 research is the
-evidence base under most of this, including the finding that Soko does **not** need a
+evidence base under most of this, including the finding that MalFleks does **not** need a
 Bank of Tanzania licence.
 
 ---
 
-## 1. What Soko actually is
+## 1. What MalFleks actually is
 
-Soko is a **shop window for the whole city**. The shops and the couriers already exist
+MalFleks is a **shop window for the whole city**. The shops and the couriers already exist
 as real businesses out in Dar es Salaam, Arusha, Mwanza and Dodoma. They do not sign
 themselves up on the customer-facing site.
 
@@ -19,13 +19,13 @@ But they *are* partners, not scraped listings. The signup desk simply lives off 
 website:
 
 1. A branch or a courier **applies externally**.
-2. **Soko's admin approves them** and creates their account.
+2. **MalFleks's admin approves them** and creates their account.
 3. A branch **submits products**, which land in an admin review queue.
 4. Admin **publishes** them, and only then do they appear to customers.
 5. A customer orders, and the order **goes back to the exact branch that listed it**.
 
 That last step is what makes this a marketplace rather than a directory, and it is the
-single fact the whole revenue model rests on: **Soko knows the sale happened**, so Soko
+single fact the whole revenue model rests on: **MalFleks knows the sale happened**, so MalFleks
 can charge for it. A pure directory could never enforce a commission.
 
 ### The three phases
@@ -85,7 +85,7 @@ and a 24,500,000 TZS fee on the SUV, worse than the 6% it replaces.
 > **What the 40,000 cap means for the business — read this before changing it.**
 > On this catalogue the cap cuts fee revenue by **95%**: if all 38 products sold once, a
 > 1,200,000 ceiling earns 17,701,500 TZS and this one earns 898,500. That is not a
-> mistake, it is a change of business model. Soko stops being a **commission** business
+> mistake, it is a change of business model. MalFleks stops being a **commission** business
 > (revenue scales with order value) and becomes a **transaction-fee** business (revenue
 > scales with order *count*). A car sale earns 40,000 TZS — about seven earbud sales.
 > The upside is the reason to do it: at 0.016%, Toyota and BMW have no commercial reason
@@ -96,38 +96,38 @@ and a 24,500,000 TZS fee on the SUV, worse than the 6% it replaces.
 > 500 TZS fee on it is **25%**. Either accept that small items are disproportionately
 > taxed, add a narrower first rung, or set a minimum order value. Owner's call.
 
-### Delivery is priced by Soko per city, and billed to the courier
+### Delivery is priced by MalFleks per city, and billed to the courier
 
-**Decided 2026-08-23.** Soko sets the delivery fee — not the courier, not the branch — as
-a flat number per city: Dar es Salaam, Arusha, Mwanza, Dodoma. Four numbers Soko controls,
+**Decided 2026-08-23.** MalFleks sets the delivery fee — not the courier, not the branch — as
+a flat number per city: Dar es Salaam, Arusha, Mwanza, Dodoma. Four numbers MalFleks controls,
 quotable upfront, and it is all the current data can support (branch coordinates are
 approximate city-centre points, so nothing finer than city is real yet).
 
-The customer pays the delivery fee to the courier at the door. **Soko's cut comes from the
+The customer pays the delivery fee to the courier at the door. **MalFleks's cut comes from the
 courier afterwards**, accruing on their partner page:
 
-| Delivery fee charged | Soko takes, per delivery | Note |
+| Delivery fee charged | MalFleks takes, per delivery | Note |
 |---|---|---|
 | Up to 3,000 (in-city hops) | **500** | Billed as **5,000 per 10 deliveries** — a settlement cadence, not a different rate |
 | 3,001 – 25,000 | **1,500** | |
 | Above 25,000 | **2,500** | |
 
 **This supersedes the flat 1,000 TZS off-platform fee.** That fee existed to answer "what
-does Soko earn when the delivery money never passes through it" — and under this scheme
-delivery money never passes through Soko for anyone, so the distinction has no work left
+does MalFleks earn when the delivery money never passes through it" — and under this scheme
+delivery money never passes through MalFleks for anyone, so the distinction has no work left
 to do. Charging both would mean a courier owing 1,500 on a 3,000 shilling job. If the
-intent was a penalty for taking payment outside Soko, it needs restating as one.
+intent was a penalty for taking payment outside MalFleks, it needs restating as one.
 
 > **The structural cost of this choice.** Goods revenue is secured before anything
 > happens; **delivery revenue is now a receivable.** On the worked examples below it is
-> 6–8% of what Soko earns per order, so the exposure is small — but it is credit, and it
+> 6–8% of what MalFleks earns per order, so the exposure is small — but it is credit, and it
 > makes the enforcement lever load-bearing rather than theoretical.
 
 ### The deposit is the goods rung, and nothing else
 
 The customer pays a deposit at order time by mobile money equal to **the goods rung —
 nothing more**. Everything after that is settled at the door, in cash or direct mobile
-money, between the customer, the branch and the courier. Soko never touches it.
+money, between the customer, the branch and the courier. MalFleks never touches it.
 
 Worked example — a fridge at TZS 1,000,000, delivered in Dar es Salaam for TZS 15,000:
 
@@ -144,14 +144,14 @@ Worked example — a fridge at TZS 1,000,000, delivered in Dar es Salaam for TZS
                                 996,000   ✓ exact
 
   Afterwards, on the courier's partner page:
-    courier owes Soko             1,500   (the 3,001–25,000 rung), netting 13,500
+    courier owes MalFleks             1,500   (the 3,001–25,000 rung), netting 13,500
 
-  Soko earns 20,500 — 93% of it secured before anyone moved.
+  MalFleks earns 20,500 — 93% of it secured before anyone moved.
 ```
 
 The same arithmetic across the catalogue's real range:
 
-| Order | Deposit (secured) | Courier owes | Soko earns | Share secured |
+| Order | Deposit (secured) | Courier owes | MalFleks earns | Share secured |
 |---|---|---|---|---|
 | Earbuds 65,000 + 2,500 delivery | 6,000 | 500 | 6,500 | 92% |
 | Fridge 1,000,000 + 15,000 | 19,000 | 1,500 | 20,500 | 93% |
@@ -160,13 +160,13 @@ The same arithmetic across the catalogue's real range:
 Every row reconciles exactly: what the branch keeps plus what the courier collects always
 sums to the cash taken at the door, with nothing left over.
 
-**Why this shape and not escrow.** If Soko collected the full 1,015,000 and paid the
-others out later, Soko would be holding other people's money — which brings refunds,
+**Why this shape and not escrow.** If MalFleks collected the full 1,015,000 and paid the
+others out later, MalFleks would be holding other people's money — which brings refunds,
 disputes, reconciliation, float, and a much heavier regulatory posture. Taking only the
 goods rung upfront means:
 
-- Soko is **paid before it does anything**, and never has to chase a branch.
-- Soko is a **merchant of an aggregator** (Selcom / Azampay), not a payment operator —
+- MalFleks is **paid before it does anything**, and never has to chase a branch.
+- MalFleks is a **merchant of an aggregator** (Selcom / Azampay), not a payment operator —
   no BOT licence, per the National Payment Systems Act reading in the research.
 - Cash on delivery, which still dominates the market, keeps working untouched.
 - The deposit doubles as the **low-intent filter** the research says the industry uses:
@@ -184,16 +184,16 @@ rule with a grace period, visible on their page, or it will read as arbitrary.
 > **Open — owner's call.** The grace period (how many deliveries or days before
 > suspension), whether a suspended courier's accepted jobs still complete, and whether a
 > courier who stops at 7 in-city deliveries owes 3,500 or nothing. This document assumes
-> **accrual** — they owe 3,500, and "per 10" is only when Soko asks for it.
+> **accrual** — they owe 3,500, and "per 10" is only when MalFleks asks for it.
 
 ### Refunds
 
-The deposit is Soko's revenue, taken before anyone has done anything, so the failure
+The deposit is MalFleks's revenue, taken before anyone has done anything, so the failure
 cases need a stated policy:
 
 | What happens | Proposal |
 |---|---|
-| Branch declines — out of stock, price wrong | **Full refund.** Soko did not deliver a customer; keeping it would be indefensible. |
+| Branch declines — out of stock, price wrong | **Full refund.** MalFleks did not deliver a customer; keeping it would be indefensible. |
 | Customer cancels before dispatch | **Full refund** within a short window, then non-refundable. |
 | Customer refuses at the door | **Non-refundable.** This is the exact behaviour the deposit exists to discourage, and a driver has already made the trip. |
 | Courier fails to deliver | **Full refund**, and it counts against the courier. |
@@ -277,7 +277,7 @@ Nothing below is honest until this changes.
   Authorization stays in the DAL, next to the data — the repo has already rejected a
   proxy as the only line of defence, and that reasoning holds here. It must be
   `app_metadata` and never `user_metadata`: the second is writable by the account holder,
-  so an admin check against it is a self-service promotion. `SOKO_ADMIN_EMAILS` is the
+  so an admin check against it is a self-service promotion. `MALFLEKS_ADMIN_EMAILS` is the
   bootstrap allowlist, because nothing in the app should be able to mint the first admin.
 - `ProductSubmission` model plus `/admin`: approve partners, review submissions,
   publish. Publishing writes the live `Product` row.
@@ -287,7 +287,7 @@ Nothing below is honest until this changes.
 ### Phase 3 — Money
 
 - **Owner action, not code:** a merchant account with one aggregator (Selcom or Azampay
-  are the concrete Tanzania-headquartered candidates). Soko is their merchant; they hold
+  are the concrete Tanzania-headquartered candidates). MalFleks is their merchant; they hold
   the licence.
 - A **pure fee module** — goods total and delivery fee in; goods rung, delivery rung,
   deposit, branch payout and courier payout out. Pure and heavily tested, in the shape of
@@ -306,7 +306,7 @@ Nothing below is honest until this changes.
 
 ### Phase 4 — Settlement and trust
 
-- Per-partner statements: what was ordered, what Soko took, what is outstanding.
+- Per-partner statements: what was ordered, what MalFleks took, what is outstanding.
 - Delivery confirmation (a PIN or code against the reference), which is also the
   evidence a dispute is decided on.
 - Dispute and refund handling against the policy in §2.
@@ -325,12 +325,12 @@ Nothing below is honest until this changes.
 4. **The bottom rung.** A 500 TZS fee on the TZS 2,000 item is 25%. Accept it, add a
    narrower first rung, or set a minimum order value.
 5. **Does the deposit apply to brand-fleet orders?** No courier means no delivery rung,
-   so the deposit is the goods rung alone and Soko earns nothing from the delivery leg —
+   so the deposit is the goods rung alone and MalFleks earns nothing from the delivery leg —
    confirm that is intended for 6 of 19 branches.
 6. **Weight or size surcharge on delivery**, once `Product` can carry it. Today an SUV and
    a pair of earbuds are quoted the same delivery fee.
 7. **Was the 1,000 TZS meant as a penalty?** It is superseded here. If the intent was to
-   discourage taking payment outside Soko, it needs restating as a surcharge on top of
+   discourage taking payment outside MalFleks, it needs restating as a surcharge on top of
    the delivery rung rather than an alternative to it.
 
 ---

@@ -1,6 +1,6 @@
 ---
 name: mercury-data-domain
-description: ENG-2 Mercury — data model, business logic, search and delivery routing on Soko. Load before touching src/data, src/lib, pricing, currency or the routing rules.
+description: ENG-2 Mercury — data model, business logic, search and delivery routing on MalFleks. Load before touching src/data, src/lib, pricing, currency or the routing rules.
 ---
 
 # ENG-2 · Mercury — Data & Business Logic

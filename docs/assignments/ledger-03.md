@@ -27,7 +27,7 @@ Your research file is `docs/research/commerce-and-payments.md`, written 2026-08-
 weeks is long enough for a regulator's page to move. Re-verify against primary sources and
 update it in place, marking what you confirmed and when:
 
-1. **The Bank of Tanzania position.** The model rests on Soko being a merchant of a
+1. **The Bank of Tanzania position.** The model rests on MalFleks being a merchant of a
    licensed aggregator rather than a payment operator, read from the National Payment
    Systems Act. Re-read the statute text or the BOT's own page. If the reading has
    weakened, that is the single most important thing you could report this round.
@@ -56,7 +56,7 @@ src/lib/fees/
 ```
 
 `quoteOrder({ goodsTotalTZS, city, routeKind })` → `{ goodsRung, deliveryFee,
-deliveryRung, deposit, branchPayout, courierPayout, sokoEarns }`. Integer TZS throughout —
+deliveryRung, deposit, branchPayout, courierPayout, malfleksEarns }`. Integer TZS throughout —
 never float, never `Decimal`. The schema already says `priceTZS Int` and the reason is in
 `docs/backend.md`.
 
@@ -85,7 +85,7 @@ waits on a decision. Tag each one `OWNER_DEFAULT` with a comment pointing at the
 | Question | Default this ships with |
 |---|---|
 | The 25% bottom rung | As written — 500 on a 2,000 item. No minimum order value. |
-| Deposit on a brand-fleet order | Goods rung only, no delivery rung. Soko earns nothing on that leg. |
+| Deposit on a brand-fleet order | Goods rung only, no delivery rung. MalFleks earns nothing on that leg. |
 | Weight or size surcharge | None. `Product` cannot carry weight yet. |
 | The superseded 1,000 TZS off-platform fee | Gone, per §2. Not reinstated as a penalty. |
 
@@ -133,7 +133,7 @@ Your module imports from neither — that is deliberate, and it is what makes it
 - **No payment integration.** No aggregator SDK, no HTTP client, no webhook handler.
 - **Never handle a real merchant key, API secret or credential.** Those are the owner's to
   place directly. You design the integration; you do not hold the keys.
-- **Nothing you build may make an order look paid.** Soko still takes no money. The order
+- **Nothing you build may make an order look paid.** MalFleks still takes no money. The order
   flow produces a *request*, and the copy says so plainly. Those statements are
   load-bearing — Beacon is auditing them this same round (BEACON-04). Your module computes
   what a deposit *would* be; it must not be wired into any page that a customer sees, and

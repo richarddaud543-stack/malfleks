@@ -5,8 +5,8 @@ import ScrollReveal from "@/components/motion/ScrollReveal";
 import { getAllBranches, getAllBrands } from "@/server/repositories";
 
 export const metadata = {
-  // The root layout's `%s — Soko` template appends the brand name; spelling it
-  // out here too rendered "All brands — Soko — Soko".
+  // The root layout's `%s — MalFleks` template appends the brand name; spelling it
+  // out here too rendered "All brands — MalFleks — MalFleks".
   title: "All brands",
 };
 
@@ -26,7 +26,7 @@ export default async function BrandsPage() {
         <p className="mt-3 max-w-xl text-lg text-muted">
           {brands.length === 0
             ? "Brands list their own branches here, each with its own delivery status."
-            : "Every brand on Soko has its own branches across Tanzania, each with its own delivery status."}
+            : "Every brand on MalFleks has its own branches across Tanzania, each with its own delivery status."}
         </p>
       </ScrollReveal>
       {brands.length === 0 ? (

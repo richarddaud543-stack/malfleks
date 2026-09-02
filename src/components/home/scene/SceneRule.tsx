@@ -7,7 +7,7 @@ import { usePrefersReducedMotion, useSceneReveal } from "./useSceneTimeline";
 /**
  * Scene 02 — the rule.
  *
- * This is the scene the whole redesign exists for. Soko's product is not the
+ * This is the scene the whole redesign exists for. MalFleks's product is not the
  * catalogue, it is one boolean on a branch: `deliveryOffered`. Four lines of
  * `resolveDeliveryRoute()` decide whether the brand carries the order or a
  * local courier does, and every other feature is downstream of that.
@@ -46,7 +46,7 @@ export default function SceneRule({ branches }: { branches: Branch[] }) {
           className="mt-5 max-w-2xl text-lg leading-relaxed"
           style={{ color: "var(--scene-muted)" }}
         >
-          Does this branch run its own delivery? Everything Soko does follows
+          Does this branch run its own delivery? Everything MalFleks does follows
           from the answer — and you see it before you commit, not after.
         </p>
 
@@ -69,7 +69,7 @@ export default function SceneRule({ branches }: { branches: Branch[] }) {
             <p className="mt-4 leading-relaxed" style={{ color: "var(--scene-muted)" }}>
               The branch owns the goods and its own fleet. No third-party
               handoff, and no invented delivery estimate — brands do not quote
-              one, so Soko does not print one.
+              one, so MalFleks does not print one.
             </p>
           </article>
 
@@ -89,7 +89,7 @@ export default function SceneRule({ branches }: { branches: Branch[] }) {
               A local courier does
             </h3>
             <p className="mt-4 leading-relaxed" style={{ color: "var(--scene-muted)" }}>
-              Soko matches a vetted courier serving that branch&apos;s city.
+              MalFleks matches a vetted courier serving that branch&apos;s city.
               Couriers <em className="scene-serif">do</em> publish a time, so
               the estimate you see is theirs.
             </p>

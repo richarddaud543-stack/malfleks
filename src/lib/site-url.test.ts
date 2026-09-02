@@ -16,8 +16,8 @@ import { resolveSiteUrl } from "./site-url";
 
 describe("resolveSiteUrl", () => {
   it("returns a configured origin", () => {
-    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://soko.example" })).toBe(
-      "https://soko.example",
+    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://malfleks.example" })).toBe(
+      "https://malfleks.example",
     );
   });
 
@@ -40,24 +40,24 @@ describe("resolveSiteUrl", () => {
   });
 
   it("trims surrounding whitespace rather than passing it into new URL", () => {
-    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "  https://soko.example  " })).toBe(
-      "https://soko.example",
+    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "  https://malfleks.example  " })).toBe(
+      "https://malfleks.example",
     );
   });
 
   // robots.ts and sitemap.ts both build paths as `${siteUrl}/...`, so a
   // trailing slash here becomes `//sitemap.xml` on a live robots.txt.
   it("strips trailing slashes so callers can append a path", () => {
-    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://soko.example/" })).toBe(
-      "https://soko.example",
+    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://malfleks.example/" })).toBe(
+      "https://malfleks.example",
     );
-    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://soko.example///" })).toBe(
-      "https://soko.example",
+    expect(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: "https://malfleks.example///" })).toBe(
+      "https://malfleks.example",
     );
   });
 
   it("produces something new URL always accepts", () => {
-    for (const value of [undefined, "", "   ", "https://soko.example/"]) {
+    for (const value of [undefined, "", "   ", "https://malfleks.example/"]) {
       expect(() => new URL(resolveSiteUrl({ NEXT_PUBLIC_SITE_URL: value }))).not.toThrow();
     }
   });

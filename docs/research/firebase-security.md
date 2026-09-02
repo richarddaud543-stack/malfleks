@@ -2,7 +2,7 @@
 
 Assignment: current professional practice on Firestore Security Rules, Firebase
 App Check, Firebase Auth in a Next.js App Router app, the Admin SDK on the
-server, and Firestore cost/quota traps — then what it means for Soko
+server, and Firestore cost/quota traps — then what it means for MalFleks
 specifically, given debt #14 (two persistence stacks) and #16 (no rules, no
 App Check, nothing reads Firebase yet).
 
@@ -173,7 +173,7 @@ the App Check metrics in the console, and only flip a product to
 **enforced** once you're confident legitimate traffic isn't being scored out
 — enforcing blind risks locking out real users.
 
-The detail that matters most for Soko: **App Check only covers requests made
+The detail that matters most for MalFleks: **App Check only covers requests made
 with a client SDK.** Admin SDK calls run under a service account with
 elevated trust and bypass both Security Rules and App Check entirely — by
 design, the same way a `psql` connection with the Postgres superuser bypasses
@@ -252,7 +252,7 @@ real bills:
 Sources: [Best practices for Cloud Firestore](https://firebase.google.com/docs/firestore/best-practices) ·
 [Cloud Firestore quotas and limits](https://firebase.google.com/docs/firestore/quotas)
 
-## 3. What this means for Soko
+## 3. What this means for MalFleks
 
 ### What must exist before a single Firestore read ships
 
@@ -359,7 +359,7 @@ needs to.
 
 ### How Auth should work here, given server-rendered pages
 
-Soko's pages are server components; nothing today authenticates a user. If
+MalFleks's pages are server components; nothing today authenticates a user. If
 customers ever sign in — order history, saved addresses, order status — the
 architecture Google's own Next.js docs describe (App Router Authentication
 guide, `node_modules/next/dist/docs/01-app/02-guides/authentication.md`,
@@ -377,7 +377,7 @@ exactly:
 - **A Data Access Layer**, not scattered `verifySessionCookie` calls. Next's
   docs prescribe a `verifySession()` function wrapped in React's `cache()`,
   called from Server Components, Server Actions, and Route Handlers — one
-  choke point, memoized once per render pass. For Soko this is
+  choke point, memoized once per render pass. For MalFleks this is
   `src/server/auth/dal.ts` (new), a `verifySession()` that calls
   `getAuth().verifySessionCookie(cookie, true)` (the revocation-checking
   form) and either returns the decoded claims or redirects. Everything that
@@ -417,7 +417,7 @@ offline support and realtime listeners if the product ever wants live
 inventory or order-status push updates on a customer's phone, and it's
 already configured (`v-mall-f37c6`, `src/lib/firebase.ts`).
 
-**The case against Firestore, specifically for Soko's catalog:**
+**The case against Firestore, specifically for MalFleks's catalog:**
 
 - **The data is relational and the modeling shows it.** `prisma/schema.prisma`
   has real foreign keys (`Product.branchId`/`brandId`, cascading deletes),
@@ -451,7 +451,7 @@ already configured (`v-mall-f37c6`, `src/lib/firebase.ts`).
   redesign.
 - **A public-read, admin-written catalog gets nothing from Firestore's
   actual strengths.** Offline sync and realtime listeners matter for
-  collaborative or live-updating client state; Soko's catalog changes on
+  collaborative or live-updating client state; MalFleks's catalog changes on
   ops's schedule, not in response to concurrent users editing it. The one
   place realtime *would* matter — order status — is a small, well-scoped
   slice that could live in Firestore deliberately without dragging the whole
@@ -490,7 +490,7 @@ retiring the least already-working code.
   changed that: it protects client-SDK requests specifically, and Admin SDK
   requests bypass it by design (§2) — not a gap, the intended trust
   boundary. Given the server-side-reads architecture this doc recommends,
-  App Check has nothing in Soko's current or near-term plans to protect. It
+  App Check has nothing in MalFleks's current or near-term plans to protect. It
   belongs on the list the day a client component calls Firestore directly,
   not before.
 - **I expected the free Firestore tier to comfortably absorb a small

@@ -1,4 +1,4 @@
-// Soko marketplace schema.
+// MalFleks marketplace schema.
 //
 // This models the same four entities the site currently serves from the static
 // arrays in `src/data/`. It deliberately mirrors those TypeScript interfaces
@@ -206,7 +206,7 @@ model AgentRegion {
 // (`OrderRequest` in src/lib/order.ts) despite mirroring its fields: that
 // type is a receipt shown to the browser, this is the durable record. The
 // transition rules and the guarded write that moves this column live in
-// `src/server/orders/status.ts`; only Soko admin moves it, via
+// `src/server/orders/status.ts`; only MalFleks admin moves it, via
 // `/admin/orders`. "confirmed" still means no money has moved — see
 // `docs/backend.md`.
 model Order {
@@ -349,7 +349,7 @@ model OrderEvent {
   @@index([orderId, createdAt])
 }
 
-// A brand branch or a courier asking to join Soko.
+// A brand branch or a courier asking to join MalFleks.
 //
 // The intake half of the partner pipeline in `docs/marketplace-model.md`:
 // they apply here, an admin approves, and only then does a `Partner` exist and
@@ -547,11 +547,11 @@ model ProductSubmissionSpec {
 //
 // ## Why this is a separate table from `Order`
 //
-// They look like duplicates and they are not. `Order` is Soko's record —
+// They look like duplicates and they are not. `Order` is MalFleks's record —
 // written for every request, signed in or not, and it must survive: it is what
 // the admin queue works from and what the status workflow transitions. This is
 // the *customer's* copy, and its defining property is that the customer can
-// delete it. Merging them would mean either a customer can destroy Soko's
+// delete it. Merging them would mean either a customer can destroy MalFleks's
 // operational record, or the "delete my saved request" button quietly does not
 // delete. Both are worse than one extra table.
 //

@@ -1,6 +1,6 @@
 # Authentication and saved order requests
 
-Rewritten 2026-08-28, when Soko moved off Firebase and onto Supabase Auth.
+Rewritten 2026-08-28, when MalFleks moved off Firebase and onto Supabase Auth.
 
 Two things are documented here: **who a visitor is**, and **the one thing being
 signed in currently buys them** — a copy of their order request that outlives
@@ -23,7 +23,7 @@ order request is otherwise held in the browser tab and dies with it; signed in,
 it is kept, and the customer can find the reference days later and quote it to
 the branch.
 
-That is also the whole of what it does. Soko takes no payment, and being signed
+That is also the whole of what it does. MalFleks takes no payment, and being signed
 in does not change what is transmitted to a branch — which today is nothing.
 
 ---
@@ -74,7 +74,7 @@ provider needs a Google Cloud OAuth client and nothing else.
 
 ### Where this decision expires
 
-**When Soko takes money, phone becomes the right primary method** — mobile money
+**When MalFleks takes money, phone becomes the right primary method** — mobile money
 identity *is* the phone number, and at that point the SMS cost is a cost of
 doing business rather than a cost of having a button. That is Ledger's call to
 make alongside the payment rail, not a decision to pre-empt here.
@@ -182,9 +182,9 @@ else and returns a display name and nothing more. No uid, no email, no token.
 
 This is the customer's **own copy**, and it is deliberately not the same row as
 the `Order` that `create-order.ts` writes for every request signed in or out.
-The distinction is lifecycle: an `Order` is Soko's operational record and must
+The distinction is lifecycle: an `Order` is MalFleks's operational record and must
 survive, while the whole point of this one is that the customer can delete it.
-Merging them would mean either a customer can destroy Soko's record, or the
+Merging them would mean either a customer can destroy MalFleks's record, or the
 delete button quietly does not delete.
 
 The request is stored as a `Json` column. `Order` already flattens the same
@@ -243,14 +243,14 @@ same screen either way, and it says whether the reference will outlive the tab.
 | `NEXT_PUBLIC_SUPABASE_URL` | No | Project URL, e.g. `https://<ref>.supabase.co` |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | No | Legacy `eyJ…` anon key or the newer `sb_publishable_…`. Either works. |
 | `NEXT_PUBLIC_SITE_URL` | No | The origin OAuth returns to. Optional; strongly recommended. |
-| `SOKO_ADMIN_EMAILS` | No | Comma-separated bootstrap admin addresses. |
+| `MALFLEKS_ADMIN_EMAILS` | No | Comma-separated bootstrap admin addresses. |
 
 Both `NEXT_PUBLIC_` values ship to every visitor by design. What protects your
 data is Row Level Security and the fact that Prisma — not the browser — is what
 reaches Postgres.
 
 **The `service_role` key must never appear in this repo or this deployment.** It
-bypasses RLS entirely. Soko has no use for it.
+bypasses RLS entirely. MalFleks has no use for it.
 
 ### Console steps, in order
 
@@ -269,7 +269,7 @@ bypasses RLS entirely. Soko has no use for it.
 
 Two routes in, and the second exists because of a real chicken-and-egg.
 
-**The bootstrap allowlist.** `SOKO_ADMIN_EMAILS`, read per request. Nothing
+**The bootstrap allowlist.** `MALFLEKS_ADMIN_EMAILS`, read per request. Nothing
 inside the app can grant the first admin, and nothing should be able to — an app
 that can promote its own users is one bug away from letting a stranger do it.
 
@@ -283,7 +283,7 @@ expires, one hour by default. To end access immediately you must also revoke
 their sessions — Supabase dashboard → the user → sign out, or the Admin API's
 `signOut(jwt, 'global')`.
 
-> **In a hurry, remove them from `SOKO_ADMIN_EMAILS` first.** That is read per
+> **In a hurry, remove them from `MALFLEKS_ADMIN_EMAILS` first.** That is read per
 > request, so it takes effect on their next page load with no token to wait out.
 > Then clear the flag and revoke the sessions.
 

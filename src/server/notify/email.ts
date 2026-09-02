@@ -1,9 +1,9 @@
-import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
+import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 /**
  * Telling a human that something happened.
  *
- * Until this existed, nothing anywhere in Soko told anyone about anything. A
+ * Until this existed, nothing anywhere in MalFleks told anyone about anything. A
  * shop could apply to be listed and a customer could send an order request,
  * and both would sit in a database until somebody thought to open `/admin` and
  * look. That is the failure that quietly kills a new marketplace: the first
@@ -32,11 +32,11 @@ import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
  *
  * ## Two providers, and why
  *
- * Soko is run from Tanzania, and on 2026-09-01 the owner could not open
+ * MalFleks is run from Tanzania, and on 2026-09-01 the owner could not open
  * resend.com at all: `ERR_CONNECTION_TIMED_OUT`. The cause was specific and
  * measurable — resend.com resolves to `76.76.21.22` (Vercel's legacy anycast
  * address) on every public resolver, and that one address does not route from
- * that network. `api.resend.com`, `github.com`, `vercel.com` and Soko's own
+ * that network. `api.resend.com`, `github.com`, `vercel.com` and MalFleks's own
  * deployment were all reachable at the same moment. Nothing was wrong with
  * Resend; one IP on one path was unreachable, and it happened to be the one
  * serving the signup page.
@@ -61,7 +61,7 @@ import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
  * from whoever is signing up: these calls run on Vercel. The signup page is the
  * only part that has to open in the owner's own browser.
  *
- * `SOKO_NOTIFY_EMAIL` overrides where they go; `NOTIFY_FROM` (or the older
+ * `MALFLEKS_NOTIFY_EMAIL` overrides where they go; `NOTIFY_FROM` (or the older
  * `RESEND_FROM`) overrides the sender once a domain is verified.
  */
 
@@ -69,7 +69,7 @@ import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
 export function notifyAddress(env: Record<string, string | undefined> = process.env): string {
   // `?.trim() ||` rather than `??`: an env var set to "" is the empty-string
   // trap that cost this project three deployments. `??` does not catch it.
-  return env.SOKO_NOTIFY_EMAIL?.trim() || SOKO_CONTACT_EMAIL;
+  return env.MALFLEKS_NOTIFY_EMAIL?.trim() || MALFLEKS_CONTACT_EMAIL;
 }
 
 /** Which provider to use, or `null` when none is configured. */
@@ -101,7 +101,7 @@ export function notifySender(
   return (
     env.NOTIFY_FROM?.trim() ||
     env.RESEND_FROM?.trim() ||
-    "Soko <onboarding@resend.dev>"
+    "MalFleks <onboarding@resend.dev>"
   );
 }
 
@@ -112,7 +112,7 @@ export function isEmailConfigured(
 }
 
 /**
- * Split `"Soko <hello@example.com>"` into a name and an address.
+ * Split `"MalFleks <hello@example.com>"` into a name and an address.
  *
  * Resend takes the combined form; Brevo wants `{ name, email }`. Parsing here
  * means one `NOTIFY_FROM` works for both and nobody has to remember which
@@ -209,9 +209,9 @@ export function partnerApplicationMessage(input: {
 }): { subject: string; body: string } {
   const what = input.kind === "courier" ? "courier" : "brand branch";
   return {
-    subject: `Soko: ${input.businessName} applied (${what})`,
+    subject: `MalFleks: ${input.businessName} applied (${what})`,
     body: [
-      `${input.businessName} in ${input.city} has applied to join Soko as a ${what}.`,
+      `${input.businessName} in ${input.city} has applied to join MalFleks as a ${what}.`,
       "",
       "Nothing is listed until you approve it, and approving does not put them",
       "on the map either — that is still a separate step after you have",
@@ -238,13 +238,13 @@ export function orderRequestMessage(input: {
   siteUrl: string;
 }): { subject: string; body: string } {
   return {
-    subject: `Soko: new order request ${input.reference}`,
+    subject: `MalFleks: new order request ${input.reference}`,
     body: [
       input.productName
         ? `${input.productName} — reference ${input.reference}`
         : `Reference ${input.reference}`,
       "",
-      "A customer is waiting to hear from the branch. Soko takes no payment,",
+      "A customer is waiting to hear from the branch. MalFleks takes no payment,",
       "so this is a message to be passed on, not a sale to be processed.",
       "",
       `Open it: ${input.siteUrl}/admin/orders`,

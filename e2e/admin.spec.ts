@@ -29,7 +29,7 @@ test.describe("admin, signed out", () => {
       /\/sign-in\?next=%2Fadmin|\/sign-in\?next=\/admin/
     );
     await expect(
-      page.getByRole("heading", { name: "Sign in to Soko", level: 1 })
+      page.getByRole("heading", { name: "Sign in to MalFleks", level: 1 })
     ).toBeVisible();
 
     // Belt and braces: the queue itself must not be in the DOM at all, not

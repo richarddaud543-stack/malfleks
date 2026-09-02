@@ -8,7 +8,7 @@ import { useReducedMotion } from "motion/react";
 import type { Brand } from "@/data";
 
 /**
- * An honest, endlessly-looping band of the six real brands on Soko — the
+ * An honest, endlessly-looping band of the six real brands on MalFleks — the
  * light direction's replacement for the deleted `OrbitingBrands` WebGL
  * scene (real logos billboarded around a distorted core). Same idea
  * (brand identity, always moving), none of the 3D.

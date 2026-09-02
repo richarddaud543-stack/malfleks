@@ -1,6 +1,6 @@
 # Dispatch Fields — an algorithmic philosophy
 
-*Written 2026-08-27 for the Soko home page overture. The algorithm it
+*Written 2026-08-27 for the MalFleks home page overture. The algorithm it
 describes lives at `src/components/home/scene/DispatchField.tsx`.*
 
 ---
@@ -14,7 +14,7 @@ evidence of thousands of journeys through a space whose rules you never see
 directly.
 
 This is not decoration that happens to sit behind a headline. The conceptual
-seed is Soko's own product: `resolveDeliveryRoute()`, four lines long, deciding
+seed is MalFleks's own product: `resolveDeliveryRoute()`, four lines long, deciding
 at every branch whether a brand's fleet carries an order or a local courier
 does. Every particle in this field is an order finding its way across a city.
 Some paths run long and clean — the branch that carries its own goods, end to

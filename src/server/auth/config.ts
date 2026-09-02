@@ -21,7 +21,7 @@
  * key anywhere in this application's configuration.
  *
  * **The service_role key must never appear here or anywhere else in this repo.**
- * It bypasses Row Level Security completely. Soko does not need it: Prisma
+ * It bypasses Row Level Security completely. MalFleks does not need it: Prisma
  * reaches Postgres as the `postgres` role over `DATABASE_URL`, and Supabase is
  * used for identity only.
  */

@@ -114,7 +114,7 @@ function serialise(row: {
  * Orders, newest-first, optionally narrowed by branch and/or status.
  *
  * **On `status`:** `"pending"` | `"confirmed"` | `"cancelled"` |
- * `"fulfilled"`, the vocabulary the owner defined on 2026-08-25. Soko admin
+ * `"fulfilled"`, the vocabulary the owner defined on 2026-08-25. MalFleks admin
  * alone moves an order between them, from `/admin/orders`, through the
  * guarded transitions in `src/server/orders/status.ts` — see that module's
  * doc comment for the full table and who may move what. This function

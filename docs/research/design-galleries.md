@@ -99,11 +99,11 @@ Source: [What UI Design Looks Like in March 2026](https://valmax.agency/insights
 
 **Land-book / Lapa Ninja's own organizing principle, as described secondhand, is itself a
 transferable pattern:** curate by industry tag *and* let visitors filter/save, rather than
-one undifferentiated stream. Worth naming because it is exactly the architecture Soko's
+one undifferentiated stream. Worth naming because it is exactly the architecture MalFleks's
 own `/search` and `/brands` pages already use (see §3) — this is a case of the pattern
 being *validated by finding it already built*, not a gap.
 
-## 3. Applied to Soko
+## 3. Applied to MalFleks
 
 I read `src/app/globals.css`, `src/app/page.tsx`, and the "premium site craft" section of
 `docs/engineering-standards.md` (ENG-1 Atlas's Phase 0 finding) before starting web
@@ -127,7 +127,7 @@ homepage's "Featured brands" section (`src/app/page.tsx`) and the full `/brands`
 description — nothing about delivery. `DeliveryBadge` (brand-fleet vs. local-courier) only
 appears once a user clicks through to a specific branch
 (`src/app/brands/[slug]/branches/[branchId]/page.tsx:86`) or a specific search result
-(`ListingCard.tsx:68`). Per Soko's own memory notes, **brand-fleet vs. local-courier
+(`ListingCard.tsx:68`). Per MalFleks's own memory notes, **brand-fleet vs. local-courier
 routing is the product** — and per the Smashing Magazine finding above, delivery cost/method
 is one of the specific, named reasons shoppers hesitate before ever reaching checkout. Right
 now that signal is invisible on the two pages (`/` and `/brands`) where a visitor is
@@ -148,13 +148,13 @@ the `ProductShowcaseLoader` 3D visual and the text column (price, specs, CTA).
 **What I found:** Neither column is currently sticky — both scroll together. For a
 product with a long `specs` list, the 3D showcase (the single most expensive, most
 deliberately crafted visual asset on the page) scrolls out of view exactly when the
-customer is reading the details it's supposed to be illustrating. Soko has *already
+customer is reading the details it's supposed to be illustrating. MalFleks has *already
 built and shipped* the fix for this elsewhere: `OrderRequestForm.tsx:272`
 (`lg:sticky lg:top-24`) pins the order summary column while the form scrolls past it. This
 is the lightweight, CSS-only version of the "pinned media column, text scrolls past"
 structural pattern that recurs across premium builds — Atlas's research already named the
 JS-driven, full-timeline version of this (Lenis/ScrollTrigger); this is the version that
-needs nothing but the class Soko is already using one route over.
+needs nothing but the class MalFleks is already using one route over.
 
 **Recommendation:** add `lg:sticky lg:top-24 lg:self-start` to the `ProductShowcaseLoader`
 wrapper (`page.tsx:72`), matching the pattern already proven at
@@ -180,23 +180,23 @@ never render the serif-italic motif at all.
 
 **Recommendation:** add a one-line serif-italic eyebrow to the brand page (e.g. above
 `brand.name` at `brands/[slug]/page.tsx:64`, something short — the category or a fragment
-of the description) and the branch/delivery headers, so the motif that establishes Soko's
-type identity on the homepage is still visibly Soko's once someone is deep in a branch or
+of the description) and the branch/delivery headers, so the motif that establishes MalFleks's
+type identity on the homepage is still visibly MalFleks's once someone is deep in a branch or
 mid-order, not just on the pages a first-time visitor sees.
 
 **Priority order and why:** #1 is functional and ties directly to the product's actual
-differentiator; #2 is structural, low-risk, and literally copies a class Soko already
+differentiator; #2 is structural, low-risk, and literally copies a class MalFleks already
 shipped one route over; #3 is pure art-direction consistency — real, per Awwwards'
 own weighting, but correctly last for a marketplace where being able to compare price and
 delivery method matters more than the brand voice being airtight on every screen.
 
-### What Soko should explicitly *not* adopt, and why
+### What MalFleks should explicitly *not* adopt, and why
 
 - **The Codrops clip-path grid-to-preview interaction, applied wholesale to `BrandGrid` or
   `ProductGrid`.** It's a genuinely elegant technique (see §2) but it is hover-only with
   no stated touch fallback in the tutorial I read, animates four grid cells at once, and
   would compete for GPU/JS budget against the two Bloom-postprocessed React Three Fiber
-  scenes Soko already runs. Tanzania mobile access is the primary use case per Soko's own
+  scenes MalFleks already runs. Tanzania mobile access is the primary use case per MalFleks's own
   market notes — a hover-only interaction is dead on arrival there, and a marketplace
   where someone is scanning ten rows for the cheapest price needs the tenth row to look
   the same as the first, not to have shifted into a puzzle-piece preview state.

@@ -10,7 +10,7 @@ import OrderRequestForm from "./OrderRequestForm";
  * One rule, and it has now been reversed twice.
  *
  * **A signed-out customer's request is transmitted nowhere.** Neither
- * `submitOrder` (Soko's own record) nor `saveOrderRequest` (the customer's
+ * `submitOrder` (MalFleks's own record) nor `saveOrderRequest` (the customer's
  * saved copy) may fire without a session. Not "fires and is refused" —
  * does not fire, because an action that declines to write has still received
  * the name, phone number and address over the wire.
@@ -108,7 +108,7 @@ describe("OrderRequestForm and the customer's session", () => {
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
 
-    // Neither server action. Not Soko's record, not the customer's copy.
+    // Neither server action. Not MalFleks's record, not the customer's copy.
     expect(submitOrder).not.toHaveBeenCalled();
     expect(saveOrderRequest).not.toHaveBeenCalled();
 

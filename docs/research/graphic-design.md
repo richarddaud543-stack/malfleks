@@ -6,10 +6,10 @@ Prepared by ENG-6 (Prism), Visual & Graphic Design. Research budget: 5 web searc
 
 **I did not watch any video.** Everything below is drawn from secondary text material (search result summaries and articles), not from viewing footage, so treat channel recommendations as reputational pointers, not endorsements of specific content I've verified.
 
-- **Refactoring UI (Adam Wathan & Steve Schoger)** — a book/site, not a channel, but the single most relevant resource for this codebase specifically: it's written for developers styling their own UI with a utility-first CSS framework, which is exactly Soko's situation (Tailwind v4, no design tool in the loop).
+- **Refactoring UI (Adam Wathan & Steve Schoger)** — a book/site, not a channel, but the single most relevant resource for this codebase specifically: it's written for developers styling their own UI with a utility-first CSS framework, which is exactly MalFleks's situation (Tailwind v4, no design tool in the loop).
 - **DesignCourse** (Gary Simon) — foundations: color theory, typography, layout, design psychology; broad and practical.
 - **The Futur / Chris Do** — branding and design-thinking, useful for the "why" behind identity decisions rather than pixel-level execution.
-- **Will Paterson** and **Satori Graphics** — logo and brand-identity focused; secondary relevance to Soko given the per-brand accent-color system, but oriented toward mark-making, not web layout.
+- **Will Paterson** and **Satori Graphics** — logo and brand-identity focused; secondary relevance to MalFleks given the per-brand accent-color system, but oriented toward mark-making, not web layout.
 
 None of these were watched or read in full for this report; they're named because multiple independent secondary sources converge on them as credible.
 
@@ -27,7 +27,7 @@ Source: [WCAG Contrast (Minimum) Explained](https://www.getstark.co/wcag-explain
 **Spacing.** The dominant convention is an 8px base grid with a 4px sub-grid for tight, inner-component spacing (icon padding, badge gaps). 4px/2px values are meant to be the exception, not the default rhythm.
 Source: [Designing with Spacing: The Power of a 4-Point System](https://medium.com/@linz07m/designing-with-spacing-the-power-of-a-4-point-system-949771d8dbf4), [Basics: Spacing systems & scales in UI design](https://blog.designary.com/p/spacing-systems-and-scales-ui-design)
 
-## 3. Audit of Soko's visual system
+## 3. Audit of MalFleks's visual system
 
 Grounded in `src/app/globals.css` and `src/app/layout.tsx`, plus `src/data/brands.ts`, `src/components/brand/BrandCard.tsx`, `src/components/search/ListingCard.tsx`, and `src/components/product/ProductCard.tsx`.
 

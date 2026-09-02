@@ -10,7 +10,7 @@
 //      `Partner.branchId` and `Partner.agentId` null forever.
 //   2. `publishSubmission` was written, guarded, tested — and called by
 //      nothing. No screen could turn a submission into a product.
-//   3. A branch could not see the orders sent to it. Only Soko admin could.
+//   3. A branch could not see the orders sent to it. Only MalFleks admin could.
 //
 // Each part was individually correct and collectively useless: a real shop
 // could apply, be approved, sign in, submit a product, and never sell
@@ -40,7 +40,7 @@ import { publishSubmission, submitProduct } from "./submissions";
 let db: TestDatabase;
 
 beforeAll(async () => {
-  // No seed. The loop starts where Soko actually starts: nothing listed.
+  // No seed. The loop starts where MalFleks actually starts: nothing listed.
   db = await createTestDatabase("loop");
 }, 180_000);
 

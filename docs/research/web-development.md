@@ -124,7 +124,7 @@ bugs even when every element has a correct role and label. I can't verify
 specifics beyond the framing, but it's consistent with what the handbook
 already practices here — see section 4.
 
-## 3. What this means for Soko
+## 3. What this means for MalFleks
 
 **`SearchExplorer` (`src/components/search/SearchExplorer.tsx`) and
 `HeroScene` (`src/components/three/HeroScene.tsx`) are the textbook version
@@ -209,7 +209,7 @@ actually wired.
 
 ## 4. Where I was wrong
 
-I expected to find that Soko's client/server split was mostly fine and the
+I expected to find that MalFleks's client/server split was mostly fine and the
 3D/motion work was the risk area, because that's what the Lead's existing
 research emphasizes and it's my own domain. Reading the actual component
 tree reversed that: the R3F code is the *well-handled* part (proper dynamic

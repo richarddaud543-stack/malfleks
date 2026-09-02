@@ -56,13 +56,13 @@ async function siteOrigin(): Promise<string> {
   // This branch takes the host from the request, which `siteOrigin` otherwise
   // avoids on purpose. It is safe *because* it is not the request's choice:
   // the value is only used after it has matched the one hostname configured in
-  // `SOKO_ADMIN_HOST`, so a forged `Host` header can select this constant or
+  // `MALFLEKS_ADMIN_HOST`, so a forged `Host` header can select this constant or
   // nothing at all. It cannot introduce an origin of its own.
   const requestHost =
     store.get("x-forwarded-host") ?? store.get("host") ?? null;
   const { adminHost, isAdminHost } = await import("@/lib/admin-host");
-  if (isAdminHost(requestHost, process.env.SOKO_ADMIN_HOST)) {
-    const host = adminHost(process.env.SOKO_ADMIN_HOST)!;
+  if (isAdminHost(requestHost, process.env.MALFLEKS_ADMIN_HOST)) {
+    const host = adminHost(process.env.MALFLEKS_ADMIN_HOST)!;
     const proto = host.startsWith("localhost") ? "http" : "https";
     return `${proto}://${host}`;
   }

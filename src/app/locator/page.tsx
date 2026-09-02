@@ -54,7 +54,7 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
       title: "Branch locator",
       description:
-        "Soko's map fills up as real branches join — every brand at once, with the delivery agents covering each city.",
+        "MalFleks's map fills up as real branches join — every brand at once, with the delivery agents covering each city.",
     };
   }
 

@@ -609,7 +609,7 @@ describe("order storage round trip", () => {
   });
 
   it("uses a namespaced storage key", () => {
-    expect(ORDER_STORAGE_KEY).toBe("soko:order-request");
+    expect(ORDER_STORAGE_KEY).toBe("malfleks:order-request");
   });
 
   it("survives a serialize/parse round trip unchanged", () => {

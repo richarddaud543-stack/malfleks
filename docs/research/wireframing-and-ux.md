@@ -2,7 +2,7 @@
 
 Scope: wireframing craft and the UX practice around it — IA, user flows, fidelity,
 grid/responsive structure, and how wireframes actually function on a product team.
-Read against Soko's real pages in `src/app` and their components.
+Read against MalFleks's real pages in `src/app` and their components.
 
 ## 0. An honesty note before anything else
 
@@ -80,7 +80,7 @@ using it to get a room to agree on structure before anyone touches pixels.
 
 ### Plain wireframes fail on stateful, dynamic UI — this is where "wireflows" come in
 
-NN/g names the exact gap that matters for Soko: wireframes are for static pages,
+NN/g names the exact gap that matters for MalFleks: wireframes are for static pages,
 and struggle once a page "change[s] the content and layout dynamically... based
 on interactions the user has with the product." A flowchart alone isn't the fix
 either — it "typically leave[s] out the context of the interactions and its
@@ -90,7 +90,7 @@ indicate the clickable 'hotspots'... in order to lessen ambiguity" for whoever
 builds it.
 [NN/g, Wireflows: A UX Deliverable for Workflows and Apps](https://www.nngroup.com/articles/wireflows/)
 
-This is a direct, checkable gap in Soko today. `SearchExplorer.tsx`,
+This is a direct, checkable gap in MalFleks today. `SearchExplorer.tsx`,
 `CityLocator.tsx`, and `OrderRequestForm.tsx` are exactly this class of
 component — URL-synced filter state, optimistic updates, multi-step validation
 with focus management on error. None of that state machine is written down
@@ -118,13 +118,13 @@ NN/g's breadcrumb guidance is conditional, not a blanket "always add
 breadcrumbs": they're not useful on flat, 1–2-level or linear sites, but for
 deeper ones they "afford one-click access to higher site levels" and "rescue
 users who parachute into very specific but inappropriate destinations through
-search or deep links" — which is exactly how Soko's search results and shared
+search or deep links" — which is exactly how MalFleks's search results and shared
 `/locator?city=` links work. The guidance also caps it: breadcrumbs "realistically
 can support only 2–3 tiers before it intrud[ing] too much upon the main content
 space."
 [NN/g, Breadcrumb Navigation Increasingly Useful](https://www.nngroup.com/articles/breadcrumb-navigation-useful/)
 
-Soko's real hierarchy is `Home → Brands → Brand → Branch → Product → Delivery →
+MalFleks's real hierarchy is `Home → Brands → Brand → Branch → Product → Delivery →
 Confirmation` — six tiers, past NN/g's own 2–3-tier comfort limit for a
 breadcrumb trail alone. Current navigation is a single "← previous page" link
 present on some pages (branch page links to its brand, product page links to
@@ -145,7 +145,7 @@ different capabilities of interaction and different screen sizes," and content
 parity does not require UI parity.
 [NN/g, Mobile First Is NOT Mobile Only](https://www.nngroup.com/articles/mobile-first-not-mobile-only/)
 
-This is one place Soko already does the right thing rather than the wrong one,
+This is one place MalFleks already does the right thing rather than the wrong one,
 worth confirming rather than assuming: `Navbar.tsx` shows a plain horizontal
 link row on `sm:` and up and only collapses to a hamburger below that, and
 `SearchExplorer.tsx` gives desktop a persistent sticky facet sidebar
@@ -154,7 +154,7 @@ link row on `sm:` and up and only collapses to a hamburger below that, and
 breakpoint, not one component with `display: none`. That's the pattern NN/g is
 asking for.
 
-## 3. A real wireframe pass on Soko
+## 3. A real wireframe pass on MalFleks
 
 Read: `src/app/page.tsx`, `src/app/brands/page.tsx`, `src/app/brands/[slug]/page.tsx`,
 `src/app/products/[id]/page.tsx`, `src/app/delivery/[productId]/page.tsx`,
@@ -189,14 +189,14 @@ needs one. Putting it in the hero as a first-class action asks a first-time
 visitor to make a choice they don't have the context to make yet.
 
 **Task this serves:** a first-time visitor in the first five seconds should be
-able to say what Soko is and what the colored dot on a listing means, before
+able to say what MalFleks is and what the colored dot on a listing means, before
 they've clicked anything.
 
 Proposed structure:
 
 ```
 ┌────────────────────────────────────────────────────────────────┐
-│ Soko.                       Search   Brands   Near Me   Agents  │
+│ MalFleks.                       Search   Brands   Near Me   Agents  │
 ├────────────────────────────────────────────────────────────────┤
 │  ● Now live across Tanzania                                     │
 │                                                                   │
@@ -340,16 +340,16 @@ material actually supports here, not a deeper breadcrumb component.
   2025/2026-era material** because that's how search aggregators framed the
   hits. The source article is dated May 2024. Worth citing, wrong to present
   as a hot new practice.
-- **I assumed Soko's split mobile/desktop nav and filter UI was worth
+- **I assumed MalFleks's split mobile/desktop nav and filter UI was worth
   flagging as a smell** — a hamburger menu on mobile only, a completely
   different sticky-sidebar component on desktop. NN/g's mobile-first research
   says the opposite: porting one UI to every breakpoint is the mistake, and
   deliberately different components per device is correct. This is a case
   where reading the research changed a "finding" into a "this is already
   right" — worth recording so nobody re-flags it.
-- **The handbook's own framing of what makes Soko's 3D work premium — "scene
+- **The handbook's own framing of what makes MalFleks's 3D work premium — "scene
   logic, not page logic," choreography over a page hierarchy — sits in real
-  tension with what NN/g's IA material says about Soko's actual page
+  tension with what NN/g's IA material says about MalFleks's actual page
   hierarchy** (six tiers deep, thin back-navigation). Both are correct in
   their own domain: the hero is a scene, but everything past it is an
   e-commerce hierarchy that needs the boring wayfinding an immersive site

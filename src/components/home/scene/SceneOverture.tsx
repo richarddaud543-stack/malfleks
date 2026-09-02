@@ -9,7 +9,7 @@ import { usePrefersReducedMotion, useOverture } from "./useSceneTimeline";
 /**
  * Scene 01 — the overture.
  *
- * The headline is `docs/marketplace-model.md`'s own first sentence: Soko is
+ * The headline is `docs/marketplace-model.md`'s own first sentence: MalFleks is
  * "a shop window for the whole city." Using the founder's framing rather than
  * inventing marketing copy is the "art direction with a point of view" the
  * research asks for — the page argues the same thing the business does.
@@ -95,7 +95,7 @@ export default function SceneOverture({
             style={{ color: "var(--scene-muted)" }}
           >
             The shops and the couriers already exist, out in Dar es Salaam,
-            Arusha, Mwanza and Dodoma. Soko puts them behind one window — and
+            Arusha, Mwanza and Dodoma. MalFleks puts them behind one window — and
             when you order, it routes you to the branch that actually has it.
           </p>
 

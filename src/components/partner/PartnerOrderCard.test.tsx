@@ -9,7 +9,7 @@ import PartnerOrderCard from "./PartnerOrderCard";
  * want, and the reference to quote.
  *
  * Until this card existed the branch had no way to learn an order had been
- * placed at all — only Soko admin could see it — so every sale depended on
+ * placed at all — only MalFleks admin could see it — so every sale depended on
  * somebody relaying it by phone. The tests below hold the three facts that make
  * the page worth opening, and the one thing it must not do: offer status
  * buttons it has no authority to back.
@@ -18,7 +18,7 @@ import PartnerOrderCard from "./PartnerOrderCard";
 const base: ListedOrder = {
   id: "order-1",
   status: "pending",
-  reference: "SOKO-4F2A",
+  reference: "MALFLEKS-4F2A",
   customerId: "uid-1",
   customerFullName: "Neema Joseph",
   customerPhone: "+255754123456",
@@ -55,7 +55,7 @@ describe("PartnerOrderCard", () => {
   it("shows the reference, the customer and what they asked for", () => {
     render(<PartnerOrderCard order={base} />);
 
-    expect(screen.getByText("SOKO-4F2A")).toBeVisible();
+    expect(screen.getByText("MALFLEKS-4F2A")).toBeVisible();
     expect(screen.getByText("Neema Joseph")).toBeVisible();
     expect(screen.getByText("Corolla Hybrid 2024")).toBeVisible();
     expect(screen.getByText(/Mikocheni B/)).toBeVisible();
@@ -94,7 +94,7 @@ describe("PartnerOrderCard", () => {
   });
 
   // The deliberate omission.
-  it("offers no status buttons — moving an order is Soko admin's call", () => {
+  it("offers no status buttons — moving an order is MalFleks admin's call", () => {
     render(<PartnerOrderCard order={base} />);
 
     // Giving a partner these would need status.ts to learn who may move what,

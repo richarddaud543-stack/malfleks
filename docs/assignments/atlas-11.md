@@ -12,7 +12,7 @@ You start this assignment cold. Everything you need is below or named below.
 ## Why you have this
 
 `docs/marketplace-model.md` Stage 2 is the owner's stated first priority, and it is the
-half of Soko that has no interface at all. A partner can apply and an admin can approve
+half of MalFleks that has no interface at all. A partner can apply and an admin can approve
 them — and then nothing. There is no page a branch can log into, no way to submit a
 product, and no way for an admin to publish one.
 

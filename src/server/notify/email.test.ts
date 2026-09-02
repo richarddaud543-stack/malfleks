@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
+import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 import {
   isEmailConfigured,
   notifyAddress,
@@ -17,7 +17,7 @@ import {
  *
  * A notification is the least important thing in any request that sends one.
  * The order is written, the application is saved — the email is a courtesy to
- * whoever runs Soko. So the tests that matter are the ones proving this module
+ * whoever runs MalFleks. So the tests that matter are the ones proving this module
  * cannot take a request down with it, and that it does not quietly post a
  * customer's phone number to a third party.
  */
@@ -49,12 +49,12 @@ describe("configuration", () => {
   });
 
   it("falls back to the published contact address, never to nothing", () => {
-    expect(notifyAddress({})).toBe(SOKO_CONTACT_EMAIL);
+    expect(notifyAddress({})).toBe(MALFLEKS_CONTACT_EMAIL);
     expect(
-      notifyAddress({ SOKO_NOTIFY_EMAIL: "  " }),
-    ).toBe(SOKO_CONTACT_EMAIL);
+      notifyAddress({ MALFLEKS_NOTIFY_EMAIL: "  " }),
+    ).toBe(MALFLEKS_CONTACT_EMAIL);
     expect(
-      notifyAddress({ SOKO_NOTIFY_EMAIL: "ops@example.com" }),
+      notifyAddress({ MALFLEKS_NOTIFY_EMAIL: "ops@example.com" }),
     ).toBe("ops@example.com");
   });
 
@@ -63,11 +63,11 @@ describe("configuration", () => {
   });
 
   it("prefers NOTIFY_FROM, and still honours the older RESEND_FROM", () => {
-    expect(notifySender({ NOTIFY_FROM: "Soko <hello@soko.co.tz>" })).toBe(
-      "Soko <hello@soko.co.tz>",
+    expect(notifySender({ NOTIFY_FROM: "MalFleks <hello@malfleks.co.tz>" })).toBe(
+      "MalFleks <hello@malfleks.co.tz>",
     );
-    expect(notifySender({ RESEND_FROM: "Soko <old@soko.co.tz>" })).toBe(
-      "Soko <old@soko.co.tz>",
+    expect(notifySender({ RESEND_FROM: "MalFleks <old@malfleks.co.tz>" })).toBe(
+      "MalFleks <old@malfleks.co.tz>",
     );
     // Both set means a migration in progress; the new name wins.
     expect(
@@ -79,7 +79,7 @@ describe("configuration", () => {
 /**
  * Two providers exist because on 2026-09-01 the owner's network could not reach
  * resend.com at all — that one IP did not route, while api.resend.com,
- * github.com and Soko's own deployment all did. A marketplace run from a
+ * github.com and MalFleks's own deployment all did. A marketplace run from a
  * country with partial routing should not have one third-party dashboard as a
  * hard dependency.
  */
@@ -109,22 +109,22 @@ describe("parseSender", () => {
   // Resend takes "Name <addr>"; Brevo wants { name, email }. One env var, two
   // shapes, so the split has to be right.
   it("splits a name and an address", () => {
-    expect(parseSender("Soko <hello@soko.co.tz>")).toEqual({
-      name: "Soko",
-      email: "hello@soko.co.tz",
+    expect(parseSender("MalFleks <hello@malfleks.co.tz>")).toEqual({
+      name: "MalFleks",
+      email: "hello@malfleks.co.tz",
     });
   });
 
   it("handles a bare address", () => {
-    expect(parseSender("hello@soko.co.tz")).toEqual({
-      email: "hello@soko.co.tz",
+    expect(parseSender("hello@malfleks.co.tz")).toEqual({
+      email: "hello@malfleks.co.tz",
     });
   });
 
   it("tolerates quotes and stray whitespace", () => {
-    expect(parseSender('  "Soko Tanzania"  <  hello@soko.co.tz  >  ')).toEqual({
-      name: "Soko Tanzania",
-      email: "hello@soko.co.tz",
+    expect(parseSender('  "MalFleks Tanzania"  <  hello@malfleks.co.tz  >  ')).toEqual({
+      name: "MalFleks Tanzania",
+      email: "hello@malfleks.co.tz",
     });
   });
 });
@@ -147,7 +147,7 @@ describe("sendNotification", () => {
 
     const result = await sendNotification("Subject here", "Body here", {
       RESEND_API_KEY: "re_123",
-      SOKO_NOTIFY_EMAIL: "ops@example.com",
+      MALFLEKS_NOTIFY_EMAIL: "ops@example.com",
     });
 
     expect(result).toEqual({ sent: true });
@@ -166,8 +166,8 @@ describe("sendNotification", () => {
 
     const result = await sendNotification("Subject here", "Body here", {
       BREVO_API_KEY: "xkeysib_1",
-      NOTIFY_FROM: "Soko <hello@soko.co.tz>",
-      SOKO_NOTIFY_EMAIL: "ops@example.com",
+      NOTIFY_FROM: "MalFleks <hello@malfleks.co.tz>",
+      MALFLEKS_NOTIFY_EMAIL: "ops@example.com",
     });
 
     expect(result).toEqual({ sent: true });
@@ -176,7 +176,7 @@ describe("sendNotification", () => {
     // Brevo authenticates with its own header, not a bearer token.
     expect((init.headers as Record<string, string>)["api-key"]).toBe("xkeysib_1");
     const body = JSON.parse(String(init.body));
-    expect(body.sender).toEqual({ name: "Soko", email: "hello@soko.co.tz" });
+    expect(body.sender).toEqual({ name: "MalFleks", email: "hello@malfleks.co.tz" });
     expect(body.to).toEqual([{ email: "ops@example.com" }]);
     expect(body.textContent).toBe("Body here");
   });
@@ -219,12 +219,12 @@ describe("what the messages say", () => {
       kind: "brand",
       businessName: "Kariakoo Electronics",
       city: "Dar es Salaam",
-      siteUrl: "https://soko.example",
+      siteUrl: "https://malfleks.example",
     });
 
     expect(subject).toContain("Kariakoo Electronics");
     expect(body).toContain("Dar es Salaam");
-    expect(body).toContain("https://soko.example/admin");
+    expect(body).toContain("https://malfleks.example/admin");
     // Approval is not publication, and the email should not imply it is.
     expect(body).toMatch(/approv/i);
   });
@@ -235,28 +235,28 @@ describe("what the messages say", () => {
         kind: "courier",
         businessName: "Pikipiki Express",
         city: "Arusha",
-        siteUrl: "https://soko.example",
+        siteUrl: "https://malfleks.example",
       }).subject,
     ).toContain("courier");
   });
 
   it("carries the order reference and a link, and no personal details", () => {
     const { subject, body } = orderRequestMessage({
-      reference: "SOKO-4F2A",
-      siteUrl: "https://soko.example",
+      reference: "MALFLEKS-4F2A",
+      siteUrl: "https://malfleks.example",
     });
 
-    expect(subject).toContain("SOKO-4F2A");
-    expect(body).toContain("https://soko.example/admin/orders");
+    expect(subject).toContain("MALFLEKS-4F2A");
+    expect(body).toContain("https://malfleks.example/admin/orders");
     expect(body).toMatch(/rather\s+than\s+in\s+this\s+email/);
   });
 
   it("uses the product name when the caller has one", () => {
     expect(
       orderRequestMessage({
-        reference: "SOKO-4F2A",
+        reference: "MALFLEKS-4F2A",
         productName: "Corolla Hybrid",
-        siteUrl: "https://soko.example",
+        siteUrl: "https://malfleks.example",
       }).body,
     ).toContain("Corolla Hybrid");
   });

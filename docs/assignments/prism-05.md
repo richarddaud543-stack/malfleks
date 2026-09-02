@@ -13,14 +13,14 @@ You start this assignment cold. Everything you need is below or named below.
 
 Two unrelated things, both blocking a launch.
 
-The design system has no vocabulary for **state**. Soko now has orders that move through
+The design system has no vocabulary for **state**. MalFleks now has orders that move through
 four statuses and partners that move through three, and Atlas is about to build a partner
 portal that renders all of them (ATLAS-11). Without tokens, seven status treatments get
 invented ad hoc in seven components, which is exactly how a design system degrades — and
 you have already seen this repo's failure mode: everyone copies whatever pattern is
 present, degraded ones included.
 
-Separately, **every brand logo on the site is a trademark Soko has no agreement to use.**
+Separately, **every brand logo on the site is a trademark MalFleks has no agreement to use.**
 `SOURCES.md` flags it honestly and nobody has costed the fix.
 
 ---
@@ -75,7 +75,7 @@ build the partner components.
 Write this into `src/data/SOURCES.md`, extending the section that is already there.
 
 For each of the six brands: the official press-kit or brand-asset URL, the stated usage
-terms, and a one-line verdict — can Soko use this mark under those terms once it is
+terms, and a one-line verdict — can MalFleks use this mark under those terms once it is
 operating commercially, or does it need a distribution agreement first?
 
 Then the part that makes it actionable: **what changes if a brand says no.** A brand that

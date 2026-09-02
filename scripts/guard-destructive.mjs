@@ -18,7 +18,7 @@ const { checkDestructive } = await import("../src/server/db/destructive-guard.ts
 
 const url = process.env.DATABASE_URL?.trim();
 if (url) {
-  const check = checkDestructive(url, process.env.SOKO_DESTRUCTIVE_OK);
+  const check = checkDestructive(url, process.env.MALFLEKS_DESTRUCTIVE_OK);
   if (!check.allowed) {
     console.error(`\nRefusing to run ${process.argv[2] ?? "this command"}.\n`);
     console.error(check.reason);

@@ -11,7 +11,7 @@ You start this assignment cold. Everything you need is below or named below.
 
 ## Why you have this
 
-Soko has a real `Order` table, an admin queue and a partner application pipeline, and
+MalFleks has a real `Order` table, an admin queue and a partner application pipeline, and
 none of it can be deployed anywhere. The provider is SQLite, there is no remote, and an
 approved `Partner` is a row that points at nothing. This assignment closes the backend
 half of that gap so that the day a deploy target exists, the schema is ready for it.

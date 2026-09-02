@@ -55,23 +55,23 @@ test.describe("smoke", () => {
   });
 
   // Every route that sets its own title, not just the two where the doubling
-  // bug was found. The root layout appends "— Soko" via its `%s` template, so a
-  // page that also spells the suffix out renders "… — Soko — Soko". Guarding
+  // bug was found. The root layout appends "— MalFleks" via its `%s` template, so a
+  // page that also spells the suffix out renders "… — MalFleks — MalFleks". Guarding
   // only the routes that already broke leaves the same bug free to ship on the
   // other eight.
   const titledRoutes: Array<[route: string, title: string]> = [
-    ["/brands", "All brands — Soko"],
-    ["/agents", "Delivery agents — Soko"],
-    ["/search", "Search — Soko"],
-    ["/locator", "Branch locator — Soko"],
-    ["/order/confirmation", "Order request received — Soko"],
-    ["/sign-in", "Sign in — Soko"],
-    ["/apply", "Become a partner — Soko"],
-    ["/products/toyota-corolla", "Toyota Corolla — Toyota — Soko"],
-    ["/brands/toyota", "Toyota — Soko"],
-    ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Nyerere Road — Soko"],
-    ["/delivery/toyota-corolla", "Delivery for Toyota Corolla — Soko"],
-    ["/products/not-a-real-product", "Product not found — Soko"],
+    ["/brands", "All brands — MalFleks"],
+    ["/agents", "Delivery agents — MalFleks"],
+    ["/search", "Search — MalFleks"],
+    ["/locator", "Branch locator — MalFleks"],
+    ["/order/confirmation", "Order request received — MalFleks"],
+    ["/sign-in", "Sign in — MalFleks"],
+    ["/apply", "Become a partner — MalFleks"],
+    ["/products/toyota-corolla", "Toyota Corolla — Toyota — MalFleks"],
+    ["/brands/toyota", "Toyota — MalFleks"],
+    ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Nyerere Road — MalFleks"],
+    ["/delivery/toyota-corolla", "Delivery for Toyota Corolla — MalFleks"],
+    ["/products/not-a-real-product", "Product not found — MalFleks"],
   ];
 
   for (const [route, title] of titledRoutes) {

@@ -1,6 +1,6 @@
 ---
 name: ledger-commerce
-description: ENG-8 Ledger — payments, pricing, fees and marketplace trust on Soko. Load before touching money, the order record, or anything about how a transaction would actually settle in Tanzania.
+description: ENG-8 Ledger — payments, pricing, fees and marketplace trust on MalFleks. Load before touching money, the order record, or anything about how a transaction would actually settle in Tanzania.
 ---
 
 # ENG-8 · Ledger — Commerce & Payments
@@ -12,7 +12,7 @@ report to the Engineering Lead, who is the only writer to `master`.
 
 ## Where the product actually is
 
-**Soko takes no payment at all.** The order flow produces a *request* with a read-aloud
+**MalFleks takes no payment at all.** The order flow produces a *request* with a read-aloud
 reference code, held in `sessionStorage`, transmitted nowhere. This is deliberate, and the
 copy says so plainly. Treat those statements as load-bearing.
 
@@ -25,7 +25,7 @@ aggregator abstracting all wallets is the correct default from day one.
 
 **The licence sits with the aggregator, not the merchant.** The National Payment Systems
 Act (No. 4 of 2015, ss. 5/15/24) licenses whoever operates the payment system or issues
-e-money. Soko's realistic posture is "merchant of a BOT-licensed aggregator" (Selcom,
+e-money. MalFleks's realistic posture is "merchant of a BOT-licensed aggregator" (Selcom,
 Azampay, ClickPesa, Pesapal), not "licence applicant". Confirmed against the statute text.
 
 **Payment cannot honestly attach to an order the backend has never seen.** The current
@@ -37,8 +37,8 @@ non-refundable reservation fee** at the point the branch confirms price — not 
 prepayment, and not eliminating cash.
 
 **The two delivery routes carry different risk**, and the data model does not yet reflect
-it. Brand-fleet orders: Soko is a collections agent — low risk, remit and commission.
-Third-party-courier orders: Soko is the trust layer between an unvetted courier and real
+it. Brand-fleet orders: MalFleks is a collections agent — low risk, remit and commission.
+Third-party-courier orders: MalFleks is the trust layer between an unvetted courier and real
 money, and needs a delivery-confirmation event gating fund release. `OrderRouteRecord`
 records *who delivers*, not *who gets paid*. Close that before money moves.
 

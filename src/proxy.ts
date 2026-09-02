@@ -16,7 +16,7 @@ import { isAdminHost } from "@/lib/admin-host";
  * but a project that keeps the old name gets a deprecation warning on every
  * build, and this file was written after the rename.
  *
- * ## Why `process.env.SOKO_ADMIN_HOST` is read literally here
+ * ## Why `process.env.MALFLEKS_ADMIN_HOST` is read literally here
  *
  * This runs in the Edge runtime, where Next inlines environment reads by
  * finding the literal text `process.env.NAME` at build time. Reading it through
@@ -35,7 +35,7 @@ export function proxy(request: NextRequest) {
 
   // No separate admin site configured, or this is the public one: hands off.
   // The public site's behaviour is unchanged by this file existing.
-  if (!isAdminHost(host, process.env.SOKO_ADMIN_HOST)) {
+  if (!isAdminHost(host, process.env.MALFLEKS_ADMIN_HOST)) {
     return NextResponse.next();
   }
 

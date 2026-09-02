@@ -45,7 +45,7 @@ const FAILURE_TEXT: Record<string, string> = {
   "signed-out": "Your session expired. Sign in again and resend this.",
   unavailable: "Sign-in isn't available right now, so we can't record this.",
   "not-a-partner":
-    "This account isn't linked to a partner any more. Contact Soko if that's wrong.",
+    "This account isn't linked to a partner any more. Contact MalFleks if that's wrong.",
   "not-a-branch-partner": "Only brand branches can list products.",
   "partner-suspended":
     "This account is suspended, so new listings can't be submitted.",
@@ -122,7 +122,7 @@ export default function ListProductForm() {
       <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
         <h2 className="font-display text-2xl font-medium">Sent for review</h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          It is saved against your branch and waiting on Soko.{" "}
+          It is saved against your branch and waiting on MalFleks.{" "}
           <strong>Customers cannot see it yet</strong> — a person reads every
           listing before it goes live, and you&apos;ll see the outcome on your
           listings page either way.
@@ -165,7 +165,7 @@ export default function ListProductForm() {
     } bg-surface-2 px-4 py-2.5 text-sm text-foreground outline-none transition-colors placeholder:text-muted hover:border-foreground/30`;
 
   // Shown under the price as it is typed, so a partner catches a missing or
-  // extra zero before Soko does.
+  // extra zero before MalFleks does.
   const pricePreview = /^\d+$/.test(input.price.replace(/[,\s]/g, ""))
     ? formatTZS(Number(input.price.replace(/[,\s]/g, "")))
     : null;
@@ -266,7 +266,7 @@ export default function ListProductForm() {
             id={`${fieldId}-image-hint`}
             className="mt-1 text-xs text-muted"
           >
-            Soko draws products as symbols rather than photographs — choose the
+            MalFleks draws products as symbols rather than photographs — choose the
             closest one.
           </p>
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -382,7 +382,7 @@ export default function ListProductForm() {
         {submitting ? "Sending…" : "Send for review"}
       </button>
       <p className="mt-3 text-center text-xs text-muted">
-        Nothing here reaches customers until Soko publishes it.
+        Nothing here reaches customers until MalFleks publishes it.
       </p>
     </form>
   );

@@ -25,7 +25,7 @@ export const dynamic = "force-dynamic";
  *
  * Publishing creates the live `Product`, in one guarded transaction that also
  * stamps `publishedProductId` back onto the submission — which is what puts the
- * "See it on Soko" link on the partner's own page.
+ * "See it on MalFleks" link on the partner's own page.
  */
 export default async function AdminSubmissionsPage() {
   await requireAdmin("/admin/submissions");

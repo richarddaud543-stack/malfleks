@@ -8,7 +8,7 @@ import { verifySession } from "@/server/auth/dal";
  * "Is the notification setup actually working?" — answered without waiting for
  * a real partner to apply.
  *
- * Notifications are the one part of Soko whose failure is silent by design:
+ * Notifications are the one part of MalFleks whose failure is silent by design:
  * `sendNotification` swallows everything so a mail outage can never take an
  * order down with it. That is right, and it means a misconfigured key looks
  * exactly like a working one from the outside — until the day a shop applies,
@@ -21,7 +21,7 @@ import { verifySession } from "@/server/auth/dal";
  *
  * Admin only, and re-checked here rather than trusting the page: a Server
  * Action is a public HTTP endpoint, and this one spends someone's email quota
- * and reveals which address Soko notifies.
+ * and reveals which address MalFleks notifies.
  */
 
 export type NotificationTestResult =
@@ -51,7 +51,7 @@ export async function sendTestNotification(): Promise<NotificationTestResult> {
   const to = notifyAddress();
 
   const outcome = await sendNotification(
-    "Soko: notifications are working",
+    "MalFleks: notifications are working",
     [
       "This is the test message from /admin.",
       "",

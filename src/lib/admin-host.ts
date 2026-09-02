@@ -6,7 +6,7 @@
  * `/admin` was already unlinked from every page, `noindex`, absent from the
  * sitemap, and a 404 to anyone signed in who is not an admin. What it was not
  * is *absent*: type the URL on the public site and the route exists, which is
- * enough to tell a curious customer that Soko has a back office and roughly
+ * enough to tell a curious customer that MalFleks has a back office and roughly
  * where it lives.
  *
  * Moving it to its own hostname is a different kind of answer. The public site
@@ -18,7 +18,7 @@
  *
  * ## Unconfigured means "no restriction", on purpose
  *
- * With `SOKO_ADMIN_HOST` unset — local development, CI, preview deployments,
+ * With `MALFLEKS_ADMIN_HOST` unset — local development, CI, preview deployments,
  * and this app as it stands before the domain is added — the admin routes
  * answer on whatever host is asking, exactly as they did before this file
  * existed.
@@ -44,7 +44,7 @@
  * Every function takes the configured value as an argument instead of reading
  * the environment itself. That is not purity for its own sake: `proxy.ts` runs
  * in the Edge runtime, where Next inlines `process.env.SOME_NAME` by static
- * analysis at build time. A read through a parameter — `env.SOKO_ADMIN_HOST`,
+ * analysis at build time. A read through a parameter — `env.MALFLEKS_ADMIN_HOST`,
  * where `env` is a variable — is not statically visible, so it would inline to
  * nothing and the proxy would silently believe no admin host is configured.
  * Callers do the literal read; this module does the thinking.
@@ -55,9 +55,9 @@
  *
  * Accepts what people actually paste: a bare host, a host with a port, or a
  * whole URL copied out of the browser. Case is folded because DNS is
- * case-insensitive; the default port is dropped because `soko.example` and
- * `soko.example:443` are the same site; a trailing dot is dropped because
- * `soko.example.` is the fully-qualified spelling of the same name and a
+ * case-insensitive; the default port is dropped because `malfleks.example` and
+ * `malfleks.example:443` are the same site; a trailing dot is dropped because
+ * `malfleks.example.` is the fully-qualified spelling of the same name and a
  * browser will happily send it.
  *
  * A non-default port is *kept* — `localhost:3000` and `localhost:3001` are two
@@ -85,7 +85,7 @@ export function normalizeHost(value: string | null | undefined): string | null {
 /**
  * The configured admin hostname, or `null` when there isn't one.
  *
- * Pass `process.env.SOKO_ADMIN_HOST` — read literally, at the call site. See
+ * Pass `process.env.MALFLEKS_ADMIN_HOST` — read literally, at the call site. See
  * the note on the Edge runtime above.
  */
 export function adminHost(configured: string | null | undefined): string | null {

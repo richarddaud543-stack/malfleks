@@ -5,7 +5,7 @@ import { isAuthConfigured } from "@/server/auth/config";
 import type { PartnerApplicationInput } from "@/lib/partner-application";
 
 /**
- * A brand branch or a courier applying to join Soko.
+ * A brand branch or a courier applying to join MalFleks.
  *
  * Sign-in is required, and not mainly for spam. **The account that applies is
  * the account that gets the partner role**, so on approval an admin grants a
@@ -69,7 +69,7 @@ export async function submitPartnerApplication(
 }
 
 /**
- * Announce a new application to Soko's own inbox.
+ * Announce a new application to MalFleks's own inbox.
  *
  * Its own function, wrapped in its own try/catch, for one reason: it is called
  * from inside the `try` that decides whether the applicant sees success, and

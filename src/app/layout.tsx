@@ -34,8 +34,8 @@ const siteUrl = resolveSiteUrl();
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Soko — Brands, branches and delivery in one place",
-    template: "%s — Soko",
+    default: "MalFleks — Brands, branches and delivery in one place",
+    template: "%s — MalFleks",
   },
   description:
     "Browse authorized brand branches across Tanzania and get every order delivered, by the brand or a local courier.",

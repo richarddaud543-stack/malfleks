@@ -18,8 +18,8 @@ export const dynamic = "force-dynamic";
  *
  * The loop did not close without this. A customer picked a product, filled in
  * their name, phone and address, and got a reference — and the branch that was
- * supposed to fulfil it had no way to find out. Only Soko's admin could see the
- * order, which made every sale depend on somebody at Soko relaying it by phone.
+ * supposed to fulfil it had no way to find out. Only MalFleks's admin could see the
+ * order, which made every sale depend on somebody at MalFleks relaying it by phone.
  *
  * **`branchId` comes from `requirePartner()`, never from the URL.** That is the
  * same boundary the rest of the portal holds: a `branchId` in a query string
@@ -54,8 +54,8 @@ export default async function PartnerOrdersPage() {
       </h1>
       <p className="mt-3 max-w-prose text-muted">
         {isCourier
-          ? "Deliveries a customer routed to you. Soko takes no payment and holds no stock — you arrange the pickup and the fee with the branch and the customer directly. Call them, and quote the reference."
-          : "A customer asking to buy from your branch. Soko takes no payment and holds no stock — you agree the price, the payment and the handover with them directly. Call them, and quote the reference."}
+          ? "Deliveries a customer routed to you. MalFleks takes no payment and holds no stock — you arrange the pickup and the fee with the branch and the customer directly. Call them, and quote the reference."
+          : "A customer asking to buy from your branch. MalFleks takes no payment and holds no stock — you agree the price, the payment and the handover with them directly. Call them, and quote the reference."}
       </p>
 
       {orders === null ? (
@@ -77,8 +77,8 @@ export default async function PartnerOrdersPage() {
           </p>
           <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
             {isCourier
-              ? "Customers can only pick a courier that Soko has added to the routing, so there is nothing here until we confirm your details and add you."
-              : "Customers can only order from a branch that is listed, so there is nothing here until Soko confirms your details and puts you on the map."}
+              ? "Customers can only pick a courier that MalFleks has added to the routing, so there is nothing here until we confirm your details and add you."
+              : "Customers can only order from a branch that is listed, so there is nothing here until MalFleks confirms your details and puts you on the map."}
           </p>
         </div>
       ) : orders.length === 0 ? (

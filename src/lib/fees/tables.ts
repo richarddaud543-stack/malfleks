@@ -1,5 +1,5 @@
 /**
- * Soko's fee tables — data, not code.
+ * MalFleks's fee tables — data, not code.
  *
  * Everything in this file is a number the owner decides, transcribed verbatim
  * from `docs/marketplace-model.md` §2. It is deliberately separated from the
@@ -38,7 +38,7 @@ export interface FeeBand {
  * is a ladder on the goods, not a percentage".
  *
  * The first two rungs are the founder's own. The rest deliberately flatten to
- * a 40,000 ceiling — the model document is explicit that this converts Soko
+ * a 40,000 ceiling — the model document is explicit that this converts MalFleks
  * from a commission business into a transaction-fee business, and that the
  * flattening is the entire point rather than a rounding artefact. Read the
  * "What the 40,000 cap means for the business" block before changing the cap.
@@ -59,9 +59,9 @@ export const GOODS_FEE_LADDER: readonly FeeBand[] = [
 ] as const;
 
 /**
- * What Soko takes from the **courier**, per delivery, banded by what the
+ * What MalFleks takes from the **courier**, per delivery, banded by what the
  * delivery itself costs. `docs/marketplace-model.md` §2, "Delivery is priced by
- * Soko per city, and billed to the courier".
+ * MalFleks per city, and billed to the courier".
  *
  * The bottom rung is settled as 5,000 per 10 deliveries. That is a settlement
  * cadence, not a different rate — the accrual is 500 per delivery and this
@@ -78,7 +78,7 @@ export const DELIVERY_FEE_LADDER: readonly FeeBand[] = [
 ] as const;
 
 /**
- * The four cities Soko operates in, matching `city` in `src/data/branches.ts`
+ * The four cities MalFleks operates in, matching `city` in `src/data/branches.ts`
  * exactly. A fifth city is a data change here plus real branches there — not a
  * code change.
  */
@@ -92,7 +92,7 @@ export const DELIVERY_CITIES = [
 export type DeliveryCity = (typeof DELIVERY_CITIES)[number];
 
 /**
- * What Soko charges the customer for delivery, per city. Soko sets these — not
+ * What MalFleks charges the customer for delivery, per city. MalFleks sets these — not
  * the courier, not the branch — and they are quotable upfront.
  *
  * **All four are deliberately unset.** The model document decides that these
@@ -119,15 +119,15 @@ export const CITY_DELIVERY_FEES: Readonly<Record<DeliveryCity, TZS | null>> = {
  *
  * OWNER_DEFAULT — open question 5 in `docs/marketplace-model.md` §5: "Does the
  * deposit apply to brand-fleet orders?" On a brand route there is no courier,
- * so no delivery money passes through Soko and there is nothing to bill. The
- * deposit is therefore the goods rung alone and Soko earns nothing from the
+ * so no delivery money passes through MalFleks and there is nothing to bill. The
+ * deposit is therefore the goods rung alone and MalFleks earns nothing from the
  * delivery leg. That is what §2 describes; it affects 6 of 19 branches and the
  * owner has not confirmed it.
  */
 export const BRAND_FLEET_EARNS_DELIVERY_RUNG = false;
 
 /**
- * A minimum order value, below which Soko will not take an order at all.
+ * A minimum order value, below which MalFleks will not take an order at all.
  *
  * OWNER_DEFAULT — open question 4 in §5, "The bottom rung". The cheapest
  * product in the catalogue is TZS 2,000 and a 500 TZS fee on it is 25%. The

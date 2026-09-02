@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { checkDestructive } from "./destructive-guard";
 
 const LIVE = "postgresql://postgres:pw@db.nnrcjeowivnbzdkwxxrm.supabase.co:5432/postgres";
-const LOCAL = "postgresql://postgres@localhost:5433/soko_test";
+const LOCAL = "postgresql://postgres@localhost:5433/malfleks_test";
 
 describe("checkDestructive", () => {
   it("allows localhost with no ceremony — a dev database is meant to be thrown away", () => {
@@ -19,7 +19,7 @@ describe("checkDestructive", () => {
 
   it("names the exact opt-in in the refusal, so the message is the fix", () => {
     expect(checkDestructive(LIVE, undefined).reason).toContain(
-      "SOKO_DESTRUCTIVE_OK=db.nnrcjeowivnbzdkwxxrm.supabase.co",
+      "MALFLEKS_DESTRUCTIVE_OK=db.nnrcjeowivnbzdkwxxrm.supabase.co",
     );
   });
 

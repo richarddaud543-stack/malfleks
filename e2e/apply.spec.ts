@@ -5,7 +5,7 @@ import { test, expect } from "@playwright/test";
  *
  * Every case here runs **signed out**, because that is the state a brand
  * arrives in and the one thing this page must get right: it has to be findable
- * and readable by someone with no Soko account, and it must not show them a
+ * and readable by someone with no MalFleks account, and it must not show them a
  * form they cannot submit. The signed-in path needs real Admin credentials,
  * which `docs/auth.md` records as the project's largest untested seam — so it
  * is covered by the component test instead of pretended at here.
@@ -21,7 +21,7 @@ test.describe("partner application", () => {
 
     await expect(page).toHaveURL(/\/apply$/);
     await expect(
-      page.getByRole("heading", { name: /become a soko partner/i, level: 1 })
+      page.getByRole("heading", { name: /become a malfleks partner/i, level: 1 })
     ).toBeVisible();
   });
 

@@ -55,7 +55,7 @@ Query priority, in order: `getByRole` → `getByLabelText` →
 cannot see (or hear) these" — it's an escape hatch, not a default. Source:
 [testing-library.com/docs/queries/about/#priority](https://testing-library.com/docs/queries/about/#priority).
 
-Soko's suite matches this closely. `CityLocator.test.tsx` and
+MalFleks's suite matches this closely. `CityLocator.test.tsx` and
 `OrderRequestForm.test.tsx` reach for `getByRole`/`getByLabelText` first and
 only fall back to `data-testid` (`locator-branch`, `order-line-total`,
 `brand-delivery-panel`) for whole-card or whole-region groupings that have no
@@ -114,7 +114,7 @@ rather than trusting that it would. (Secondary — search-summarized across a
 handful of 2026 QA-practice write-ups; no single primary standards body
 covers this yet, unsurprisingly, since it is a very recent problem class.)
 
-## 3. Audit of Soko's actual test suite
+## 3. Audit of MalFleks's actual test suite
 
 Numbers, verified by running both suites myself, read-only: **15 Vitest files
 / 182 tests, all pass** (28.2s). **5 Playwright spec files / 28 tests** — 26/28
@@ -186,7 +186,7 @@ layout/composition pieces and less so for interactive ones (see gaps below).
 ### Regression that would slip through today
 - **A page-title regression on any route other than `/brands` and
   `/agents`.** I checked: ten routes set page-specific `title` metadata
-  through the `%s — Soko` layout template (`/locator`, `/search`,
+  through the `%s — MalFleks` layout template (`/locator`, `/search`,
   `/delivery/[productId]`, `/products/[id]`, `/brands/[slug]`,
   `/brands/[slug]/branches/[branchId]`, `/order/confirmation`, `not-found`,
   plus the two already covered). Only the two are asserted with
@@ -275,7 +275,7 @@ once, at close to zero cost.
 - I assumed visual regression testing would be an easy, obvious
   recommendation to lead with. Having read into it, I now rank it **behind**
   closing the title-coverage gap and adding an automated a11y scan for this
-  specific repo: Soko's actual defects so far — contrast, focus, doubled
+  specific repo: MalFleks's actual defects so far — contrast, focus, doubled
   title — are not the kind a pixel diff catches well. Contrast needs a
   computed-ratio assertion (which `accent.test.ts` already does, precisely,
   for one property); focus needs a real key-press assertion; title needs a

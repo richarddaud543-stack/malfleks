@@ -19,8 +19,8 @@ export async function generateMetadata(): Promise<Metadata> {
     description:
       // "Search 0 products" is worse than saying nothing about the count.
       products.length === 0
-        ? "Soko's catalogue is still filling up — real shops in Tanzania list their own products here, each with its own delivery method."
-        : `Search ${products.length} products across every brand, branch and city on Soko — ` +
+        ? "MalFleks's catalogue is still filling up — real shops in Tanzania list their own products here, each with its own delivery method."
+        : `Search ${products.length} products across every brand, branch and city on MalFleks — ` +
           "filter by brand, category, city, price and delivery method.",
   };
 }

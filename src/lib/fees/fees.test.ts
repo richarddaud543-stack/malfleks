@@ -154,14 +154,14 @@ describe("deliveryRung", () => {
 describe("the three worked examples in docs/marketplace-model.md §2", () => {
   // A canary on the tables. If someone edits a rung, these break by name and
   // point at the document the numbers came from.
-  it("earbuds — 65,000 goods + 2,500 delivery earns Soko 6,500", () => {
+  it("earbuds — 65,000 goods + 2,500 delivery earns MalFleks 6,500", () => {
     const q = quoteOrder(
       { goodsTotalTZS: 65_000, city: "Arusha", routeKind: "agent" },
       TEST_CITY_FEES,
     );
     expect(q.depositTZS).toBe(6_000);
     expect(q.deliveryRungTZS).toBe(500);
-    expect(q.sokoEarnsTZS).toBe(6_500);
+    expect(q.malfleksEarnsTZS).toBe(6_500);
     expect(q.securedShare).toBeCloseTo(0.92, 2);
   });
 
@@ -176,18 +176,18 @@ describe("the three worked examples in docs/marketplace-model.md §2", () => {
     expect(q.branchPayoutTZS).toBe(981_000);
     expect(q.courierPayoutTZS).toBe(15_000);
     expect(q.deliveryRungTZS).toBe(1_500);
-    expect(q.sokoEarnsTZS).toBe(20_500);
+    expect(q.malfleksEarnsTZS).toBe(20_500);
     expect(q.securedShare).toBeCloseTo(0.93, 2);
   });
 
-  it("SUV — 245,000,000 goods + 26,000 delivery earns Soko 42,500", () => {
+  it("SUV — 245,000,000 goods + 26,000 delivery earns MalFleks 42,500", () => {
     const q = quoteOrder(
       { goodsTotalTZS: 245_000_000, city: "Mwanza", routeKind: "agent" },
       TEST_CITY_FEES,
     );
     expect(q.depositTZS).toBe(40_000);
     expect(q.deliveryRungTZS).toBe(2_500);
-    expect(q.sokoEarnsTZS).toBe(42_500);
+    expect(q.malfleksEarnsTZS).toBe(42_500);
     expect(q.securedShare).toBeCloseTo(0.94, 2);
   });
 });
@@ -283,10 +283,10 @@ describe("the brand-fleet route", () => {
     expect(q.deliveryRungTZS).toBe(0);
     expect(q.courierPayoutTZS).toBe(0);
     expect(q.orderTotalTZS).toBe(1_000_000);
-    expect(q.sokoEarnsTZS).toBe(q.depositTZS);
+    expect(q.malfleksEarnsTZS).toBe(q.depositTZS);
   });
 
-  it("secures 100% of what Soko earns, because there is no receivable", () => {
+  it("secures 100% of what MalFleks earns, because there is no receivable", () => {
     const q = quoteOrder(
       { goodsTotalTZS: 65_000, city: "Arusha", routeKind: "brand" },
       TEST_CITY_FEES,

@@ -2,7 +2,7 @@ import type { EnvSource } from "./config";
 import type { Session } from "./dal";
 
 /**
- * Who counts as a Soko admin.
+ * Who counts as a MalFleks admin.
  *
  * Two ways in, and the second one exists because of a genuine chicken-and-egg:
  *
@@ -12,7 +12,7 @@ import type { Session } from "./dal";
  *    lookup is needed. It must be `app_metadata` and never `user_metadata`:
  *    the latter is writable by the user themselves. `dal.ts` says the same
  *    thing at the point of reading, because it only takes one careless edit.
- * 2. **A bootstrap allowlist** in `SOKO_ADMIN_EMAILS`. Nothing in the app can
+ * 2. **A bootstrap allowlist** in `MALFLEKS_ADMIN_EMAILS`. Nothing in the app can
  *    set the *first* admin flag, and nothing should be able to — an app that
  *    can promote its own users to admin is an app one bug away from letting a
  *    stranger do it. So the first admin is named in config, outside the system
@@ -51,13 +51,13 @@ export function hasAdminFlag(appMetadata: Record<string, unknown>): boolean {
 }
 
 /**
- * Parses `SOKO_ADMIN_EMAILS` — comma-separated, whitespace-tolerant, matched
+ * Parses `MALFLEKS_ADMIN_EMAILS` — comma-separated, whitespace-tolerant, matched
  * case-insensitively because email local parts are compared that way in
  * practice and an admin who typed their address with a capital should not be
  * silently locked out.
  */
 export function adminEmailAllowlist(env: EnvSource = process.env): string[] {
-  return (env.SOKO_ADMIN_EMAILS ?? "")
+  return (env.MALFLEKS_ADMIN_EMAILS ?? "")
     .split(",")
     .map((entry) => entry.trim().toLowerCase())
     .filter((entry) => entry.length > 0);

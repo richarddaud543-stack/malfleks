@@ -122,7 +122,7 @@ export default function PartnerApplicationForm({
         <h2 className="font-display text-xl font-medium">Sign in to apply</h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
           We ask for a sign-in because the account you apply with becomes the
-          account you manage your branch from. Nothing else about your Soko
+          account you manage your branch from. Nothing else about your MalFleks
           account changes, and applying costs nothing.
         </p>
         <Link
@@ -142,7 +142,7 @@ export default function PartnerApplicationForm({
           Application received
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          It is recorded against your account. Someone at Soko reviews every
+          It is recorded against your account. Someone at MalFleks reviews every
           application by hand — <strong>there is no automatic approval</strong>,
           and we will contact you on the number you gave us.
         </p>
@@ -150,7 +150,7 @@ export default function PartnerApplicationForm({
           href="/"
           className="btn-pill btn-ink mt-8 inline-block px-6 py-2.5 text-sm"
         >
-          Back to Soko
+          Back to MalFleks
         </Link>
       </div>
     );
@@ -187,7 +187,7 @@ export default function PartnerApplicationForm({
               {
                 value: "brand" as PartnerKind,
                 title: "A brand branch",
-                blurb: "You have a shop or showroom and want to sell through Soko.",
+                blurb: "You have a shop or showroom and want to sell through MalFleks.",
               },
               {
                 value: "courier" as PartnerKind,
@@ -430,7 +430,7 @@ export default function PartnerApplicationForm({
       </button>
 
       <p className="mt-4 text-xs text-muted">
-        Soko reviews every application by hand. Nothing is approved
+        MalFleks reviews every application by hand. Nothing is approved
         automatically, and applying costs nothing.
       </p>
     </form>

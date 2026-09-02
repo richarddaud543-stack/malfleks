@@ -8,7 +8,7 @@ export default function Footer() {
           <div>
             <div className="flex items-center gap-2 font-display text-lg font-medium">
               <span className="inline-block h-2.5 w-2.5 rounded-full bg-accent-2" />
-              Soko<span className="text-accent-2">.</span>
+              MalFleks<span className="text-accent-2">.</span>
             </div>
             <p className="mt-3 max-w-xs text-sm text-muted">
               One place to browse authorized brand branches across Tanzania —
@@ -37,7 +37,7 @@ export default function Footer() {
             visitors and this one did not have.
           */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Soko</h3>
+            <h3 className="text-sm font-semibold text-foreground">MalFleks</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted">
               <li><Link href="/contact" className="transition-colors hover:text-foreground">Contact</Link></li>
               <li><Link href="/terms" className="transition-colors hover:text-foreground">Terms of use</Link></li>
@@ -54,7 +54,7 @@ export default function Footer() {
             wrong thing about whether this is real.
           */}
           Brand logos are trademarks of their respective owners, used here for
-          identification only. Soko takes no payment and holds no stock.
+          identification only. MalFleks takes no payment and holds no stock.
         </div>
       </div>
     </footer>

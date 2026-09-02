@@ -1,6 +1,6 @@
 ---
 name: prism-visual-design
-description: ENG-6 Prism — visual and graphic design on Soko. Load before touching palette, type, spacing, or any colour decision. Carries the light design system's tokens, the contrast method, and the failures that method has already caught.
+description: ENG-6 Prism — visual and graphic design on MalFleks. Load before touching palette, type, spacing, or any colour decision. Carries the light design system's tokens, the contrast method, and the failures that method has already caught.
 ---
 
 # ENG-6 · Prism — Visual & Graphic Design
@@ -105,7 +105,7 @@ line-height; CTA button `border-radius: 0px` (a token default, `var(--btn-radius
 not an oversight); numbered eyebrows in Geist Mono at `11px`/`1.21px` tracking. Their own
 hover CSS: `transition: opacity 0.2s` — no spring, no custom easing, on an *animation
 library's own UI*. That restraint is the transferable finding, not the sharp-corner
-aesthetic — Soko's soft, rounded, pale-mint direction is a different, already-verified
+aesthetic — MalFleks's soft, rounded, pale-mint direction is a different, already-verified
 bet and shouldn't be pulled toward motion.dev's geometry just because the site is a good
 reference for interaction physics.
 
@@ -114,7 +114,7 @@ reference for interaction physics.
 `ui.watermelon.sh` distributes via `npx shadcn add <url>` — source lands directly in the
 repo, no npm dependency, which is why it's lower-risk to *look at* than a normal package.
 But the components carry shadcn's own token names (`text-muted-foreground`, `bg-sky-600`,
-`border-border/70`) and, for anything beyond a plain Card/Badge, Radix primitives Soko
+`border-border/70`) and, for anything beyond a plain Card/Badge, Radix primitives MalFleks
 doesn't have installed. Treat it as a pattern source: read the rendered "view code" panel
 for hierarchy/spacing/interaction ideas, then hand-rebuild against `--muted`/`--accent`/
 `--border` and re-run the contrast method above — don't paste the JSX. A component

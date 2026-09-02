@@ -2,12 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { SOKO_CONTACT_EMAIL } from "@/lib/contact";
+import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "How to reach Soko — one email address, read by a person, with what to include so we can help quickly.",
+    "How to reach MalFleks — one email address, read by a person, with what to include so we can help quickly.",
 };
 
 /**
@@ -26,12 +26,12 @@ export default function ContactPage() {
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
       <ScrollReveal>
-        <p className="font-accent-serif text-xl italic text-accent">Soko</p>
+        <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Contact
         </h1>
         <p className="mt-4 max-w-prose text-muted">
-          Soko is small, and a person reads everything that comes in. One
+          MalFleks is small, and a person reads everything that comes in. One
           address, and it is checked.
         </p>
       </ScrollReveal>
@@ -39,10 +39,10 @@ export default function ContactPage() {
       <div className="glass-card mt-10 rounded-2xl px-6 py-8 text-center">
         <p className="text-sm text-muted">Email</p>
         <a
-          href={`mailto:${SOKO_CONTACT_EMAIL}`}
+          href={`mailto:${MALFLEKS_CONTACT_EMAIL}`}
           className="mt-1 block break-words font-display text-xl font-medium text-accent underline decoration-border underline-offset-4"
         >
-          {SOKO_CONTACT_EMAIL}
+          {MALFLEKS_CONTACT_EMAIL}
         </a>
         <p className="mx-auto mt-4 max-w-sm text-xs text-muted">
           We aim to answer within a couple of working days. If something has
@@ -58,7 +58,7 @@ export default function ContactPage() {
           </h2>
           <p className="mt-2">
             Include the reference from your confirmation — it is the fastest way
-            to find the exact request. Remember that Soko passes your request to
+            to find the exact request. Remember that MalFleks passes your request to
             the branch and takes no payment: if you have already agreed a price
             or a delivery time with them, they are the ones who can change it.
             If they have gone quiet, tell us and we will chase them.

@@ -19,7 +19,7 @@
  *
  * A connection to **localhost** is assumed disposable and passes. Anything else
  * is assumed live and is refused, unless the operator names the host they mean
- * in `SOKO_DESTRUCTIVE_OK`.
+ * in `MALFLEKS_DESTRUCTIVE_OK`.
  *
  * Naming the host — rather than a bare `=1` — is deliberate. A blanket opt-in
  * left exported in a shell keeps applying after you switch `DATABASE_URL` to a
@@ -51,7 +51,7 @@ export function checkDestructive(url: string, override: string | undefined): Des
   }
 
   if (override?.trim() === host) {
-    return { allowed: true, host, reason: "SOKO_DESTRUCTIVE_OK names this host" };
+    return { allowed: true, host, reason: "MALFLEKS_DESTRUCTIVE_OK names this host" };
   }
 
   return {
@@ -61,7 +61,7 @@ export function checkDestructive(url: string, override: string | undefined): Des
       `DATABASE_URL points at ${host}, which is not localhost. This command ` +
       `deletes data, and against a live database that is not undoable.\n\n` +
       `If you have a backup and you mean it, name the host:\n` +
-      `  SOKO_DESTRUCTIVE_OK=${host} <your command>\n\n` +
+      `  MALFLEKS_DESTRUCTIVE_OK=${host} <your command>\n\n` +
       `To work against a disposable database instead, point TEST_DATABASE_URL ` +
       `or DATABASE_URL at a local Postgres. docs/deploy.md has both.`,
   };
@@ -72,7 +72,7 @@ export function assertDestructiveAllowed(label: string): void {
   const url = process.env.DATABASE_URL?.trim();
   if (!url) return; // No URL set: the app's own resolver will fail first, and clearly.
 
-  const check = checkDestructive(url, process.env.SOKO_DESTRUCTIVE_OK);
+  const check = checkDestructive(url, process.env.MALFLEKS_DESTRUCTIVE_OK);
   if (check.allowed) return;
 
   throw new Error(`Refusing to run ${label}.\n\n${check.reason}`);

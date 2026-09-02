@@ -1,5 +1,5 @@
 /**
- * What Soko earns on an order, and who pays whom.
+ * What MalFleks earns on an order, and who pays whom.
  *
  * A pure function over the tables in `./tables.ts`. No I/O, no Prisma, no
  * Supabase, no imports from `src/server` — the same shape as `buildListings`
@@ -13,7 +13,7 @@
  * The customer pays a **deposit** at order time by mobile money, equal to the
  * goods rung and nothing else. Everything after that settles at the door, in
  * cash or direct mobile money, between the customer, the branch and the
- * courier — Soko never touches it. Afterwards the courier owes Soko its
+ * courier — MalFleks never touches it. Afterwards the courier owes MalFleks its
  * delivery rung, accruing on their partner page.
  *
  * Two invariants hold for every quote this module produces, and both are
@@ -28,7 +28,7 @@
  *
  * ## What this module is not
  *
- * It does not collect anything, and it holds no credential. Soko still takes no
+ * It does not collect anything, and it holds no credential. MalFleks still takes no
  * money at all: the order flow produces a *request*, and nothing here may be
  * rendered to a customer as though a payment had been taken or authorised.
  * Wiring a deposit figure into a customer-facing page is a separate, later
@@ -79,7 +79,7 @@ export interface Quote {
   /** The goods payment this quote was computed from, echoed back. */
   goodsTotalTZS: TZS;
 
-  /** Soko's platform fee on the goods. The customer pays this as the deposit. */
+  /** MalFleks's platform fee on the goods. The customer pays this as the deposit. */
   goodsRungTZS: TZS;
 
   /**
@@ -89,7 +89,7 @@ export interface Quote {
   deliveryFeeTZS: TZS;
 
   /**
-   * What the courier owes Soko for this delivery, accruing on their partner
+   * What the courier owes MalFleks for this delivery, accruing on their partner
    * page. Zero on a brand route — no courier, nothing to bill.
    */
   deliveryRungTZS: TZS;
@@ -97,7 +97,7 @@ export interface Quote {
   /** Paid now, by mobile money. Equal to `goodsRungTZS`. */
   depositTZS: TZS;
 
-  /** Paid at the door, in cash or direct mobile money. Soko never touches it. */
+  /** Paid at the door, in cash or direct mobile money. MalFleks never touches it. */
   doorPaymentTZS: TZS;
 
   /** Goods plus delivery. What the order costs the customer in total. */
@@ -110,13 +110,13 @@ export interface Quote {
   courierPayoutTZS: TZS;
 
   /**
-   * Soko's total revenue on this order: the deposit plus the courier's rung.
+   * MalFleks's total revenue on this order: the deposit plus the courier's rung.
    * The deposit half is secured before anyone moves; the rung half is credit.
    */
-  sokoEarnsTZS: TZS;
+  malfleksEarnsTZS: TZS;
 
   /**
-   * How much of `sokoEarnsTZS` was secured upfront, as a fraction between 0
+   * How much of `malfleksEarnsTZS` was secured upfront, as a fraction between 0
    * and 1. `docs/marketplace-model.md` quotes 92–94% across the catalogue's
    * real range. Derived, never stored.
    */
@@ -148,12 +148,12 @@ function feeForAmount(amountTZS: TZS, ladder: readonly FeeBand[]): TZS {
   );
 }
 
-/** Soko's platform fee on a goods payment. Exported for display and testing. */
+/** MalFleks's platform fee on a goods payment. Exported for display and testing. */
 export function goodsRung(goodsTotalTZS: TZS): TZS {
   return feeForAmount(goodsTotalTZS, GOODS_FEE_LADDER);
 }
 
-/** What Soko bills a courier for a delivery that cost `deliveryFeeTZS`. */
+/** What MalFleks bills a courier for a delivery that cost `deliveryFeeTZS`. */
 export function deliveryRung(deliveryFeeTZS: TZS): TZS {
   return feeForAmount(deliveryFeeTZS, DELIVERY_FEE_LADDER);
 }
@@ -162,7 +162,7 @@ export function deliveryRung(deliveryFeeTZS: TZS): TZS {
 export type CityFeeTable = Readonly<Record<DeliveryCity, TZS | null>>;
 
 /**
- * The delivery fee Soko charges in a city, or `null` if the owner has not set
+ * The delivery fee MalFleks charges in a city, or `null` if the owner has not set
  * one yet. Callers that need a number must handle `null` — see the note on
  * `CITY_DELIVERY_FEES`.
  */
@@ -174,7 +174,7 @@ export function cityDeliveryFee(
 }
 
 /**
- * Everything Soko needs to know about the money on one order.
+ * Everything MalFleks needs to know about the money on one order.
  *
  * `fees` defaults to the live table and exists so the reconciliation properties
  * can be exercised across a real fee schedule while the owner's four numbers are
@@ -209,7 +209,7 @@ export function quoteOrder(
   const goodsRungTZS = goodsRung(goodsTotalTZS);
 
   // On a brand route the brand carries the goods itself: no courier, no
-  // delivery fee charged, and nothing for Soko to bill afterwards.
+  // delivery fee charged, and nothing for MalFleks to bill afterwards.
   let deliveryFeeTZS = 0;
   let deliveryRungTZS = 0;
 
@@ -238,12 +238,12 @@ export function quoteOrder(
   const doorPaymentTZS = orderTotalTZS - depositTZS;
 
   // The branch keeps the goods payment less the rung the customer already paid
-  // Soko; the courier collects the delivery fee whole and settles its rung
+  // MalFleks; the courier collects the delivery fee whole and settles its rung
   // afterwards, out of band. Together these are exactly the cash at the door.
   const branchPayoutTZS = goodsTotalTZS - goodsRungTZS;
   const courierPayoutTZS = deliveryFeeTZS;
 
-  const sokoEarnsTZS = depositTZS + deliveryRungTZS;
+  const malfleksEarnsTZS = depositTZS + deliveryRungTZS;
 
   return {
     goodsTotalTZS,
@@ -255,13 +255,13 @@ export function quoteOrder(
     orderTotalTZS,
     branchPayoutTZS,
     courierPayoutTZS,
-    sokoEarnsTZS,
-    securedShare: sokoEarnsTZS === 0 ? 0 : depositTZS / sokoEarnsTZS,
+    malfleksEarnsTZS,
+    securedShare: malfleksEarnsTZS === 0 ? 0 : depositTZS / malfleksEarnsTZS,
   };
 }
 
 /**
- * What a courier owes Soko across a batch of deliveries.
+ * What a courier owes MalFleks across a batch of deliveries.
  *
  * The bottom rung of `DELIVERY_FEE_LADDER` is described in the model document
  * as "5,000 per 10 deliveries". That is a settlement cadence, not a different

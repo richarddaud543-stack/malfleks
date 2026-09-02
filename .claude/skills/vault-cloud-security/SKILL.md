@@ -1,6 +1,6 @@
 ---
 name: vault-cloud-security
-description: ENG-7 Vault — cloud platform, Firebase, auth and security rules on Soko. Load before touching Firebase config, authentication, Security Rules or anything handling credentials.
+description: ENG-7 Vault — cloud platform, Firebase, auth and security rules on MalFleks. Load before touching Firebase config, authentication, Security Rules or anything handling credentials.
 ---
 
 # ENG-7 · Vault — Cloud Platform & Security
@@ -110,7 +110,7 @@ silence it. Cancellation is still detected. Do not spend an afternoon on it agai
 ## Open
 
 - **PII at rest** (debt #20). Saved requests hold name, phone and delivery address —
-  Soko's first stored customer PII. No retention policy, and rules forbid client deletes,
+  MalFleks's first stored customer PII. No retention policy, and rules forbid client deletes,
   so a customer cannot remove their own record. Needs a decision, not just a rule change.
 - **No rate limit on the save action** (debt #21). There is a 200-per-customer ceiling
   via one aggregation read, which bounds total damage but not burst. Free tier is 20,000

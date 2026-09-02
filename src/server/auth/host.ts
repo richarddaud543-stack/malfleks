@@ -20,7 +20,7 @@ export async function requestHost(): Promise<string | null> {
 /**
  * Does the admin console exist on the host this request came in on?
  *
- * True everywhere when `SOKO_ADMIN_HOST` is unset — see `src/lib/admin-host.ts`
+ * True everywhere when `MALFLEKS_ADMIN_HOST` is unset — see `src/lib/admin-host.ts`
  * for why that direction is the safe one.
  *
  * The environment variable is read here, literally, rather than passed down
@@ -28,7 +28,7 @@ export async function requestHost(): Promise<string | null> {
  * so the value tracks the deployment without a rebuild.
  */
 export async function adminRoutesAvailable(): Promise<boolean> {
-  return adminRoutesAllowedOn(await requestHost(), process.env.SOKO_ADMIN_HOST);
+  return adminRoutesAllowedOn(await requestHost(), process.env.MALFLEKS_ADMIN_HOST);
 }
 
 /**
@@ -39,5 +39,5 @@ export async function adminRoutesAvailable(): Promise<boolean> {
  * changing how a page presents itself.
  */
 export async function onAdminHost(): Promise<boolean> {
-  return isAdminHost(await requestHost(), process.env.SOKO_ADMIN_HOST);
+  return isAdminHost(await requestHost(), process.env.MALFLEKS_ADMIN_HOST);
 }
