@@ -7,6 +7,7 @@ import {
 } from "@/server/partners/review";
 import { getAllBrands } from "@/server/repositories";
 import ApplicationReviewCard from "@/components/admin/ApplicationReviewCard";
+import NotificationCheck from "@/components/admin/NotificationCheck";
 import PartnerActivationCard from "@/components/admin/PartnerActivationCard";
 import {
   listActivatablePartners,
@@ -39,6 +40,16 @@ export const dynamic = "force-dynamic";
  */
 export default async function AdminPage() {
   await requireAdmin();
+
+  // Read on the server so the banner reflects this deployment rather than
+  // anyone's memory of what they configured. Safe to show an admin: which
+  // provider, and the address Soko notifies — never the key.
+  const { isEmailConfigured, notifyAddress, notifyProvider } = await import(
+    "@/server/notify/email"
+  );
+  const emailConfigured = isEmailConfigured();
+  const emailProvider = notifyProvider();
+  const emailTo = notifyAddress();
 
   const [pending, reviewed, brands, waitingToGoLive, catalogueBrands] =
     await Promise.all([
@@ -113,6 +124,12 @@ export default async function AdminPage() {
           </ul>
         </section>
       )}
+
+      <NotificationCheck
+        configured={emailConfigured}
+        provider={emailProvider}
+        to={emailTo}
+      />
 
       <section aria-labelledby="pending-heading" className="mt-12">
         <h2
