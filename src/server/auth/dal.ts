@@ -138,6 +138,14 @@ export async function requireSession(next: string = "/account"): Promise<Session
  * a matcher edit could quietly stop covering.
  */
 export async function requireAdmin(next: string = "/admin"): Promise<Session> {
+  // Host before session, and the order is the point. Once `SOKO_ADMIN_HOST` is
+  // set, the console does not exist on the public site at all — so a visitor
+  // who types /admin there must get a 404 *without* first being bounced to
+  // sign-in, because that bounce is itself the answer they were fishing for.
+  // Unset, this is true everywhere and nothing changes. See lib/admin-host.ts.
+  const { adminRoutesAvailable } = await import("./host");
+  if (!(await adminRoutesAvailable())) notFound();
+
   const session = await verifySession();
   if (!session) redirect(`/sign-in?next=${encodeURIComponent(next)}`);
 

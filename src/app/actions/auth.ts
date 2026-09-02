@@ -45,10 +45,31 @@ import { createServerSupabase } from "@/server/auth/supabase";
  * allowlist, and the path is fixed. Set the variable anyway.
  */
 async function siteOrigin(): Promise<string> {
+  const store = await headers();
+
+  // The admin site signs in on its own hostname, and it has to come back to
+  // that hostname or the whole exercise fails at the last step: session cookies
+  // are scoped per host, so a callback landing on the public site would set
+  // cookies there and leave the admin host signed out — forever, in a loop that
+  // looks like sign-in silently doing nothing.
+  //
+  // This branch takes the host from the request, which `siteOrigin` otherwise
+  // avoids on purpose. It is safe *because* it is not the request's choice:
+  // the value is only used after it has matched the one hostname configured in
+  // `SOKO_ADMIN_HOST`, so a forged `Host` header can select this constant or
+  // nothing at all. It cannot introduce an origin of its own.
+  const requestHost =
+    store.get("x-forwarded-host") ?? store.get("host") ?? null;
+  const { adminHost, isAdminHost } = await import("@/lib/admin-host");
+  if (isAdminHost(requestHost, process.env.SOKO_ADMIN_HOST)) {
+    const host = adminHost(process.env.SOKO_ADMIN_HOST)!;
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    return `${proto}://${host}`;
+  }
+
   const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   if (configured) return configured.replace(/\/+$/, "");
 
-  const store = await headers();
   const host = store.get("x-forwarded-host") ?? store.get("host") ?? "localhost:3000";
   const proto = store.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
   return `${proto}://${host}`;

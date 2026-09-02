@@ -2,8 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
-import { isAdminUser } from "@/server/auth/admin";
-import { isAuthConfigured } from "@/server/auth/config";
+import { adminSession } from "@/server/auth/admin-session";
 import { createOrder, type CreateOrderFailure } from "@/server/orders/create-order";
 import type { TransitionBlocker } from "@/server/orders/status";
 import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
@@ -86,12 +85,9 @@ export type OrderTransitionResult =
       reason: "forbidden" | "unavailable" | TransitionBlocker;
     };
 
-async function requireAdminSession() {
-  if (!isAuthConfigured()) return null;
-  const session = await verifySession();
-  if (!session || !isAdminUser(session)) return null;
-  return session;
-}
+// One shared guard: auth configured, right hostname, session, admin.
+// See server/auth/admin-session.ts for why it lives in one place now.
+const requireAdminSession = adminSession;
 
 /** Admin verified with the branch that the product is available at the quoted price. */
 export async function confirmOrder(orderId: string): Promise<OrderTransitionResult> {

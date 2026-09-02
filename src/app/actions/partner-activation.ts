@@ -2,9 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
-import { isAuthConfigured } from "@/server/auth/config";
-import { isAdminUser } from "@/server/auth/admin";
-import { verifySession } from "@/server/auth/dal";
+import { adminSession } from "@/server/auth/admin-session";
 import type {
   BrandActivationInput,
   CourierActivationInput,
@@ -40,12 +38,9 @@ export type ActivationResult =
         | "name-taken";
     };
 
-async function requireAdminSession() {
-  if (!isAuthConfigured()) return null;
-  const session = await verifySession();
-  if (!session || !isAdminUser(session)) return null;
-  return session;
-}
+// One shared guard: auth configured, right hostname, session, admin.
+// See server/auth/admin-session.ts for why it lives in one place now.
+const requireAdminSession = adminSession;
 
 /**
  * Everything the catalogue gains here is visible to the public immediately, so

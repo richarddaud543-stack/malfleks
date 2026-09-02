@@ -254,6 +254,50 @@ In this order:
 
 ---
 
+## 6. Give the admin console its own address
+
+Optional, and off until you switch it on. With `SOKO_ADMIN_HOST` unset the site
+behaves exactly as it always has: `/admin` answers on whatever host is asking,
+protected by `SOKO_ADMIN_EMAILS` and the `app_metadata` flag and by nothing else.
+
+Set it and `/admin` stops existing on the shop. A customer who types the URL on
+the public site gets the same 404 as a misspelled brand slug — not a redirect to
+sign-in, not a "you are not allowed" page, either of which would confirm there is
+something there. The console answers only on the hostname you name.
+
+Three steps, in this order, because the third one fails silently if you skip it:
+
+1. **Add the hostname to the same Vercel project.** Project -> Settings ->
+   Domains -> Add. A free `*.vercel.app` name works and costs nothing:
+   `soko-admin.vercel.app`, if it is unclaimed. It serves the same deployment —
+   there is no second project, no second build, and nothing to keep in sync.
+2. **Set `SOKO_ADMIN_HOST`** to that hostname, for Production, and redeploy. The
+   value is the bare host, no scheme and no path. The proxy inlines it at build
+   time, which is why a redeploy is needed rather than just a save.
+3. **Add `https://<that host>/auth/callback`** under Supabase -> Authentication
+   -> URL Configuration -> Redirect URLs. Sign-in on the admin site goes out
+   through Google and has to come back to *that* hostname; Supabase refuses any
+   callback not on this list, and the failure looks like the sign-in button
+   doing nothing at all.
+
+What changes once it is on: the admin hostname's root redirects to `/admin`, its
+`robots.txt` says `Disallow: /`, its sitemap is gone, and every response from it
+carries `X-Robots-Tag: noindex`. The public site is untouched.
+
+Two things worth knowing before you rely on it:
+
+- **Sessions are per-hostname.** Signing in on the admin site is a separate
+  session from signing in on the shop, and signing out of one leaves the other
+  alone. That is a feature — but it does mean signing in twice.
+- **This is obscurity, not authorization.** `requireAdmin()` in the DAL and
+  `adminSession()` in the actions are what actually decide who may read the
+  queue, and they are unchanged. The hostname decides where the door is, not
+  who holds the key. Which is also why a blank `SOKO_ADMIN_HOST` fails *open*:
+  a typo that locked you out of your own console would be a worse failure than
+  the one this setting prevents.
+
+---
+
 ## What is still not done after all of this
 
 Being online is not being finished. In rough order of how much they matter:

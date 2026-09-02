@@ -1,9 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { verifySession } from "@/server/auth/dal";
-import { isAdminUser } from "@/server/auth/admin";
-import { isAuthConfigured } from "@/server/auth/config";
+import { adminSession } from "@/server/auth/admin-session";
 
 /**
  * Approving and rejecting partner applications.
@@ -31,12 +29,9 @@ export type ReviewResult =
         | "account-already-partnered";
     };
 
-async function requireAdminSession() {
-  if (!isAuthConfigured()) return null;
-  const session = await verifySession();
-  if (!session || !isAdminUser(session)) return null;
-  return session;
-}
+// One shared guard: auth configured, right hostname, session, admin.
+// See server/auth/admin-session.ts for why it lives in one place now.
+const requireAdminSession = adminSession;
 
 export async function approvePartnerApplication(
   applicationId: string
