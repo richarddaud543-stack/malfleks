@@ -45,6 +45,10 @@ export const dynamic = "force-dynamic";
 export default async function PartnerPage() {
   const { partner } = await requirePartner();
 
+  const isBrand = partner.kind === "brand";
+  const suspended = partner.status !== "active";
+  const canList = isBrand && !suspended;
+
   let submissions: PartnerSubmission[] = [];
   let counts: PartnerCounts = { pending: 0, published: 0, rejected: 0 };
   let unavailable = false;
@@ -60,9 +64,6 @@ export default async function PartnerPage() {
     unavailable = true;
   }
 
-  const isBrand = partner.kind === "brand";
-  const suspended = partner.status !== "active";
-  const canList = isBrand && !suspended;
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-16">
@@ -73,12 +74,26 @@ export default async function PartnerPage() {
         <h1 className="font-display text-4xl font-medium tracking-tight">
           {partner.displayName}
         </h1>
-        <Link
-          href="/account"
-          className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
-        >
-          Your orders
-        </Link>
+        <div className="flex gap-4">
+          {/* Orders sent to this branch — the reason a partner opens this page
+              on a weekday morning. `/account` below is their own customer
+              account, which is a different thing and was confusingly the only
+              link here. */}
+          {(isBrand || partner.agentId) && (
+            <Link
+              href="/partner/orders"
+              className="text-sm text-accent underline decoration-border underline-offset-4"
+            >
+              {isBrand ? "Customer orders" : "Your deliveries"}
+            </Link>
+          )}
+          <Link
+            href="/account"
+            className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
+          >
+            Your own account
+          </Link>
+        </div>
       </div>
       <p className="mt-3 text-muted">
         {partner.city}
@@ -114,16 +129,16 @@ export default async function PartnerPage() {
         </div>
       )}
 
-      {!isBrand && (
+      {!isBrand && !partner.agentId && (
         <div className="glass-card mt-8 rounded-2xl px-6 py-5">
           <h2 className="font-display text-lg font-medium">
-            Delivery jobs aren&apos;t routed here yet
+            You aren&apos;t in the delivery routing yet
           </h2>
           <p className="mt-2 max-w-prose text-sm text-muted">
-            Soko does not yet hand orders to couriers through this site — no
-            job feed exists, and we would rather say so than show you an empty
-            one that looks broken. When a customer picks you, the branch
-            contacts you directly. We&apos;ll tell you when that changes.
+            Customers can only pick a courier Soko has added to the delivery
+            routing, and that is a separate step from approving your account.
+            Until it happens you will not be offered any jobs. We&apos;ll be in
+            touch to confirm which cities you cover and how fast you deliver.
           </p>
         </div>
       )}

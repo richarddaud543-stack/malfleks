@@ -39,10 +39,36 @@ export interface DeliveryRoute {
  * delivers the order itself, otherwise the customer is connected to a local
  * agent serving that branch's city.
  */
-export function resolveDeliveryRoute(branch: Branch): DeliveryRoute {
-  return branch.deliveryOffered
-    ? { kind: "brand", agents: [] }
-    : { kind: "agent", agents: getAgentsForCity(branch.city) };
+/**
+ * Who carries an order from this branch.
+ *
+ * `agents` is the set of couriers to consider — normally every courier in the
+ * database, which the server page has already fetched. **Passing it is not an
+ * optimisation.** Until 2026-09-01 this function always read the static
+ * `src/data` array, so a courier a real partner had been approved and wired up
+ * as simply did not exist as far as routing was concerned: they were never
+ * offered to a customer, and a branch that does not run its own vehicles stayed
+ * unorderable no matter how many couriers had signed up.
+ *
+ * The static fallback is kept for the pure unit tests, which exercise the rule
+ * itself against fixture couriers and have no database. Every server call site
+ * passes the real set.
+ */
+export function resolveDeliveryRoute(
+  branch: Branch,
+  agents?: DeliveryAgent[]
+): DeliveryRoute {
+  if (branch.deliveryOffered) return { kind: "brand", agents: [] };
+
+  const candidates = agents
+    ? // Same rule as `getAgentsForCity` in both `@/data` and the repositories:
+      // the courier's own city, or a region they have said they serve.
+      agents.filter(
+        (a) => a.city === branch.city || a.regionsServed.includes(branch.city)
+      )
+    : getAgentsForCity(branch.city);
+
+  return { kind: "agent", agents: candidates };
 }
 
 export function deliveryRouteLabel(kind: DeliveryRouteKind): string {
@@ -134,12 +160,15 @@ export function previewDelivery({
   product,
   brand,
   branch,
+  agents,
 }: {
   product: Product;
   brand: Brand;
   branch: Branch;
+  /** See `resolveDeliveryRoute` — omit only where there is no database. */
+  agents?: DeliveryAgent[];
 }): DeliveryOutlook {
-  const route = resolveDeliveryRoute(branch);
+  const route = resolveDeliveryRoute(branch, agents);
   const fastest = fastestAgent(route.agents);
 
   const unavailable = !product.inStock

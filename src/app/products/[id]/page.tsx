@@ -8,6 +8,7 @@ import { ViewTransition } from "react";
 // under `next dev`/Turbopack (it tries to resolve a module that only exists
 // under the "types" export condition).
 import {
+  getAgentsForCity,
   getAllProducts,
   getProductById,
   getBrandById,
@@ -72,8 +73,15 @@ export default async function ProductPage({
   // Same rule, same answer as /delivery/[productId] — just reached before the
   // customer commits rather than after. `blockReason` is the long-form version
   // of `outlook.unavailable`; both come from the one rule in lib/order.
-  const outlook = previewDelivery({ product, brand, branch });
-  const blockReason = orderBlockReason(product, resolveDeliveryRoute(branch));
+  // The couriers come from the database, not `src/data`. Without this the page
+  // would rank and offer the seeded fixture couriers — and ignore every real
+  // one a partner had been wired up as.
+  const agents = await getAgentsForCity(branch.city);
+  const outlook = previewDelivery({ product, brand, branch, agents });
+  const blockReason = orderBlockReason(
+    product,
+    resolveDeliveryRoute(branch, agents)
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">

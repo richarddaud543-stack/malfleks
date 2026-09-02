@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
+  getAgentsForCity,
   getAllProducts,
   getProductById,
   getBrandById,
@@ -55,7 +56,9 @@ export default async function DeliveryPage({
     notFound();
   }
 
-  const route = resolveDeliveryRoute(branch);
+  // Real couriers, from the database — see the note on `resolveDeliveryRoute`.
+  const agents = await getAgentsForCity(branch.city);
+  const route = resolveDeliveryRoute(branch, agents);
   const blockReason = orderBlockReason(product, route);
 
   return (

@@ -1,5 +1,5 @@
+import BrandLogo from "@/components/brand/BrandLogo";
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import type { BrandCategory } from "@/data";
 import {
@@ -68,14 +68,7 @@ export default async function BrandPage({
       <ScrollReveal>
         <div className="flex flex-wrap items-center gap-5">
           <div className="relative h-20 w-20 rounded-2xl bg-white p-4 shadow-xl">
-            <Image
-              src={brand.logo}
-              alt={brand.name}
-              fill
-              sizes="80px"
-              priority
-              className="object-contain p-4"
-            />
+            <BrandLogo brand={brand} sizes="80px" className="object-contain p-4" />
           </div>
           <div>
             <p className="font-accent-serif italic text-accent">

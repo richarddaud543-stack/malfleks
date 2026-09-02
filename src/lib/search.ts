@@ -1,5 +1,5 @@
 import { brands, branches, products } from "@/data";
-import type { Brand, Branch, Product } from "@/data";
+import type { Brand, Branch, DeliveryAgent, Product } from "@/data";
 
 /**
  * Faceted search over the product catalogue.
@@ -13,6 +13,20 @@ export interface Listing {
   product: Product;
   brand: Brand;
   branch: Branch;
+  /**
+   * The couriers that could serve this branch's city.
+   *
+   * `ListingCard` runs `previewDelivery` on the client, and until this field
+   * existed that call fell back to the static `src/data` couriers — so a search
+   * result could promise "1–2 days with Fargo Courier" for a branch whose real
+   * courier was somebody else entirely, or claim no courier served a city that
+   * one had just been wired up for. Attached server-side, where the database
+   * is.
+   *
+   * Optional because the pure unit tests build listings without a database and
+   * exercise the static fallback deliberately.
+   */
+  agents?: DeliveryAgent[];
 }
 
 export type SortKey = "relevance" | "price-asc" | "price-desc" | "name";
@@ -110,15 +124,41 @@ let cachedListings: Listing[] | null = null;
 export function buildListings(
   brands: Brand[],
   branches: Branch[],
-  products: Product[]
+  products: Product[],
+  /**
+   * Every courier, from the database. Matched to each branch by the same rule
+   * `getAgentsForCity` uses — the courier's own city, or a region they serve.
+   * Omit only where there is no database; see `Listing.agents`.
+   */
+  agents?: DeliveryAgent[]
 ): Listing[] {
   const brandById = new Map(brands.map((b) => [b.id, b]));
   const branchById = new Map(branches.map((b) => [b.id, b]));
 
+  // Grouped once rather than filtered per product: a 38-product catalogue with
+  // five couriers is nothing, but this runs on every search page render.
+  const agentsByCity = new Map<string, DeliveryAgent[]>();
+  if (agents) {
+    for (const branch of branches) {
+      if (agentsByCity.has(branch.city)) continue;
+      agentsByCity.set(
+        branch.city,
+        agents.filter(
+          (a) => a.city === branch.city || a.regionsServed.includes(branch.city)
+        )
+      );
+    }
+  }
+
   return products.flatMap((product) => {
     const brand = brandById.get(product.brandId);
     const branch = branchById.get(product.branchId);
-    return brand && branch ? [{ product, brand, branch }] : [];
+    if (!brand || !branch) return [];
+    return [
+      agents
+        ? { product, brand, branch, agents: agentsByCity.get(branch.city) ?? [] }
+        : { product, brand, branch },
+    ];
   });
 }
 

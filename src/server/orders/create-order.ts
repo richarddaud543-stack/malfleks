@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import { getPrisma } from "@/server/db/client";
 import type { OrderRequest } from "@/lib/order";
+import { databaseCatalogueFor } from "./catalogue-source";
 import {
   buildOrderRequest,
   type SaveOrderRequestFailure,
@@ -64,7 +65,12 @@ export async function createOrder(
   input: SaveOrderRequestInput,
   customerId: string | null
 ): Promise<CreateOrderOutcome> {
-  const built = buildOrderRequest(input);
+  // Read the catalogue from the database, not from `src/data`. Every product
+  // a partner published lives only in Postgres, so the static array would
+  // answer `unknown-product` for all of them — see `catalogue-source.ts`.
+  const catalogue = await databaseCatalogueFor(input.productId);
+
+  const built = buildOrderRequest(input, undefined, catalogue);
   if (!built.ok) return { ok: false, reason: built.reason };
 
   try {
@@ -77,7 +83,11 @@ export async function createOrder(
     // Force a fresh reference the same way a tampered client reference does:
     // an empty string fails `sanitizeReference`, so `createOrderRequest`'s
     // default parameter regenerates one from the brand and branch.
-    const retried = buildOrderRequest({ ...input, reference: "" });
+    const retried = buildOrderRequest(
+      { ...input, reference: "" },
+      undefined,
+      catalogue,
+    );
     if (!retried.ok) return { ok: false, reason: retried.reason };
 
     try {

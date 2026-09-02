@@ -7,6 +7,11 @@ import {
 } from "@/server/partners/review";
 import { getAllBrands } from "@/server/repositories";
 import ApplicationReviewCard from "@/components/admin/ApplicationReviewCard";
+import PartnerActivationCard from "@/components/admin/PartnerActivationCard";
+import {
+  listActivatablePartners,
+  listBrandsForActivation,
+} from "@/server/partners/activation";
 
 export const metadata: Metadata = {
   title: "Partner applications",
@@ -35,11 +40,18 @@ export const dynamic = "force-dynamic";
 export default async function AdminPage() {
   await requireAdmin();
 
-  const [pending, reviewed, brands] = await Promise.all([
-    listPendingApplications(),
-    listReviewedApplications(),
-    getAllBrands(),
-  ]);
+  const [pending, reviewed, brands, waitingToGoLive, catalogueBrands] =
+    await Promise.all([
+      listPendingApplications(),
+      listReviewedApplications(),
+      getAllBrands(),
+      // Approved but not yet in the catalogue. Before this section existed,
+      // approving was the end of the road: Partner.branchId stayed null
+      // forever, canPublish answered "no-branch" for everything they
+      // submitted, and no courier ever entered the routing.
+      listActivatablePartners(),
+      listBrandsForActivation(),
+    ]);
 
   const brandNames = Object.fromEntries(brands.map((b) => [b.id, b.name]));
 
@@ -50,12 +62,20 @@ export default async function AdminPage() {
         <h1 className="font-display text-4xl font-medium tracking-tight">
           Partner applications
         </h1>
-        <Link
-          href="/admin/orders"
-          className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
-        >
-          Orders
-        </Link>
+        <div className="flex gap-4">
+          <Link
+            href="/admin/submissions"
+            className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
+          >
+            Product submissions
+          </Link>
+          <Link
+            href="/admin/orders"
+            className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
+          >
+            Orders
+          </Link>
+        </div>
       </div>
       <p className="mt-3 max-w-xl text-muted">
         Every application is decided here by a person. Approving creates the
@@ -63,6 +83,36 @@ export default async function AdminPage() {
         <strong>not</strong> put a branch on the locator or a courier in the
         routing. That is a separate, deliberate step.
       </p>
+
+      {waitingToGoLive.length > 0 && (
+        <section aria-labelledby="golive-heading" className="mt-12">
+          <h2
+            id="golive-heading"
+            className="font-display text-lg font-medium tracking-tight"
+          >
+            Approved, waiting to go live
+            <span className="ml-2 text-sm font-normal text-muted tabular-nums">
+              {waitingToGoLive.length}
+            </span>
+          </h2>
+          <p className="mt-2 max-w-xl text-sm text-muted">
+            These partners can sign in, but customers cannot see them yet. A
+            brand branch cannot have a single product published until it is on
+            the map, and a courier is offered to nobody until it is in the
+            routing — so this list is the last step between an approval and a
+            working listing.
+          </p>
+          <ul className="mt-5 flex flex-col gap-5">
+            {waitingToGoLive.map((partner) => (
+              <PartnerActivationCard
+                key={partner.partnerId}
+                partner={partner}
+                brands={catalogueBrands}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-labelledby="pending-heading" className="mt-12">
         <h2

@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useRef } from "react";
+import BrandLogo from "@/components/brand/BrandLogo";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { useReducedMotion } from "motion/react";
@@ -72,13 +72,7 @@ export default function BrandMarquee({ brands }: { brands: Brand[] }) {
             data-marquee-clone={i >= brands.length ? "true" : undefined}
             className="relative h-16 w-32 shrink-0 rounded-2xl border border-border bg-surface-2 p-4 sm:h-20 sm:w-40"
           >
-            <Image
-              src={brand.logo}
-              alt={brand.name}
-              fill
-              sizes="160px"
-              className="object-contain p-2"
-            />
+            <BrandLogo brand={brand} sizes="160px" className="object-contain p-2" />
           </div>
         ))}
       </div>

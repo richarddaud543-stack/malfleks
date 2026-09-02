@@ -7,6 +7,7 @@ import { buildListings } from "@/lib/search";
 import {
   getAllBranches,
   getAllBrands,
+  getAllDeliveryAgents,
   getAllProducts,
 } from "@/server/repositories";
 
@@ -25,12 +26,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SearchPage() {
-  const [brands, branches, products] = await Promise.all([
+  const [brands, branches, products, agents] = await Promise.all([
     getAllBrands(),
     getAllBranches(),
     getAllProducts(),
+    getAllDeliveryAgents(),
   ]);
-  const catalogue = buildListings(brands, branches, products);
+  const catalogue = buildListings(brands, branches, products, agents);
 
   return (
     <div className="relative">

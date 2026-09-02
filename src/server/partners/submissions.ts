@@ -269,6 +269,7 @@ export async function publishSubmission(
       status: true,
       branchId: true,
       brandId: true,
+      partnerId: true,
       name: true,
       category: true,
       priceTZS: true,
@@ -280,19 +281,43 @@ export async function publishSubmission(
   });
 
   if (!submission) return { ok: false, reason: "not-found" };
-  if (!submission.branchId) {
+
+  // A submission copies `branchId` and `brandId` off its partner *at the time
+  // it was written*, and a partner who has not been put on the map yet has
+  // neither. That is not a dead end: `/partner` explicitly invites them to
+  // prepare listings while they wait, and an admin puts them on the map
+  // afterwards. Without this fall-back every product prepared during the wait
+  // stayed permanently unpublishable — the submission remembered a null the
+  // partner had since grown out of.
+  //
+  // Found by `loop.integration.test.ts` walking the real order of events, not
+  // by any of the per-function tests, all of which happened to activate first.
+  let branchId = submission.branchId;
+  let brandId = submission.brandId;
+
+  if (!branchId && submission.partnerId) {
+    const partner = await db.partner.findUnique({
+      where: { id: submission.partnerId },
+      select: { branchId: true, brandId: true },
+    });
+    if (partner?.branchId) {
+      branchId = partner.branchId;
+      brandId = partner.brandId;
+    }
+  }
+
+  if (!branchId) {
     // Checked before the slug lookup, which needs a branch to scope by.
-    const early = canPublish(submission, false);
+    const early = canPublish({ ...submission, branchId: null }, false);
     if (!early.ok) return early;
   }
 
-  const branchId = submission.branchId;
   const slug = branchId ? slugForSubmission(submission.name, branchId) : "";
   const existing = branchId
     ? await db.product.findUnique({ where: { slug }, select: { id: true } })
     : null;
 
-  const check = canPublish(submission, existing !== null);
+  const check = canPublish({ ...submission, branchId }, existing !== null);
   if (!check.ok) return check;
 
   return db.$transaction(async (tx) => {
@@ -304,6 +329,9 @@ export async function publishSubmission(
         status: "published",
         reviewedAt: new Date(),
         reviewedBy: adminUid,
+        // Written back so the row stops saying "no branch" once it has one.
+        branchId,
+        brandId,
       },
     });
 
@@ -323,7 +351,7 @@ export async function publishSubmission(
         id: `sub-${submissionId}`,
         slug,
         branchId: branchId as string,
-        brandId: submission.brandId as string,
+        brandId: brandId as string,
         name: submission.name,
         category: submission.category,
         priceTZS: submission.priceTZS,

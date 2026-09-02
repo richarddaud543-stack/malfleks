@@ -2,6 +2,7 @@ import type { Prisma, PrismaClient } from "@prisma/client";
 
 import type { OrderRequest } from "@/lib/order";
 import { getPrisma } from "@/server/db/client";
+import { databaseCatalogueFor } from "./catalogue-source";
 import {
   buildOrderRequest,
   sanitizeReference,
@@ -99,7 +100,11 @@ export async function saveOrderRequestForCustomer(
   input: SaveOrderRequestInput,
   db: PrismaClient = getPrisma(),
 ): Promise<SaveOutcome> {
-  const built = buildOrderRequest(input);
+  // Same reasoning as `createOrder`: the catalogue is in Postgres now, and a
+  // customer saving a partner's product must not be told it does not exist.
+  const catalogue = await databaseCatalogueFor(input.productId);
+
+  const built = buildOrderRequest(input, undefined, catalogue);
   if (!built.ok) return { saved: false, reason: built.reason };
 
   return db.$transaction(async (tx) => {

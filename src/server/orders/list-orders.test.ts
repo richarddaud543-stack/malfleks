@@ -119,6 +119,48 @@ describe("listOrders — filtering", () => {
     expect(darOnly.every((o) => o.branchId === "toyota-dar")).toBe(true);
   });
 
+  it("filters by agentId, which is what a courier's own job list is scoped to", async () => {
+    // `/partner/orders` gives a courier partner exactly this filter, resolved
+    // from their session. Without the WHERE clause a courier would see every
+    // customer's name, phone number and home address on Soko.
+    const routedToAgent = await createOrder(
+      input({
+        productId: AGENT_ROUTED,
+        agentId: AGENT_IN_ARUSHA,
+        fullName: "Agent Filter — routed",
+      }),
+      null,
+    );
+    const branchDelivered = await createOrder(
+      input({ fullName: "Agent Filter — branch fleet" }),
+      null,
+    );
+    expect(routedToAgent.ok).toBe(true);
+    expect(branchDelivered.ok).toBe(true);
+    if (!routedToAgent.ok || !branchDelivered.ok) return;
+
+    const theirs = await listOrders({ agentId: AGENT_IN_ARUSHA }, 500);
+
+    expect(theirs.some((o) => o.id === routedToAgent.value.id)).toBe(true);
+    // An order the brand delivers itself is not a courier's business.
+    expect(theirs.some((o) => o.id === branchDelivered.value.id)).toBe(false);
+  });
+
+  it("returns everything when no filter is given — which is why callers must pass one", async () => {
+    // Not a feature request: this documents the sharp edge. `/partner/orders`
+    // refuses to call listOrders at all when the partner has neither a branch
+    // nor an agent, because `listOrders({})` is the whole table.
+    const mine = await createOrder(input({ fullName: "Unfiltered" }), null);
+    expect(mine.ok).toBe(true);
+    if (!mine.ok) return;
+
+    const everything = await listOrders({}, 500);
+    expect(everything.length).toBeGreaterThan(1);
+    expect(
+      new Set(everything.map((o) => o.branchId)).size,
+    ).toBeGreaterThan(1);
+  });
+
   it("filters by status", async () => {
     const outcome = await createOrder(input({ fullName: "Status Filter" }), null);
     expect(outcome.ok).toBe(true);

@@ -28,6 +28,9 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   // A `Listing` is exactly the {product, brand, branch} join `previewDelivery`
   // wants, so the routing rule answers here — on the card the customer is
   // choosing from — instead of two pages later on /delivery.
+  // `listing.agents` is the database set attached by `buildListings`; without
+  // it `previewDelivery` falls back to the static couriers and can name the
+  // wrong carrier on a real branch.
   const outlook = previewDelivery(listing);
 
   return (

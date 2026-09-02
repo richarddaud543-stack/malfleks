@@ -36,6 +36,12 @@ export interface PartnerIdentity {
   city: string;
   brandId: string | null;
   branchId: string | null;
+  /**
+   * The `DeliveryAgent` this courier partner became, once an admin added them
+   * to the routing. Null until then — and until then a courier is offered to
+   * nobody, so `/partner/orders` has nothing to scope to.
+   */
+  agentId: string | null;
   role: string;
 }
 
@@ -61,6 +67,7 @@ export async function partnerForUser(uid: string): Promise<PartnerIdentity | nul
           city: true,
           brandId: true,
           branchId: true,
+          agentId: true,
         },
       },
     },
@@ -76,6 +83,7 @@ export async function partnerForUser(uid: string): Promise<PartnerIdentity | nul
     city: link.partner.city,
     brandId: link.partner.brandId,
     branchId: link.partner.branchId,
+    agentId: link.partner.agentId,
     role: link.role,
   };
 }

@@ -1,4 +1,13 @@
-import { getBranchById, getBrandById, getProductById } from "@/data";
+import {
+  getAgentsForCity as staticAgentsForCity,
+  getBranchById as staticBranchById,
+  getBrandById as staticBrandById,
+  getProductById as staticProductById,
+  type Branch,
+  type Brand,
+  type DeliveryAgent,
+  type Product,
+} from "@/data";
 import {
   createOrderRequest,
   orderBlockReason,
@@ -90,6 +99,43 @@ export function sanitizeRequestedAt(
 }
 
 /**
+ * Where the three catalogue records come from.
+ *
+ * This used to be `@/data` directly, and that was a hole under the whole
+ * marketplace: **an order could only be placed for a product in the static
+ * array.** Browsing already read from the database — the product page, search
+ * and the locator all use `@/server/repositories` — so a product a partner had
+ * published rendered perfectly, showed a price, and answered `unknown-product`
+ * the moment a customer pressed the button. Nothing in the UI could have told
+ * them why.
+ *
+ * Injecting the source keeps this function pure and synchronous, which is what
+ * makes it the testable trust boundary, while letting the two persistence paths
+ * hand it records they read from Postgres. The default stays the static
+ * catalogue so the existing suite still exercises the real code path with real
+ * fixtures.
+ */
+export interface CatalogueSource {
+  getProductById(id: string): Product | undefined;
+  getBranchById(id: string): Branch | undefined;
+  getBrandById(id: string): Brand | undefined;
+  /**
+   * The couriers that could carry this order. Part of the source for the same
+   * reason the other three are: routing read them from `src/data`, so a real
+   * courier could never be chosen and a branch without its own vehicles could
+   * never be ordered from.
+   */
+  getAgentsForCity(city: string): DeliveryAgent[];
+}
+
+export const staticCatalogue: CatalogueSource = {
+  getProductById: staticProductById,
+  getBranchById: staticBranchById,
+  getBrandById: staticBrandById,
+  getAgentsForCity: staticAgentsForCity,
+};
+
+/**
  * Rebuilds the order request server-side from the catalogue.
  *
  * Pure: no database, no session, no clock beyond what is
@@ -99,19 +145,23 @@ export function sanitizeRequestedAt(
  */
 export function buildOrderRequest(
   input: SaveOrderRequestInput,
-  nowMs: number = Date.now()
+  nowMs: number = Date.now(),
+  catalogue: CatalogueSource = staticCatalogue
 ): BuildResult {
-  const product = getProductById(input.productId);
+  const product = catalogue.getProductById(input.productId);
   if (!product) return { ok: false, reason: "unknown-product" };
 
-  const branch = getBranchById(product.branchId);
-  const brand = getBrandById(product.brandId);
+  const branch = catalogue.getBranchById(product.branchId);
+  const brand = catalogue.getBrandById(product.brandId);
   // The catalogue asserts these agree at seed time. If they ever do not, this
   // is a corrupt record rather than a bad request, and storing half of it
   // would be worse than storing none.
   if (!branch || !brand) return { ok: false, reason: "catalogue-mismatch" };
 
-  const route = resolveDeliveryRoute(branch);
+  const route = resolveDeliveryRoute(
+    branch,
+    catalogue.getAgentsForCity(branch.city)
+  );
   if (orderBlockReason(product, route)) {
     return { ok: false, reason: "not-orderable" };
   }

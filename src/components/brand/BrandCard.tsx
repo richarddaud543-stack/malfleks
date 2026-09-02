@@ -1,4 +1,4 @@
-import Image from "next/image";
+import BrandLogo from "./BrandLogo";
 import Link from "next/link";
 import type { Brand, Branch } from "@/data";
 
@@ -90,13 +90,7 @@ export default function BrandCard({
         style={{ background: brand.accentColor }}
       />
       <div className="relative h-16 w-16 rounded-2xl border border-border bg-surface p-3">
-        <Image
-          src={brand.logo}
-          alt={brand.name}
-          fill
-          sizes="64px"
-          className="object-contain p-3"
-        />
+        <BrandLogo brand={brand} sizes="64px" className="object-contain p-3" />
       </div>
       <h3 className="relative mt-5 font-display text-xl font-semibold tracking-tight text-foreground">
         {brand.name}

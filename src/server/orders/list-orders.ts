@@ -55,6 +55,16 @@ export interface ListOrdersFilter {
    * unfiltered list still shows it via its snapshot fields.
    */
   branchId?: string;
+  /**
+   * `Order.agentId` — the courier a customer chose. Same nullability and same
+   * reasoning as `branchId` above.
+   *
+   * Added so a courier partner can see their own jobs on `/partner/orders`.
+   * Before it, a courier could be picked by a customer, named on the order and
+   * printed on the confirmation screen, and still have no way to learn the job
+   * existed except by the branch phoning them.
+   */
+  agentId?: string;
   status?: string;
 }
 
@@ -118,6 +128,7 @@ export async function listOrders(
   const rows = await getPrisma().order.findMany({
     where: {
       ...(filter.branchId ? { branchId: filter.branchId } : {}),
+      ...(filter.agentId ? { agentId: filter.agentId } : {}),
       ...(filter.status ? { status: filter.status } : {}),
     },
     orderBy: { createdAt: "desc" },

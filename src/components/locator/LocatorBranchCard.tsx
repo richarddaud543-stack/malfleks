@@ -1,4 +1,4 @@
-import Image from "next/image";
+import BrandLogo from "@/components/brand/BrandLogo";
 import Link from "next/link";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import type { LocatorBranch } from "./locator";
@@ -43,13 +43,7 @@ export default function LocatorBranchCard({
         style={{ boxShadow: `0 0 0 1px ${brand.accentColor}55` }}
       >
         {/* Decorative: the brand name is spelled out immediately alongside. */}
-        <Image
-          src={brand.logo}
-          alt=""
-          width={32}
-          height={32}
-          className="h-8 w-8 object-contain"
-        />
+        <BrandLogo brand={brand} sizes="48px" className="h-8 w-8 object-contain" />
       </span>
 
       {/* Column on a phone so the badge sits under the address rather than
