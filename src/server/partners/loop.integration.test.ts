@@ -23,10 +23,22 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
+import {
+  accrueCourierBalance,
+  FeeQuoteError,
+  quoteOrder,
+  type CityFeeTable,
+} from "@/lib/fees";
 import { getPrisma } from "@/server/db/client";
 import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 import { createOrder } from "@/server/orders/create-order";
 import { listOrders } from "@/server/orders/list-orders";
+import {
+  cancelOrder,
+  confirmOrder,
+  markOrderFulfilled,
+  orderHistory,
+} from "@/server/orders/status";
 import { getAllBrands, getProductById } from "@/server/repositories";
 import { createApplicationForUser } from "./applications";
 import { approveApplication } from "./review";
@@ -35,6 +47,7 @@ import {
   activateCourierPartner,
 } from "./activation";
 import { partnerForUser, listSubmissionsForPartner } from "./portal";
+import { partnerStatusForUser } from "./status";
 import { publishSubmission, submitProduct } from "./submissions";
 
 let db: TestDatabase;
@@ -59,6 +72,13 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     // 1. A shop applies.
     // ---------------------------------------------------------------------
     const shopUid = `uid-shop-${Date.now()}`;
+
+    // What `/apply` will show them, asserted at every stage below. Before this
+    // existed the page showed the same blank form at all four of them, and the
+    // quota allows five pending applications — so the natural response to
+    // silence, applying again, filled the review queue with duplicates.
+    expect(await partnerStatusForUser(shopUid)).toEqual({ state: "none" });
+
     const application = await createApplicationForUser(
       shopUid,
       "shop@example.com",
@@ -82,6 +102,11 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     });
     expect(pending).not.toBeNull();
 
+    // "We have it, sent on <date>. You do not need to send another one."
+    expect(await partnerStatusForUser(shopUid)).toMatchObject({
+      state: "pending",
+    });
+
     // ---------------------------------------------------------------------
     // 2. An admin approves it. This creates an account and NOTHING public.
     // ---------------------------------------------------------------------
@@ -92,6 +117,16 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     // The state that used to be permanent.
     expect(partner!.branchId).toBeNull();
     expect(await db.branch.count()).toBe(0);
+
+    // Approved, but not on the map: the state most likely to look like a
+    // broken site. They have an account, they can reach the partner area, and
+    // they cannot publish a thing. `/apply` says exactly that rather than
+    // handing them the form again.
+    expect(await partnerStatusForUser(shopUid)).toEqual({
+      state: "partner",
+      kind: "brand",
+      live: false,
+    });
 
     // ---------------------------------------------------------------------
     // 3. They can already prepare a listing — but it cannot be published,
@@ -135,6 +170,14 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
 
     const wired = await partnerForUser(shopUid);
     expect(wired!.branchId).toBe(activated.value.branchId);
+
+    // And now they are live, which is the only difference `/apply` reports
+    // between "we approved you" and "you can sell".
+    expect(await partnerStatusForUser(shopUid)).toEqual({
+      state: "partner",
+      kind: "brand",
+      live: true,
+    });
 
     // ---------------------------------------------------------------------
     // 5. Now the same submission publishes.
@@ -303,5 +346,137 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     );
     // The customer's name, phone number and home address must not be here.
     expect(strangerInbox).toEqual([]);
+
+    // ---------------------------------------------------------------------
+    // 12. The order is verified with the branch and confirmed.
+    //
+    //     MalFleks admin moves it, not the branch — there is no partner-facing
+    //     order queue in this codebase and this test does not pretend there
+    //     is. See the note at the top of `src/server/orders/status.ts`.
+    // ---------------------------------------------------------------------
+    const orderId = order.value.id;
+
+    expect(await confirmOrder(orderId, ADMIN)).toEqual({ ok: true });
+
+    const confirmedInbox = await listOrders(
+      { branchId: wired!.branchId!, status: "confirmed" },
+      100,
+    );
+    expect(confirmedInbox.map((o) => o.reference)).toContain(
+      order.value.reference,
+    );
+
+    // ---------------------------------------------------------------------
+    // 13. It is delivered, and the request is complete.
+    // ---------------------------------------------------------------------
+    expect(await markOrderFulfilled(orderId, ADMIN)).toEqual({ ok: true });
+
+    // Terminal in both directions. Neither of these is a hypothetical: two
+    // admin tabs open on the same order is the ordinary way this happens.
+    expect(await confirmOrder(orderId, ADMIN)).toEqual({
+      ok: false,
+      reason: "invalid-transition",
+    });
+    expect(await cancelOrder(orderId, ADMIN, "changed their mind")).toEqual({
+      ok: false,
+      reason: "invalid-transition",
+    });
+
+    // ---------------------------------------------------------------------
+    // 14. And the whole sequence is on the record, in order.
+    //
+    //     `Order.decidedBy/decidedAt/decisionNote` only ever hold the *last*
+    //     transition. The history is the part that survives the next one.
+    // ---------------------------------------------------------------------
+    const history = await orderHistory(orderId);
+    expect(
+      history.map((event) => [event.fromStatus, event.toStatus]),
+    ).toEqual([
+      ["pending", "confirmed"],
+      ["confirmed", "fulfilled"],
+    ]);
+    // The two refused transitions above wrote nothing. A history that recorded
+    // attempts would claim things happened that did not.
+    expect(history).toHaveLength(2);
+    expect(history.every((event) => event.actorUid === ADMIN)).toBe(true);
+
+    // ---------------------------------------------------------------------
+    // 15. The money. **None of this happened.**
+    //
+    //     A delivered order is where a marketplace settles up, so this is the
+    //     natural place to assert what MalFleks does about money — which is
+    //     nothing. `src/lib/fees` computes a complete quote and is imported by
+    //     nothing outside its own directory: no page renders it, no action
+    //     calls it, and the `Order` row below has no column to put it in.
+    //
+    //     These assertions exist so that stays a decision rather than a
+    //     discovery. If someone wires the fee module into the order flow, this
+    //     block fails and they have to come here and say so.
+    // ---------------------------------------------------------------------
+    const settled = await db.order.findUniqueOrThrow({ where: { id: orderId } });
+
+    // Every money word the schema knows. `lineTotalTZS` is what the customer
+    // was quoted for the goods and nothing else.
+    expect(Object.keys(settled).filter((key) => /fee|deposit|rung|payout|paid|balance/i.test(key)))
+      .toEqual([]);
+    expect(settled.lineTotalTZS).toBe(320_000);
+
+    // A real quote for this delivery cannot be produced at all: the four city
+    // delivery fees are unset on purpose, and `quoteOrder` refuses rather than
+    // returning a zero that would read as free delivery to the customer and as
+    // "you owe nothing" to the courier.
+    expect(() =>
+      quoteOrder({
+        goodsTotalTZS: settled.lineTotalTZS,
+        city: "Dar es Salaam",
+        routeKind: "agent",
+      }),
+    ).toThrow(FeeQuoteError);
+
+    // With a fee supplied, the arithmetic reconciles exactly — to the shilling,
+    // no tolerance, because every figure is a whole number of shillings. This
+    // is the same pair of invariants `fees.test.ts` holds across the whole
+    // catalogue; here it is held over one real order that a real branch really
+    // fulfilled, which is the only thing this file adds to it.
+    const fees: CityFeeTable = {
+      "Dar es Salaam": 4_000,
+      Arusha: null,
+      Mwanza: null,
+      Dodoma: null,
+    };
+    const quote = quoteOrder(
+      {
+        goodsTotalTZS: settled.lineTotalTZS,
+        city: "Dar es Salaam",
+        routeKind: "agent",
+      },
+      fees,
+    );
+
+    expect(quote.depositTZS + quote.doorPaymentTZS).toBe(quote.orderTotalTZS);
+    expect(quote.branchPayoutTZS + quote.courierPayoutTZS).toBe(
+      quote.doorPaymentTZS,
+    );
+    // And what the courier would owe after ten of these, accruing per delivery
+    // rather than per settlement batch.
+    expect(
+      accrueCourierBalance(Array<number>(10).fill(quote.deliveryFeeTZS)),
+    ).toBe(quote.deliveryRungTZS * 10);
+
+    // ---------------------------------------------------------------------
+    // 16. Nothing about the delivered order moved any of it.
+    //
+    //     No deposit was taken, no payout was made, and the courier's balance
+    //     is not a number anywhere in this database. The order is a *request*
+    //     that was fulfilled off-platform, exactly as `docs/backend.md` says.
+    // ---------------------------------------------------------------------
+    const tables = await db.$queryRawUnsafe<{ table_name: string }[]>(
+      `select table_name from information_schema.tables where table_schema = current_schema()`,
+    );
+    expect(
+      tables
+        .map((row) => row.table_name)
+        .filter((name) => /payment|payout|ledger|invoice|balance|settle/i.test(name)),
+    ).toEqual([]);
   }, 120_000);
 });
