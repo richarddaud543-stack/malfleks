@@ -26,6 +26,20 @@ vi.mock("@/components/auth/session-state", () => ({
   useSessionState: () => sessionState(),
 }));
 
+/**
+ * The form now asks where this account already stands before deciding what to
+ * show. Mocked at the hook rather than at `fetch`, so these tests keep testing
+ * the form's branching rather than an HTTP client — `partner-status.ts` owns
+ * the request and can be wrong about it on its own time.
+ *
+ * Defaulted to "none" in `beforeEach`: most of this file is about the form
+ * itself, and only the cases below care about the other states.
+ */
+const partnerStatus = vi.fn();
+vi.mock("@/components/apply/partner-status", () => ({
+  usePartnerStatus: () => partnerStatus(),
+}));
+
 const BRANDS = [
   { id: "toyota", name: "Toyota" },
   { id: "apple", name: "Apple" },
@@ -42,6 +56,78 @@ beforeEach(() => {
   submitPartnerApplication.mockReset();
   submitPartnerApplication.mockResolvedValue({ submitted: true });
   sessionState.mockReturnValue(signedIn);
+  partnerStatus.mockReturnValue({ state: "none" });
+});
+
+/**
+ * What the form shows an account that has already been here.
+ *
+ * Before this, all of these people saw the same blank form. The quota allows
+ * five *pending* applications per account and nothing emails an applicant when
+ * they are approved, so the natural response to that silence — apply again —
+ * worked repeatedly, filling the review queue with duplicates of one business.
+ * Each case below is a person the old page could not tell apart from a
+ * stranger.
+ */
+describe("PartnerApplicationForm — an account that has already applied", () => {
+  it("shows a pending application instead of a fresh form", () => {
+    partnerStatus.mockReturnValue({
+      state: "pending",
+      submittedAt: "2026-08-14T09:00:00.000Z",
+    });
+    renderForm();
+
+    expect(screen.getByText(/Your application is with us/i)).toBeVisible();
+    // The date matters: "we have it" is only reassuring if they can see it is
+    // the one they sent.
+    expect(screen.getByText(/14 August 2026/)).toBeVisible();
+    // And the sentence that stops the duplicate.
+    expect(screen.getByText(/do not need to send another one/i)).toBeVisible();
+    expect(screen.queryByLabelText(/branch or shop name/i)).toBeNull();
+  });
+
+  it("sends an approved partner to their partner area, not to the form", () => {
+    partnerStatus.mockReturnValue({ state: "partner", live: true, kind: "brand" });
+    renderForm();
+
+    expect(screen.getByText(/already a MalFleks partner/i)).toBeVisible();
+    expect(screen.getByRole("link", { name: /partner area/i })).toHaveAttribute(
+      "href",
+      "/partner"
+    );
+    expect(screen.queryByLabelText(/branch or shop name/i)).toBeNull();
+  });
+
+  // The state most likely to look like a broken site: approved, with an
+  // account, but not yet through the separate "Put on the map" step — so they
+  // cannot list anything and nothing has told them why.
+  it("names the gap between approved and on the map", () => {
+    partnerStatus.mockReturnValue({ state: "partner", live: false, kind: "brand" });
+    renderForm();
+
+    expect(screen.getByText(/not put you on the map yet/i)).toBeVisible();
+    expect(screen.getByText(/do not need to apply again/i)).toBeVisible();
+  });
+
+  it("lets a turned-down applicant apply again, and says why the form is back", () => {
+    partnerStatus.mockReturnValue({ state: "rejected", reviewedAt: null });
+    renderForm();
+
+    expect(screen.getByText(/not able to take it on/i)).toBeVisible();
+    // The form is still there — the quota counts only pending rows, so
+    // re-applying is allowed and pretending otherwise would be a lie.
+    expect(screen.getByLabelText(/branch or shop name/i)).toBeVisible();
+  });
+
+  it("holds the space while the answer is still in flight", () => {
+    // Rendering the form and then swapping it for a status card would show a
+    // stranger's form to a partner for a frame, and jump the page.
+    partnerStatus.mockReturnValue(undefined);
+    renderForm();
+
+    expect(screen.queryByLabelText(/branch or shop name/i)).toBeNull();
+    expect(screen.queryByText(/Your application is with us/i)).toBeNull();
+  });
 });
 
 describe("PartnerApplicationForm", () => {

@@ -13,6 +13,25 @@ import { useEffect, useState } from "react";
  *
  * The request is deduplicated at module scope: two mounts on one page make one
  * request, not two.
+ *
+ * ## Why this is a subscription and not a one-shot effect
+ *
+ * It used to fetch once on mount, with `invalidateSessionState()` clearing the
+ * memo so the *next* reader would see fresh data. That is fine for a component
+ * that mounts after the change and useless for one already on screen — which is
+ * every component that matters here.
+ *
+ * Signing out was the bug. `signOut()` cleared the cookie server-side and the
+ * memo was dropped, but `AuthMenu` was already mounted: its `useState` survived,
+ * its effect had `[]` for dependencies and never ran again, and `router.refresh()`
+ * only re-renders Server Components. So the nav went on showing the person's
+ * name after they had genuinely been signed out. Pressing the button again did
+ * nothing visible, because there was nothing left to do — they were already out.
+ *
+ * Every reader now subscribes, and invalidation notifies all of them. The fix
+ * belongs here rather than in `AuthMenu` because the same staleness applies to
+ * the order form: it decides whether it may transmit a customer's address, and
+ * it must never make that decision from a session state that has since changed.
  */
 
 export interface SessionState {
@@ -28,6 +47,7 @@ export const SIGNED_OUT: SessionState = {
 };
 
 let pending: Promise<SessionState> | null = null;
+const listeners = new Set<() => void>();
 
 export function fetchSessionState(): Promise<SessionState> {
   if (!pending) {
@@ -46,9 +66,15 @@ export function fetchSessionState(): Promise<SessionState> {
   return pending;
 }
 
-/** Drops the memoized answer, so the next read reflects a sign-in or sign-out. */
+/**
+ * Drops the memoized answer and tells every mounted reader to ask again.
+ *
+ * Call it after any change to who is signed in. Notifying is the half that was
+ * missing: dropping the memo alone only helps components that mount later.
+ */
 export function invalidateSessionState(): void {
   pending = null;
+  for (const listener of listeners) listener();
 }
 
 /**
@@ -60,11 +86,18 @@ export function useSessionState(): SessionState | undefined {
 
   useEffect(() => {
     let cancelled = false;
-    fetchSessionState().then((value) => {
-      if (!cancelled) setState(value);
-    });
+
+    const read = () => {
+      fetchSessionState().then((value) => {
+        if (!cancelled) setState(value);
+      });
+    };
+
+    read();
+    listeners.add(read);
     return () => {
       cancelled = true;
+      listeners.delete(read);
     };
   }, []);
 

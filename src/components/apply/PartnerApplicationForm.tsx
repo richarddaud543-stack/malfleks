@@ -4,6 +4,7 @@ import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { submitPartnerApplication } from "@/app/actions/partner-applications";
 import { useSessionState } from "@/components/auth/session-state";
+import { usePartnerStatus } from "@/components/apply/partner-status";
 import {
   MAX_NOTES,
   SERVED_CITIES,
@@ -46,6 +47,9 @@ export default function PartnerApplicationForm({
   brands: { id: string; name: string }[];
 }) {
   const session = useSessionState();
+  // Called unconditionally, before any early return: the branches below bail
+  // out at several points and a hook after one of them would break the order.
+  const status = usePartnerStatus(session?.signedIn);
   const fieldId = useId();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -156,6 +160,93 @@ export default function PartnerApplicationForm({
     );
   }
 
+  // Everything below this point is for a signed-in account that has not just
+  // submitted. What it has already done with MalFleks decides what it sees.
+  //
+  // Before this existed, all of these people got the same blank form: a shop
+  // whose application was sitting in the review queue, and a partner who had
+  // been approved and put on the map weeks earlier. Nothing acknowledged
+  // either. Since the quota allows five *pending* applications per account,
+  // and nothing emails an applicant when they are approved, the natural
+  // response to that silence — apply again — worked, five times, filling the
+  // owner's queue with duplicate rows for one business.
+
+  if (status === undefined) {
+    return (
+      <div
+        className="glass-card mt-10 min-h-64 animate-pulse rounded-2xl"
+        aria-hidden="true"
+      />
+    );
+  }
+
+  if (status.state === "partner") {
+    return (
+      <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
+        <h2 className="font-display text-2xl font-medium">
+          You are already a MalFleks partner
+        </h2>
+        {status.live ? (
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted">
+            {status.kind === "courier"
+              ? "Your courier account is live. Delivery jobs and your coverage are in your partner area."
+              : "Your shop is live on MalFleks. List a product or check what is waiting for review in your partner area."}
+          </p>
+        ) : (
+          // The gap between "approved" and "on the map" is a real state a
+          // partner can sit in, and the one most likely to look like a broken
+          // site. Name it rather than leaving them to guess.
+          <p className="mx-auto mt-3 max-w-md text-sm text-muted">
+            Your application was approved and your account is ready. MalFleks
+            has not put you on the map yet — that is a second step someone here
+            does by hand, and until it is done you cannot list anything. You do
+            not need to apply again; we will call you on the number you gave us.
+          </p>
+        )}
+        <Link
+          href="/partner"
+          className="btn-pill btn-lime mt-8 inline-block px-6 py-2.5 text-sm"
+        >
+          Go to your partner area
+        </Link>
+      </div>
+    );
+  }
+
+  if (status.state === "pending") {
+    return (
+      <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
+        <h2 className="font-display text-2xl font-medium">
+          Your application is with us
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-sm text-muted">
+          {status.submittedAt ? (
+            <>
+              Received{" "}
+              <strong>
+                {new Date(status.submittedAt).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              </strong>
+              .{" "}
+            </>
+          ) : null}
+          Someone at MalFleks reads every application by hand, so this takes a
+          little time. <strong>You do not need to send another one</strong> — we
+          will call you on the number you gave us.
+        </p>
+        <Link
+          href="/"
+          className="btn-pill btn-ink mt-8 inline-block px-6 py-2.5 text-sm"
+        >
+          Back to MalFleks
+        </Link>
+      </div>
+    );
+  }
+
   const describe = (field: PartnerApplicationField, hasHint: boolean) =>
     [
       hasHint ? `${fieldId}-${field}-hint` : null,
@@ -176,6 +267,20 @@ export default function PartnerApplicationForm({
       noValidate
       className="glass-card mt-10 rounded-2xl p-6 sm:p-8"
     >
+      {/* A previous application that was turned down still leaves the form
+          open, because the quota counts only pending rows and a business whose
+          circumstances have changed is entitled to another go. Saying so is
+          kinder than a blank form that pretends the first one never happened,
+          and honest about the fact that we remember it. */}
+      {status.state === "rejected" && (
+        <p className="mb-6 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
+          We reviewed an earlier application from this account and were not able
+          to take it on. You are welcome to apply again — if anything has
+          changed about your branch or your delivery business, say so in the
+          notes at the end.
+        </p>
+      )}
+
       {/* The chooser comes first because it decides what the rest of the form
           even asks. Radios rather than a select: two options, both worth
           reading, and arrow keys move between them. */}
