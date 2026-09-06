@@ -58,21 +58,21 @@ async function siteOrigin(): Promise<string> {
   // the value is only used after it has matched the one hostname configured in
   // `MALFLEKS_ADMIN_HOST`, so a forged `Host` header can select this constant or
   // nothing at all. It cannot introduce an origin of its own.
-  const requestHost =
-    store.get("x-forwarded-host") ?? store.get("host") ?? null;
-  const { adminHost, isAdminHost } = await import("@/lib/admin-host");
-  if (isAdminHost(requestHost, process.env.MALFLEKS_ADMIN_HOST)) {
-    const host = adminHost(process.env.MALFLEKS_ADMIN_HOST)!;
-    const proto = host.startsWith("localhost") ? "http" : "https";
-    return `${proto}://${host}`;
-  }
+  const requestHost = store.get("x-forwarded-host") ?? store.get("host") ?? null;
+  const forwardedProto = store.get("x-forwarded-proto");
+  const { resolveOAuthOrigin } = await import("@/lib/site-url");
 
-  const configured = process.env.NEXT_PUBLIC_SITE_URL?.trim();
-  if (configured) return configured.replace(/\/+$/, "");
-
-  const host = store.get("x-forwarded-host") ?? store.get("host") ?? "localhost:3000";
-  const proto = store.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
-  return `${proto}://${host}`;
+  // The full decision -- admin-host precedence, and the guard against
+  // NEXT_PUBLIC_SITE_URL having been misconfigured to equal the admin host --
+  // lives in resolveOAuthOrigin so it can be unit tested without mocking
+  // next/headers. See its doc comment in src/lib/site-url.ts for why the
+  // guard exists.
+  return resolveOAuthOrigin({
+    requestHost,
+    configuredSiteUrl: process.env.NEXT_PUBLIC_SITE_URL,
+    configuredAdminHost: process.env.MALFLEKS_ADMIN_HOST,
+    forwardedProto,
+  });
 }
 
 export type SignInResult = { ok: false; message: string };

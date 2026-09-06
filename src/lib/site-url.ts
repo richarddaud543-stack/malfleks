@@ -1,3 +1,5 @@
+import { adminHost, isAdminHost, normalizeHost } from "./admin-host";
+
 /**
  * The site's own origin, for metadata, `robots.txt` and the sitemap.
  *
@@ -42,4 +44,75 @@ export function resolveSiteUrl(env: Record<string, string | undefined> = process
   const configured = env.NEXT_PUBLIC_SITE_URL?.trim();
   if (!configured) return "http://localhost:3000";
   return configured.replace(/\/+$/, "");
+}
+
+/**
+ * The origin a Google OAuth redirect should come back to.
+ *
+ * ## The bug this exists to prevent
+ *
+ * The admin console and the public shop are the same codebase deployed as two
+ * Vercel projects, and both have at times carried an identical set of
+ * environment variable *names* -- see `claude/malfleks-audit.md`. That is
+ * fine for a value like `BREVO_API_KEY`, which really is the same on both. It
+ * is not fine for `NEXT_PUBLIC_SITE_URL`, which by definition must differ
+ * per project. If the shop project's copy of it is ever set to the admin
+ * project's hostname -- pasted across by hand, or carried over by a script
+ * that does not know the two must differ -- a customer signing in on the
+ * shop is sent, on return from Google, to the admin hostname instead.
+ *
+ * That host sits behind Vercel Authentication (see
+ * `claude/soko-admin-site.md`), which is not part of this codebase at all --
+ * it intercepts the request before any of our code runs. The customer lands
+ * on a Vercel login screen, cannot get past it (they have no Vercel
+ * account), and the shop is left showing them as signed out forever, because
+ * the callback that would have created their session never ran. Confirmed
+ * live on 2026-09-05: this is not a hypothetical.
+ *
+ * ## Why the guard lives here and not just in configuration
+ *
+ * Fixing the Vercel dashboard value fixes today's occurrence. It does not
+ * stop the next redeploy, script, or well-meaning copy-paste from
+ * reintroducing it, because nothing before this function noticed the two
+ * variables had collided. This function is the one place that knows both
+ * values at once, so it is the one place that can refuse to act on a
+ * `NEXT_PUBLIC_SITE_URL` that has quietly become a duplicate of
+ * `MALFLEKS_ADMIN_HOST`.
+ *
+ * The check only applies once we already know (from the caller having asked
+ * `isAdminHost` first) that this particular request did *not* arrive on the
+ * admin host. A request that genuinely is on the admin host is handled
+ * before this function is reached at all -- see `siteOrigin()` in
+ * `app/actions/auth.ts`.
+ */
+export function resolveOAuthOrigin(input: {
+  requestHost: string | null | undefined;
+  configuredSiteUrl: string | null | undefined;
+  configuredAdminHost: string | null | undefined;
+  forwardedProto?: string | null;
+}): string {
+  const { requestHost, configuredSiteUrl, configuredAdminHost, forwardedProto } = input;
+
+  if (isAdminHost(requestHost, configuredAdminHost)) {
+    const host = adminHost(configuredAdminHost)!;
+    const proto = host.startsWith("localhost") ? "http" : "https";
+    return `${proto}://${host}`;
+  }
+
+  const configured = configuredSiteUrl?.trim();
+  if (configured) {
+    const trimmed = configured.replace(/\/+$/, "");
+    const expectedAdminHost = adminHost(configuredAdminHost);
+    const collidesWithAdminHost =
+      expectedAdminHost !== null && normalizeHost(trimmed) === expectedAdminHost;
+
+    if (!collidesWithAdminHost) return trimmed;
+    // Fall through: NEXT_PUBLIC_SITE_URL is misconfigured for this
+    // deployment (it points at the admin host), so it is safer to derive the
+    // origin from the request itself than to trust it.
+  }
+
+  const host = requestHost ?? "localhost:3000";
+  const proto = forwardedProto ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
 }
