@@ -1,0 +1,26 @@
+# Line endings.
+#
+# Git stores every text file with LF and checks it out as LF on every OS.
+# Without this the repo drifts: a Windows checkout writes CRLF, git compares
+# bytes, and every file reports as wholly rewritten. That is what happened
+# after the September 2026 restore — ~350 files showed as modified when only
+# 11 had real changes, which is a good way to lose work under the noise, or
+# to commit a whole-repo whitespace change by reaching for `git commit -a`.
+#
+# `text=auto` lets git detect text and leave binaries alone; `eol=lf` pins the
+# working-tree ending so this cannot drift back.
+* text=auto eol=lf
+
+# Binaries git must never touch.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.webp  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.pdf   binary
+*.mp4   binary
