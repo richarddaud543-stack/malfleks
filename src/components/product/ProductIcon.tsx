@@ -6,63 +6,277 @@ interface ProductIconProps {
   icon: string;
   className?: string;
   style?: React.CSSProperties;
+  /**
+   * Colour for the icon's single accent detail — the phone's camera module,
+   * the power bank's bolt, a car's glass. Left unset it inherits the contour
+   * colour at 45%, so an icon is still *one* colour wherever it is tinted by
+   * the brand (`iconAccent(brand.accentColor)` in ProductCard, ListingCard,
+   * ShowcaseCarousel) and never fights that tint with a second hue.
+   */
+  accentColor?: string;
+  /** Stroke weight on the 44-unit grid. 2 is the system default. */
+  strokeWidth?: number;
 }
 
-const paths: Record<ProductIconKey, React.ReactNode> = {
-  sedan: (
-    <path d="M6 38h4l4-11c1-3 4-5 7-5h10c3 0 6 2 7 5l4 11h4a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2a5 5 0 0 1-10 0H18a5 5 0 0 1-10 0H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2Zm10-13-3 9h22l-3-9c-.5-1.5-2-2.5-3.5-2.5h-9c-1.5 0-3 1-3.5 2.5Z" />
-  ),
-  suv: (
-    <path d="M5 36h3l3-13c1-4 5-7 9-7h8c4 0 7 2 9 5l5 5h1a3 3 0 0 1 3 3v7a2 2 0 0 1-2 2h-2a5 5 0 0 1-10 0H17a5 5 0 0 1-10 0H5a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Zm11-18c-2.5 0-4.7 1.7-5.3 4.1L9 30h13V18Zm5 0v12h12l-4-4.5c-1.3-2.6-4-4.5-7-4.5h-1Z" />
-  ),
-  pickup: (
-    <path d="M4 36h3l2-9c.8-3.3 3.8-5.6 7.2-5.6H23v-4a2 2 0 0 1 2-2h6c3.9 0 7.5 2.1 9.4 5.5l3 5.4a4 4 0 0 1 .6 2.1v5.6a2 2 0 0 1-2 2h-2a5 5 0 0 1-10 0H17a5 5 0 0 1-10 0H4a1 1 0 0 1-1-1v-2a1 1 0 0 1 1-1Zm12-9.6c-2 0-3.8 1.4-4.3 3.4L10.5 34H23v-7.6Z" />
-  ),
-  van: (
-    <path d="M5 16h24a5 5 0 0 1 5 5v3.3l5.6 3.4A3 3 0 0 1 41 30.4V33a2 2 0 0 1-2 2h-2a5 5 0 0 1-10 0H17a5 5 0 0 1-10 0H5a2 2 0 0 1-2-2V18a2 2 0 0 1 2-2Zm24 4H23v6h11v-1a5 5 0 0 0-5-5Z" />
-  ),
-  smartphone: (
-    <path d="M20 4h8a4 4 0 0 1 4 4v32a4 4 0 0 1-4 4h-8a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Zm-1 4v28h10V8H19Zm5 30a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" />
-  ),
-  tablet: (
-    <path d="M14 4h20a4 4 0 0 1 4 4v32a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Zm-1 6v26h22V10H13Zm11 27a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" />
-  ),
-  laptop: (
-    <path d="M12 10a3 3 0 0 1 3-3h18a3 3 0 0 1 3 3v18h3l1.6 4a2 2 0 0 1-1.9 2.7H9.3A2 2 0 0 1 7.4 32l1.6-4h3V10Zm4 1v15h16V11H16Zm-3.6 21-.8 2h20.8l-.8-2H12.4Z" />
-  ),
-  earbuds: (
-    <path d="M17 8a7 7 0 0 1 7 7v16a5 5 0 0 1-10 0v-9a2 2 0 0 0-4 0v2a2 2 0 0 1-4 0v-2a6 6 0 0 1 6-6 5 5 0 0 1 5-8Zm14 0a5 5 0 0 1 5 8 6 6 0 0 1 6 6v2a2 2 0 0 1-4 0v-2a2 2 0 0 0-4 0v9a5 5 0 0 1-10 0V15a7 7 0 0 1 7-7Zm-14 4a3 3 0 0 0-3 3v16a3 3 0 0 0 6 0V15a3 3 0 0 0-3-3Zm14 0a3 3 0 0 0-3 3v16a3 3 0 0 0 6 0V15a3 3 0 0 0-3-3Z" />
-  ),
-  powerbank: (
-    <path d="M16 4h16a4 4 0 0 1 4 4v32a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Zm2 5v3h4V9h-4Zm6 0v3h4V9h-4Zm-8 7 8 10h-4l8 10-2-9h4l-8-9h4l-6-6-4 4Z" />
-  ),
-  smartwatch: (
-    <path d="M18 6h8v6h-8Zm0 26h8v6h-8ZM14 14h16a4 4 0 0 1 4 4v12a4 4 0 0 1-4 4H14a4 4 0 0 1-4-4V18a4 4 0 0 1 4-4Zm8 4v6l4 3-1.5 2.4L20 26v-8h2Z" />
-  ),
-  router: (
-    <path d="M8 8a1.5 1.5 0 0 1 2.6-1 14 14 0 0 1 3.6 9.4c0 .5-.4 1-1 1s-1-.4-1-1a12 12 0 0 0-3.1-8 1.5 1.5 0 0 1-1.1-.4ZM14 8a1.5 1.5 0 0 1 2.5-1.1A20 20 0 0 1 22 20.5c0 .6-.5 1-1 1s-1-.4-1-1a18 18 0 0 0-4.9-12.4A1.5 1.5 0 0 1 14 8ZM7 22h30a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3Zm3 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm7 0a2 2 0 1 0 4 0 2 2 0 0 0-4 0Zm14-2h4v4h-4v-4Z" />
-  ),
-  simcard: (
-    <path d="M14 4h16l6 6v26a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm3 10v14h14V14h-4v6h-3v-6h-4v10h-3V14Z" />
-  ),
-  speaker: (
-    <path d="M14 6h16a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3H14a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3Zm8 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 10a9 9 0 1 0 0 18 9 9 0 0 0 0-18Zm0 4a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm0 3.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" />
-  ),
+/**
+ * Continuous-line contours on a shared 44x44 grid: stroke 2, round caps and
+ * joins, no fill. Everything is a <path> — no <circle>/<rect> — so a circle is
+ * two arcs and a lens/LED is a zero-length round-capped segment (`M19 12.5h0`).
+ * One primitive means one place to change stroke behaviour later.
+ *
+ * The four vehicles deliberately share a chassis (ground line y=30.5, wheels at
+ * x=12/32 r=4.2) so they align when a category row shows them side by side;
+ * what tells them apart is roof height and the shape of the glass.
+ */
+const icons: Record<
+  ProductIconKey,
+  { contour: React.ReactNode; accent?: React.ReactNode }
+> = {
+  smartphone: {
+    contour: (
+      <path d="M16 4h12a4 4 0 0 1 4 4v28a4 4 0 0 1-4 4H16a4 4 0 0 1-4-4V8a4 4 0 0 1 4-4Z" />
+    ),
+    accent: (
+      <>
+        <path d="M17 8.5h4a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Z" />
+        <path d="M19 12.5h0" />
+        <path d="M19 35.5h6" />
+      </>
+    ),
+  },
+  tablet: {
+    contour: (
+      <path d="M11 4h22a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3H11a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+    ),
+    accent: (
+      <>
+        <path d="M22 7.5h0" />
+        <path d="M18 36h8" />
+      </>
+    ),
+  },
+  laptop: {
+    contour: (
+      <>
+        <path d="M11 9h22a2 2 0 0 1 2 2v18H9V11a2 2 0 0 1 2-2Z" />
+        <path d="M9 29 4.8 36.6h34.4L35 29" />
+      </>
+    ),
+    accent: (
+      <path d="M19 32.8h6" />
+    ),
+  },
+  smartwatch: {
+    contour: (
+      <>
+        <path d="M18 12.5h8a5 5 0 0 1 5 5v9a5 5 0 0 1-5 5h-8a5 5 0 0 1-5-5v-9a5 5 0 0 1 5-5Z" />
+        <path d="M18 12.5V6h8v6.5M18 31.5V38h8v-6.5" />
+        <path d="M31 19.5v3.5" />
+      </>
+    ),
+    accent: (
+      <path d="M22 17v5.2l3.4 2" />
+    ),
+  },
+  earbuds: {
+    contour: (
+      <>
+        <path d="M16.5 9a5 5 0 0 1 2.5 9.3V29a2.5 2.5 0 0 1-5 0V18.3A5 5 0 0 1 16.5 9Z" />
+        <path d="M27.5 9a5 5 0 0 0-2.5 9.3V29a2.5 2.5 0 0 0 5 0V18.3A5 5 0 0 0 27.5 9Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M16.5 13.5h0" />
+        <path d="M27.5 13.5h0" />
+      </>
+    ),
+  },
+  headphones: {
+    contour: (
+      <>
+        <path d="M9 27.5v-5a13 13 0 0 1 26 0v5" />
+        <path d="M9 24h1a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z" />
+        <path d="M35 24h-1a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h1a3 3 0 0 0 3-3v-6a3 3 0 0 0-3-3Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M9.5 28v4" />
+        <path d="M34.5 28v4" />
+      </>
+    ),
+  },
+  speaker: {
+    contour: (
+      <>
+        <path d="M14 4h16a3 3 0 0 1 3 3v30a3 3 0 0 1-3 3H14a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z" />
+        <path d="M22 20a7 7 0 1 0 0 14a7 7 0 1 0 0 -14Z" />
+        <path d="M22 10.0a2.5 2.5 0 1 0 0 5.0a2.5 2.5 0 1 0 0 -5.0Z" />
+      </>
+    ),
+    accent: (
+      <path d="M22 24.2a2.8 2.8 0 1 0 0 5.6a2.8 2.8 0 1 0 0 -5.6Z" />
+    ),
+  },
+  powerbank: {
+    contour: (
+      <path d="M15 5h14a3 3 0 0 1 3 3v28a3 3 0 0 1-3 3H15a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z" />
+    ),
+    accent: (
+      <>
+        <path d="M24.5 13.5 19.5 22.5h6l-5 8" />
+        <path d="M18 34.5h0" />
+        <path d="M22 34.5h0" />
+        <path d="M26 34.5h0" />
+      </>
+    ),
+  },
+  charger: {
+    contour: (
+      <>
+        <path d="M16 14h12a3 3 0 0 1 3 3v14a3 3 0 0 1-3 3H16a3 3 0 0 1-3-3V17a3 3 0 0 1 3-3Z" />
+        <path d="M18 14V8M26 14V8" />
+      </>
+    ),
+    accent: (
+      <path d="M19 26h6a1.8 1.8 0 0 1 0 3.6h-6a1.8 1.8 0 0 1 0-3.6Z" />
+    ),
+  },
+  cable: {
+    contour: (
+      <>
+        <path d="M12 5h4a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+        <path d="M14 14v4a6 6 0 0 0 6 6h4a6 6 0 0 1 6 6v2" />
+        <path d="M30 32h2a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M12.5 8.5h3" />
+        <path d="M28.5 35.5h3" />
+      </>
+    ),
+  },
+  router: {
+    contour: (
+      <>
+        <path d="M8 26h28a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z" />
+        <path d="M13.5 19a12 12 0 0 1 17 0" />
+        <path d="M17.5 23a6.4 6.4 0 0 1 9 0" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M11 32h0" />
+        <path d="M15 32h0" />
+        <path d="M19 32h0" />
+      </>
+    ),
+  },
+  simcard: {
+    contour: (
+      <>
+        <path d="M16 5h9l6 6v25a3 3 0 0 1-3 3H16a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z" />
+        <path d="M18.5 15h7a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M22 15v11" />
+        <path d="M16.5 20.5h11" />
+      </>
+    ),
+  },
+  sedan: {
+    contour: (
+      <>
+        <path d="M4 30.5v-4.2a2.5 2.5 0 0 1 1.9-2.4l5.4-1.3 4.4-5.6A5 5 0 0 1 19.6 15h6.2a5 5 0 0 1 3.5 1.4l5.8 5.7 4.5 1.1A2.5 2.5 0 0 1 40 25.6v4.9" />
+        <path d="M4 30.5h3.8M16.2 30.5h11.6M36.2 30.5h3.8" />
+        <path d="M12 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+        <path d="M32 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+      </>
+    ),
+    accent: (
+      <path d="M14.6 21.6 17.6 17.8a2.5 2.5 0 0 1 2-1h5.6a2 2 0 0 1 1.4.6l4.2 4.2Z" />
+    ),
+  },
+  suv: {
+    contour: (
+      <>
+        <path d="M4 30.5v-5.2a2.5 2.5 0 0 1 2-2.5l3.2-.5 3.5-6.1A5 5 0 0 1 17 13.2h10a5 5 0 0 1 4.3 2.4l3.5 6.1 3.2.5a2.5 2.5 0 0 1 2 2.5v5.8" />
+        <path d="M4 30.5h3.8M16.2 30.5h11.6M36.2 30.5h3.8" />
+        <path d="M12 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+        <path d="M32 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M12.6 21.6 15.4 16.6a2.5 2.5 0 0 1 2.2-1.3h8.8a2.5 2.5 0 0 1 2.2 1.3l2.8 5Z" />
+        <path d="M22 15.3v6.3" />
+      </>
+    ),
+  },
+  pickup: {
+    contour: (
+      <>
+        <path d="M4 30.5v-5.2a2.5 2.5 0 0 1 2-2.5l3.2-.5 3.5-5.9A5 5 0 0 1 16.9 13.9h6.6a1.5 1.5 0 0 1 1.5 1.5v6.1h13.5a1.5 1.5 0 0 1 1.5 1.5v7.5" />
+        <path d="M4 30.5h3.8M16.2 30.5h11.6M36.2 30.5h3.8" />
+        <path d="M12 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+        <path d="M32 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+      </>
+    ),
+    accent: (
+      <path d="M12.4 21.5 15.2 16.6a2.5 2.5 0 0 1 2.2-1.3h4.4a1 1 0 0 1 1 1v5.2Z" />
+    ),
+  },
+  van: {
+    contour: (
+      <>
+        <path d="M4 30.5V15.5a2 2 0 0 1 2-2h20a2 2 0 0 1 1.6.8l4.6 6.1a2 2 0 0 0 1.6.8h4.2a2 2 0 0 1 2 2v7.3" />
+        <path d="M4 30.5h3.8M16.2 30.5h11.6M36.2 30.5h3.8" />
+        <path d="M12 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+        <path d="M32 26.3a4.2 4.2 0 1 0 0 8.4a4.2 4.2 0 1 0 0 -8.4Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M9 16.9h8a1 1 0 0 1 1 1v3.7H8v-3.7a1 1 0 0 1 1-1Z" />
+        <path d="M26.2 21.6v-5.8l4.4 5.8Z" />
+      </>
+    ),
+  },
 };
 
-export default function ProductIcon({ icon, className, style }: ProductIconProps) {
-  const resolved: ProductIconKey = icon in paths ? (icon as ProductIconKey) : "smartphone";
+export default function ProductIcon({
+  icon,
+  className,
+  style,
+  accentColor,
+  strokeWidth = 2,
+}: ProductIconProps) {
+  const resolved: ProductIconKey = icon in icons ? (icon as ProductIconKey) : "smartphone";
+  const { contour, accent } = icons[resolved];
 
   return (
     <svg
       viewBox="0 0 44 44"
       className={className}
       style={style}
-      fill="currentColor"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={strokeWidth}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       xmlns="http://www.w3.org/2000/svg"
       aria-hidden="true"
     >
-      {paths[resolved]}
+      {contour}
+      {accent ? (
+        <g stroke={accentColor} opacity={accentColor ? undefined : 0.45}>
+          {accent}
+        </g>
+      ) : null}
     </svg>
   );
 }
