@@ -71,12 +71,21 @@ MalFleks Ltd — Engineering
     ├── ENG-5 · Beacon    — SEO, metadata, content, IA
     ├── ENG-6 · Prism     — Visual & graphic design (type, colour, composition)
     ├── ENG-7 · Vault     — Cloud platform & security (Supabase, auth, sessions)
-    └── ENG-8 · Ledger    — Commerce & payments (mobile money, fees, trust)
+    ├── ENG-8 · Ledger    — Commerce & payments (mobile money, fees, trust)
+    └── ENG-9 · Relay     — Release & repository (git hygiene, CI, the deploy path)
 ```
 
 Prism is a 2026-08-14 addition. Beacon owned "design system" alongside SEO, content
 and information architecture, which is two jobs; the visual half now has its own seat.
 Beacon keeps structure — IA, wireframes, metadata, content — and Prism owns the look.
+
+Relay is a 2026-09-08 addition, for the same reason and by the same rule: a job that
+fits no seat gets one. Nobody owned the repository as an artefact, and the consequences
+were not hypothetical — `ci.yml` sat inert from 2026-08-14 because debt #2 was never
+closed, and a working-tree line-ending drift went unnoticed until it made 354 files
+report as modified when only 11 had really changed. The eight product seats own code
+inside the repo and the Lead owns integration; neither owns the path from a commit to a
+customer. Relay does.
 
 Vault and Ledger were added 2026-08-15, each because the project acquired a real
 problem nobody owned. Firebase landed with no Security Rules and no App Check, and
@@ -215,6 +224,39 @@ unless something changes:
   guard in front of it.
 - **The workflow cannot run yet.** There is no remote (debt #2), so `ci.yml` is
   a file on a disk. Closing #2 is now the highest-value thing left.
+
+### ENG-9 · Relay — Release & repository (2026-09-08)
+
+Researched how a Next.js project on Vercel should gate production, and how git is
+actually meant to handle line endings, because both had already cost this repo real
+time. Two findings, and one of them contradicts what had just been committed.
+
+**1. GitHub's own recommendation is `* text=auto`, not `* text=auto eol=lf`.** Its
+line-endings guide reserves `eol=lf` for "files that must keep LF endings, even on
+Windows" rather than applying it repo-wide. What went into `.gitattributes` here is
+therefore deliberately stricter than the standard advice, and that choice should be
+recorded rather than assumed: pinning `eol=lf` everywhere also normalises the
+*working tree* on the next checkout of each file, so a Windows clone cannot drift
+back. The cost is that any Windows-only tooling expecting CRLF will not get it.
+Accepted — the drift cost more. Also established by measurement: history was never
+damaged. `git ls-files --eol` reported 356 blobs already `i/lf`, so `git add
+--renormalize` was **not** needed, and running it would have staged eleven files of
+unfinished feature work into a whitespace commit.
+
+**2. Vercel Deployment Checks are the right shape for closing debt #2, not just a
+remote.** A production deployment is *created* on merge but held off the production
+domain until required checks pass, and GitHub Actions results import directly as
+checks. That decouples build from release and closes a gap plain branch protection
+leaves open: the set of code tested before a merge is not the set released after one.
+Two operational traps from the docs — GitHub identifies checks by **job name**, so
+renaming a job silently breaks the gate, and reusing a job name across workflows
+races branch protection. Our two job names, `static` and `e2e`, are therefore now
+load-bearing identifiers rather than labels.
+
+Sources: [Configuring Git to handle line endings, GitHub](https://docs.github.com/en/get-started/git-basics/configuring-git-to-handle-line-endings) ·
+[Deployment Checks, Vercel](https://vercel.com/docs/deployment-checks) ·
+[Deployment Protection, Vercel](https://vercel.com/docs/deployment-protection) ·
+[Deploying GitHub projects with Vercel](https://vercel.com/docs/git/vercel-for-github)
 
 ### ENG-1 · Atlas — Frontend & 3D
 
