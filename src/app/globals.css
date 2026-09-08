@@ -19,11 +19,14 @@
   --surface: #3bce70; /* saturated green — large rounded section-block fill. Picked in the component kit; no longer the pale beetogreen mint, so it carries far less text contrast (see --muted) */
   --surface-2: #ffffff; /* individual card fill (BrandCard, product/listing cards) — floats on --background or --surface */
   --foreground: #0c1e18; /* deep forest ink — body text, headings, and the navbar's "black" pill (beetogreen reuses this exact value both ways) */
-  --muted: #5a6662; /* forest mixed ~68% into white. Unchanged — but it no longer
-     clears 4.5:1 on --surface: against the old pale mint it measured 5.11:1,
-     against the new green it is 2.92:1. Still 5.66:1 on --background. Muted text
-     inside a .panel is therefore below AA until either this token darkens or
-     --surface lightens; see the note in the commit that changed --surface. */
+  --muted: #3a4944; /* forest mixed ~19% into white — darkened from #5a6662 when
+     --surface became #3bce70. That green sits at mid luminance, which is the
+     worst case for text of any lightness: white on it is 2.3:1 and the old
+     muted was 2.92:1. #3a4944 is the LIGHTEST forest-grey that still clears
+     4.5:1 on both grounds — 4.62:1 on --surface, 9.47:1 on --background — so
+     it is as muted as this palette allows, not a free choice. If --surface is
+     ever lightened again, this can move back up toward #5a6662; re-measure
+     rather than assume. */
   --border: #bdc5c1; /* forest mixed further into white than before — a visible hairline rather than a hint (1.76:1 on --background, up from 1.26:1) */
   --accent: #044931; /* deep forest — links, focus rings, icon accent, badges. 10.49:1 on --background, 5.12:1 on --surface */
   --accent-2: #2f0a6b; /* deep purple — 15.26:1 as text on --background */
