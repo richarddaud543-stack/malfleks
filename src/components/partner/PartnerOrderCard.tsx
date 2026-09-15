@@ -1,5 +1,8 @@
 import { formatTZS } from "@/lib/format";
 import type { ListedOrder } from "@/server/orders/list-orders";
+import type { DeliveryPingView } from "@/server/orders/tracking";
+import DeliveryPingButton from "./DeliveryPingButton";
+import MarkFulfilledButton from "./MarkFulfilledButton";
 
 /**
  * One customer order, as the branch that has to fulfil it needs to see it.
@@ -10,13 +13,12 @@ import type { ListedOrder } from "@/server/orders/list-orders";
  * the reference** — so the phone number is a `tel:` link and the reference is
  * the largest thing on the card after the product.
  *
- * There are no status buttons here. Moving an order between pending, confirmed,
- * cancelled and fulfilled is MalFleks admin's, through the guarded transitions in
- * `src/server/orders/status.ts`; giving a partner the same buttons would need
- * that module to learn who is allowed to move what, and inventing that here
- * would be a security decision made by a component. The status is shown so the
- * branch knows where things stand, and it is read-only until that work is done
- * properly.
+ * One status button exists here, deliberately narrow: `MarkFulfilledButton`,
+ * shown only on a `confirmed` order. Every other move between pending,
+ * confirmed and cancelled stays MalFleks admin's, through the guarded
+ * transitions in `src/server/orders/status.ts` — see that module's doc
+ * comment for why `fulfilled` is the one transition where the partner, not
+ * admin, is the person who actually knows the answer.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -33,7 +35,15 @@ const STATUS_CLASS: Record<string, string> = {
   fulfilled: "bg-foreground/10 text-muted",
 };
 
-export default function PartnerOrderCard({ order }: { order: ListedOrder }) {
+export default function PartnerOrderCard({
+  order,
+  lastPing = null,
+}: {
+  order: ListedOrder;
+  /** This order's newest `DeliveryPing`, or `null` — only meaningful (and
+   *  only fetched by the page) once the order is `"confirmed"`. */
+  lastPing?: DeliveryPingView | null;
+}) {
   return (
     <li className="glass-card rounded-2xl px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -84,6 +94,17 @@ export default function PartnerOrderCard({ order }: { order: ListedOrder }) {
             }.`}
         {order.routeAgentPhone && ` Courier: ${order.routeAgentPhone}.`}
       </p>
+
+      {/* Both controls only apply to a confirmed order — see
+          `postDeliveryPing` and `markOrderFulfilledByPartner`'s own notes on
+          why `pending`/`cancelled`/`fulfilled` don't get them at all, rather
+          than a disabled version of them. */}
+      {order.status === "confirmed" && (
+        <>
+          <DeliveryPingButton orderId={order.id} initialPing={lastPing} />
+          <MarkFulfilledButton orderId={order.id} />
+        </>
+      )}
 
       <p className="mt-2 text-xs text-muted">
         Requested{" "}

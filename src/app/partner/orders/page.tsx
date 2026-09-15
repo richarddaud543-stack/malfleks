@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import PartnerOrderCard from "@/components/partner/PartnerOrderCard";
 import { listOrders } from "@/server/orders/list-orders";
+import { latestPingsForOrders } from "@/server/orders/tracking";
 import { requirePartner } from "@/server/partners/portal";
 
 export const metadata: Metadata = {
@@ -43,6 +44,15 @@ export default async function PartnerOrdersPage() {
   // filter returns *every* customer's order, for every branch.
   const orders = scope ? await listOrders(scope).catch(() => null) : [];
   const isCourier = partner.kind === "courier";
+
+  // Only a `"confirmed"` order can take a new ping (see `postDeliveryPing`),
+  // so that is the only set worth a query for — most of a queue is `pending`
+  // and has nothing to show yet.
+  const confirmedIds =
+    orders?.filter((o) => o.status === "confirmed").map((o) => o.id) ?? [];
+  const lastPings = await latestPingsForOrders(confirmedIds).catch(
+    () => new Map(),
+  );
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
@@ -93,7 +103,11 @@ export default async function PartnerOrdersPage() {
       ) : (
         <ul className="mt-10 flex flex-col gap-5">
           {orders.map((order) => (
-            <PartnerOrderCard key={order.id} order={order} />
+            <PartnerOrderCard
+              key={order.id}
+              order={order}
+              lastPing={lastPings.get(order.id) ?? null}
+            />
           ))}
         </ul>
       )}

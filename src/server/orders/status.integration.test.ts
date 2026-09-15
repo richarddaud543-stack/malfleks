@@ -22,7 +22,13 @@ import { getPrisma } from "@/server/db/client";
 import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
 import { seedDatabase } from "@/server/db/seed";
 import { createOrder } from "./create-order";
-import { cancelOrder, confirmOrder, markOrderFulfilled, orderHistory } from "./status";
+import {
+  cancelOrder,
+  confirmOrder,
+  markOrderFulfilled,
+  markOrderFulfilledByPartner,
+  orderHistory,
+} from "./status";
 import type { SaveOrderRequestInput } from "./build-order-request";
 
 let db: TestDatabase;
@@ -325,5 +331,78 @@ describe("the OrderEvent history", () => {
     const events = await orderHistory(orderId);
     const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
     expect(events[events.length - 1].toStatus).toBe(row.status);
+  });
+});
+
+describe("markOrderFulfilledByPartner — the one transition a partner may make", () => {
+  it("marks a confirmed order fulfilled when the branch scope matches", async () => {
+    const orderId = await pendingOrder(); // toyota-dar branch
+    await confirmOrder(orderId, "admin-1");
+
+    const outcome = await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: "toyota-dar", agentId: null },
+      "uid-partner-fulfil",
+    );
+    expect(outcome).toEqual({ ok: true });
+
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(row.status).toBe("fulfilled");
+    expect(row.decidedBy).toBe("uid-partner-fulfil");
+  });
+
+  it("refuses a different branch's scope — the IDOR case", async () => {
+    const orderId = await pendingOrder(); // toyota-dar branch
+    await confirmOrder(orderId, "admin-1");
+
+    const outcome = await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: "toyota-arusha", agentId: null },
+      "uid-not-this-branch",
+    );
+    expect(outcome).toEqual({ ok: false, reason: "not-found" });
+
+    // Refused before the transition ever ran — status is untouched.
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(row.status).toBe("confirmed");
+    expect(row.decidedBy).toBe("admin-1");
+  });
+
+  it("refuses a still-pending order — admin has not confirmed it yet", async () => {
+    const orderId = await pendingOrder();
+
+    const outcome = await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: "toyota-dar", agentId: null },
+      "uid-partner-fulfil",
+    );
+    expect(outcome).toEqual({ ok: false, reason: "invalid-transition" });
+  });
+
+  it("refuses a scope with neither branchId nor agentId", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+
+    const outcome = await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: null, agentId: null },
+      "uid-no-scope",
+    );
+    expect(outcome).toEqual({ ok: false, reason: "not-found" });
+  });
+
+  it("appends an OrderEvent stamped with the partner's own uid, not an admin's", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: "toyota-dar", agentId: null },
+      "uid-partner-fulfil",
+    );
+
+    const events = await orderHistory(orderId);
+    const last = events[events.length - 1];
+    expect(last.toStatus).toBe("fulfilled");
+    expect(last.actorUid).toBe("uid-partner-fulfil");
   });
 });

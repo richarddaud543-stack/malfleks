@@ -297,6 +297,10 @@ model Order {
   /// Append-only status history. See `OrderEvent`.
   events OrderEvent[]
 
+  /// Where the delivery has been, as the partner fulfilling it reported it.
+  /// See `DeliveryPing`.
+  deliveryPings DeliveryPing[]
+
   // What an admin or branch view would query by: orders waiting on a
   // decision, a branch's own orders, newest first.
   @@index([status])
@@ -346,6 +350,43 @@ model OrderEvent {
   createdAt DateTime @default(now())
 
   // The history of one order, oldest first, is the only read this table has.
+  @@index([orderId, createdAt])
+}
+
+// A courier or branch reporting where an in-progress delivery currently is.
+//
+// **Manual, not continuous GPS.** The owner's call on 2026-09-06: no courier
+// mobile app exists, so background location reporting is not on the table.
+// Instead the partner fulfilling the order taps "update my location" from
+// `/partner/orders`, and the browser's own Geolocation API supplies the
+// coordinates for that one moment — see `postDeliveryPing`
+// (`src/server/orders/tracking.ts`). It is "live" in the sense that a
+// customer's map reflects the courier's most recent tap, polled every
+// ~20s, not that a phone streams a continuous trail.
+//
+// **Append-only**, the same discipline `OrderEvent` states on itself: nothing
+// updates or deletes a `DeliveryPing`. The order's current position is always
+// "the newest ping", derived by the reading query — never cached back onto
+// `Order` itself, which would be a second place for the two to disagree.
+//
+// `note` is the courier's own word for where they are ("Picked up", "On the
+// way", "Arrived") — deliberately distinct from `Order.status`, which only
+// MalFleks admin moves through the guarded workflow in `status.ts`. A ping never
+// changes an order's status; it is commentary, not a decision.
+model DeliveryPing {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  latitude  Float
+  longitude Float
+
+  note String?
+
+  createdAt DateTime @default(now())
+
+  // The only read this table has: one order's pings, newest first.
   @@index([orderId, createdAt])
 }
 

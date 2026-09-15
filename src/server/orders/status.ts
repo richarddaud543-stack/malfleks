@@ -1,4 +1,5 @@
 import { getPrisma } from "@/server/db/client";
+import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
 
 /**
  * Moving an order through its status workflow — the admin half of order
@@ -23,11 +24,17 @@ import { getPrisma } from "@/server/db/client";
  * cancelled`. Nothing moves out of `fulfilled` or `cancelled` — both are
  * terminal, and neither appears as a source in `ALLOWED_TRANSITIONS` below.
  *
- * Who moves it: MalFleks admin only, via `/admin/orders`, through the actions in
- * `src/app/actions/orders.ts`. There is no partner-facing order queue, and
- * none is faked here — `Partner`/`PartnerUser` records are not linked to
- * "their" orders anywhere in this codebase. Wiring that up is real future
- * scope, not this.
+ * Who moves it: mostly MalFleks admin only, via `/admin/orders`, through the
+ * actions in `src/app/actions/orders.ts` — **with one deliberate exception**.
+ * The owner's call on 6 Sep 2026: the branch or courier actually fulfilling an
+ * order may mark it `fulfilled` themselves, from `/partner/orders`, through
+ * `markOrderFulfilledByPartner` below and `src/app/actions/partner-orders.ts`.
+ * Nothing else moved — `confirmed` still means MalFleks admin rang the branch
+ * and verified stock and price, and only admin may `cancel`, since a
+ * cancellation is the one transition an interested party has a reason to lie
+ * about. "Who actually delivered it" has the opposite property: the partner
+ * is the one person who genuinely knows, and admin marking it from a phone
+ * call is transcription, not verification.
  */
 
 /** The states a transition may move an order *to*. `pending` is never a target. */
@@ -217,4 +224,46 @@ export function markOrderFulfilled(
   adminUid: string
 ): Promise<TransitionOutcome> {
   return writeTransition(orderId, "fulfilled", adminUid, null);
+}
+
+/**
+ * The partner fulfilling this order — the branch on a brand-fleet route, the
+ * courier on an agent route — marks it delivered themselves.
+ *
+ * Ownership first, transition second, exactly the order `postDeliveryPing`
+ * already uses: `partnerScopeWhere` (shared with `tracking.ts`) puts the
+ * caller's own `branchId`/`agentId` in the `WHERE`, so an `orderId` that is
+ * real but belongs to someone else's branch or courier reads as `not-found`
+ * before `writeTransition` ever runs — a partner cannot even learn whether an
+ * id they don't own exists, let alone move it. Only then does the ordinary
+ * `pending`/`confirmed` guard in `writeTransition` decide whether `fulfilled`
+ * is reachable from wherever the order actually is; nothing here loosens that
+ * check for a partner caller.
+ *
+ * `actorUid` is stamped into `Order.decidedBy` and `OrderEvent.actorUid`
+ * exactly like an admin's uid would be — both columns are a bare uid with no
+ * role attached, so a reader who needs to know *which* kind of person moved an
+ * order still has to cross-reference `PartnerUser`/the admin allowlist. That
+ * is an acceptable gap for a single new transition kept this narrow, not an
+ * oversight to fix in the same change that adds it.
+ */
+export function markOrderFulfilledByPartner(
+  orderId: string,
+  scope: PartnerOrderScope,
+  actorUid: string,
+): Promise<TransitionOutcome> {
+  return partnerOwnedOrderId(orderId, scope).then((ownId) =>
+    ownId ? markOrderFulfilled(ownId, actorUid) : { ok: false, reason: "not-found" },
+  );
+}
+
+/** Resolves `orderId` only if it belongs to this partner's own scope. */
+async function partnerOwnedOrderId(
+  orderId: string,
+  scope: PartnerOrderScope,
+): Promise<string | null> {
+  const where = partnerScopeWhere(orderId, scope);
+  if (!where) return null;
+  const order = await getPrisma().order.findFirst({ where, select: { id: true } });
+  return order?.id ?? null;
 }

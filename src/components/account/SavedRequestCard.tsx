@@ -94,9 +94,17 @@ export default function SavedRequestCard({
         </div>
       </dl>
 
-      {/* The only interactive part of an otherwise static card, so it is the
-          only part that is a client component. */}
-      <DeleteSavedRequest id={request.id} reference={request.reference} />
+      <div className="mt-5 flex flex-wrap items-center gap-4">
+        <Link
+          href={`/track/${encodeURIComponent(request.reference)}`}
+          className="btn-pill btn-ink px-4 py-1.5 text-xs"
+        >
+          Track this order
+        </Link>
+        {/* The only other interactive part of an otherwise static card, so it
+            is the only other part that is a client component. */}
+        <DeleteSavedRequest id={request.id} reference={request.reference} />
+      </div>
     </li>
   );
 }

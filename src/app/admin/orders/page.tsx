@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/dal";
 import { listOrders } from "@/server/orders/list-orders";
+import { latestPingsForOrders } from "@/server/orders/tracking";
 import { getAllBranches } from "@/server/repositories";
 import OrderCard from "@/components/admin/OrderCard";
 
@@ -49,6 +50,18 @@ export default async function AdminOrdersPage({
     listOrders({ branchId, status }),
     getAllBranches(),
   ]);
+
+  // A ping can only be *added* to a `"confirmed"` order (see
+  // `postDeliveryPing`), but a `"fulfilled"` one keeps whatever it already
+  // has — worth showing here too, since "where did it actually end up" is
+  // exactly what an admin chasing a complaint would ask. `"pending"` and
+  // `"cancelled"` orders never have one, so they are not worth the query.
+  const trackableIds = orders
+    .filter((o) => o.status === "confirmed" || o.status === "fulfilled")
+    .map((o) => o.id);
+  const lastPings = await latestPingsForOrders(trackableIds).catch(
+    () => new Map(),
+  );
 
   const filtered = Boolean(branchId) || Boolean(status);
 
@@ -148,7 +161,11 @@ export default async function AdminOrdersPage({
         ) : (
           <ul className="mt-5 flex flex-col gap-5">
             {orders.map((order) => (
-              <OrderCard key={order.id} order={order} />
+              <OrderCard
+                key={order.id}
+                order={order}
+                lastPing={lastPings.get(order.id) ?? null}
+              />
             ))}
           </ul>
         )}

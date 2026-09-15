@@ -120,7 +120,14 @@ export default function OrderConfirmation() {
             >
               Find it again
             </Link>{" "}
-            any time — closing this tab won&apos;t lose it.
+            any time — closing this tab won&apos;t lose it.{" "}
+            <Link
+              href={`/track/${encodeURIComponent(order.reference)}`}
+              className="underline underline-offset-2 hover:text-foreground"
+            >
+              Track it
+            </Link>{" "}
+            once the branch confirms it.
           </p>
         ) : (
           <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
@@ -142,9 +149,11 @@ export default function OrderConfirmation() {
           <h2 className="font-display text-lg font-medium">What happens next</h2>
           <ol className="mt-4 space-y-4">
             <Step n={1}>
-              Nothing has been paid and nothing has been reserved. MalFleks has no
-              order system behind it yet, so this request has not been
-              transmitted to anyone — it is yours to take to the branch.
+              Nothing has been paid and nothing has been reserved. This
+              request has already reached MalFleks and {order.branch.name} —
+              it stays &ldquo;pending&rdquo; until the branch calls to confirm
+              stock and price, so treat it as a heads-up rather than a done
+              deal.
             </Step>
             <Step n={2}>
               {brandDelivered ? (

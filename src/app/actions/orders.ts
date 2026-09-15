@@ -73,9 +73,12 @@ export async function submitOrder(
  * vocabulary is deliberately identical for "not an admin" and "no such
  * order": neither tells a caller anything about whether an order id exists.
  *
- * There is no partner-facing equivalent of any of this, and none is faked
- * here — `Partner`/`PartnerUser` records are not linked to "their" orders
- * anywhere in this codebase.
+ * **`markOrderFulfilled` now has a partner-facing sibling.** Since 6 Sep
+ * 2026, the branch or courier actually fulfilling an order may mark it
+ * `fulfilled` themselves — see `markOrderFulfilledByPartner` in `./status.ts`
+ * and `src/app/actions/partner-orders.ts`. Every other transition here
+ * (`confirmOrder`, `cancelOrder`) stays admin-only: this file's own boundary
+ * is unchanged, the new one is a separate action with a separate trust check.
  */
 
 export type OrderTransitionResult =

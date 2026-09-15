@@ -6,9 +6,20 @@ import {
   confirmOrder,
   markOrderFulfilled,
 } from "@/app/actions/orders";
+import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 import type { ListedOrder } from "@/server/orders/list-orders";
+import type { DeliveryPingView } from "@/server/orders/tracking";
 import { formatTZS } from "@/lib/format";
 import { formatPhone } from "@/lib/order";
+
+function timeAgo(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime();
+  const minutes = Math.round(ms / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+}
 
 /**
  * One order in the admin queue: the record `/admin/orders` used to render
@@ -48,7 +59,15 @@ function errorMessage(reason: string | undefined): string {
   }
 }
 
-export default function OrderCard({ order }: { order: ListedOrder }) {
+export default function OrderCard({
+  order,
+  lastPing = null,
+}: {
+  order: ListedOrder;
+  /** This order's newest `DeliveryPing`, if any — see the note on why the
+   *  page only ever queries this for `"confirmed"`/`"fulfilled"` orders. */
+  lastPing?: DeliveryPingView | null;
+}) {
   const [mode, setMode] = useState<Mode>("idle");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -156,6 +175,25 @@ export default function OrderCard({ order }: { order: ListedOrder }) {
           </div>
         )}
       </dl>
+
+      {/* Only appears once the branch or courier has actually reported a
+          position — see the note on `postDeliveryPing`'s `"confirmed"`-only
+          gate. No control here moves anything; this is read-only, the same
+          way the rest of this card's data is until a transition button is
+          pressed. */}
+      {lastPing && (
+        <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
+          <p className="text-xs text-muted">
+            Last reported {timeAgo(lastPing.createdAt)}
+            {lastPing.note ? ` · ${lastPing.note}` : ""}
+          </p>
+          <div className="mt-2 max-w-[220px] overflow-hidden rounded-lg border border-border">
+            <OrderTrackingMap
+              position={{ lat: lastPing.latitude, lng: lastPing.longitude }}
+            />
+          </div>
+        </div>
+      )}
 
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-600">

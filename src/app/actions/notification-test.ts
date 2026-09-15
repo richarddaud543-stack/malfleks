@@ -1,8 +1,6 @@
 "use server";
 
-import { isAdminUser } from "@/server/auth/admin";
-import { isAuthConfigured } from "@/server/auth/config";
-import { verifySession } from "@/server/auth/dal";
+import { adminSession } from "@/server/auth/admin-session";
 
 /**
  * "Is the notification setup actually working?" — answered without waiting for
@@ -22,6 +20,15 @@ import { verifySession } from "@/server/auth/dal";
  * Admin only, and re-checked here rather than trusting the page: a Server
  * Action is a public HTTP endpoint, and this one spends someone's email quota
  * and reveals which address MalFleks notifies.
+ *
+ * Goes through the shared `adminSession()` rather than its own inline check —
+ * it used to be the latter, and it was missing the hostname gate the other
+ * four admin actions all have (`adminRoutesAvailable()`, checked before the
+ * session lookup). An already-admin caller could still reach this action from
+ * the shop's own hostname, since a Server Action compiles into both
+ * deployments regardless of which host's pages ever render a button for it.
+ * Found during the 6 Sep admin-console review; fixed by routing through the
+ * one shared check instead of maintaining a second, incomplete copy of it.
  */
 
 export type NotificationTestResult =
@@ -34,11 +41,8 @@ export type NotificationTestResult =
     };
 
 export async function sendTestNotification(): Promise<NotificationTestResult> {
-  if (!isAuthConfigured()) {
-    return { ok: false, reason: "forbidden", provider: null, to: null };
-  }
-  const session = await verifySession();
-  if (!session || !isAdminUser(session)) {
+  const session = await adminSession();
+  if (!session) {
     return { ok: false, reason: "forbidden", provider: null, to: null };
   }
 
