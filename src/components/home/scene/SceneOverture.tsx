@@ -32,10 +32,24 @@ export default function SceneOverture({
   const cities = Array.from(new Set(branches.map((b) => b.city)));
   const fleet = branches.filter((b) => b.deliveryOffered).length;
 
+  // Named once, from the real branch list — not a fixed four-city claim.
+  // `SceneCities` below makes the same argument in its own comment: a
+  // hardcoded place name is a fact with no owner, and the first city this
+  // scene named that MalFleks hadn't actually reached yet was exactly that.
+  const cityList =
+    cities.length === 0
+      ? "Tanzania"
+      : cities.length === 1
+        ? cities[0]
+        : `${cities.slice(0, -1).join(", ")} and ${cities[cities.length - 1]}`;
+
   const stats = [
-    { value: brands.length, label: "brands" },
-    { value: branches.length, label: "branches" },
-    { value: cities.length, label: "cities" },
+    { value: brands.length, label: brands.length === 1 ? "brand" : "brands" },
+    {
+      value: branches.length,
+      label: branches.length === 1 ? "branch" : "branches",
+    },
+    { value: cities.length, label: cities.length === 1 ? "city" : "cities" },
     { value: `${fleet}/${branches.length}`, label: "own fleet" },
   ];
 
@@ -94,9 +108,9 @@ export default function SceneOverture({
             className="max-w-xl text-lg leading-relaxed"
             style={{ color: "var(--scene-muted)" }}
           >
-            The shops and the couriers already exist, out in Dar es Salaam,
-            Arusha, Mwanza and Dodoma. MalFleks puts them behind one window — and
-            when you order, it routes you to the branch that actually has it.
+            The shops and the couriers already exist, out in {cityList}.
+            MalFleks puts them behind one window — and when you order, it
+            routes you to the branch that actually has it.
           </p>
 
           <div className="flex flex-wrap items-start gap-x-10 gap-y-6 lg:justify-end">

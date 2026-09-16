@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { adminSession } from "@/server/auth/admin-session";
+import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 
 /**
  * Publishing or turning down a product a partner submitted — admin only.
@@ -41,7 +42,7 @@ const requireAdminSession = adminSession;
  * `generateStaticParams`. Revalidating one path and not the others is how a
  * product ends up visible in search and 404 on its own URL.
  */
-function revalidateCatalogue() {
+async function revalidateCatalogue() {
   revalidatePath("/admin/submissions");
   revalidatePath("/");
   revalidatePath("/brands", "layout");
@@ -50,6 +51,10 @@ function revalidateCatalogue() {
   revalidatePath("/products", "layout");
   revalidatePath("/delivery", "layout");
   revalidatePath("/partner");
+  // The calls above only clear this (admin) deployment's own cache. This is
+  // the one that actually reaches the shop customers browse — see the module
+  // doc on notifyPublicSiteOfCatalogueChange for why both are needed.
+  await notifyPublicSiteOfCatalogueChange();
 }
 
 export async function publishProductSubmission(
@@ -63,7 +68,7 @@ export async function publishProductSubmission(
     const outcome = await publishSubmission(submissionId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidateCatalogue();
+    await revalidateCatalogue();
     return { ok: true };
   } catch {
     return { ok: false, reason: "unavailable" };

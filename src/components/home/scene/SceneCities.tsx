@@ -38,6 +38,31 @@ export default function SceneCities({
     };
   });
 
+  // The headline used to say "Four cities" outright — the number this scene
+  // was designed around, not the number of cities MalFleks is actually in
+  // yet. Spelled out the same way for any count so a single live city still
+  // reads as a deliberate sentence, not a template with one blank filled in.
+  const countWords = [
+    "Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten",
+  ];
+  const cityCountWord =
+    cities.length < countWords.length ? countWords[cities.length] : String(cities.length);
+
+  // The grid used to be a fixed sm:grid-cols-2 lg:grid-cols-4, which drew the
+  // hairline-grid background through three empty column tracks whenever
+  // fewer than four cities had real branches — visible today, at one city,
+  // as a large blank panel next to Dodoma's card. Capping the column count at
+  // what actually has data removes the empty tracks entirely; a real fifth
+  // city still wraps onto a second row at four columns.
+  const gridColsClass =
+    cities.length >= 4
+      ? "sm:grid-cols-2 lg:grid-cols-4"
+      : cities.length === 3
+        ? "sm:grid-cols-3"
+        : cities.length === 2
+          ? "sm:grid-cols-2"
+          : "";
+
   return (
     <section ref={scope} className="relative px-5 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl">
@@ -47,7 +72,8 @@ export default function SceneCities({
               04 — Where
             </p>
             <h2 data-reveal className="scene-display-sm mt-5 max-w-2xl">
-              Four cities, <em className="scene-serif">counted</em>
+              {cityCountWord} {cities.length === 1 ? "city" : "cities"},{" "}
+              <em className="scene-serif">counted</em>
             </h2>
           </div>
           <Link
@@ -59,8 +85,10 @@ export default function SceneCities({
           </Link>
         </div>
 
-        <ul className="mt-14 grid gap-px overflow-hidden rounded-3xl sm:grid-cols-2 lg:grid-cols-4"
-            style={{ background: "var(--scene-hairline)" }}>
+        <ul
+          className={`mt-14 grid gap-px overflow-hidden rounded-3xl ${gridColsClass}`}
+          style={{ background: "var(--scene-hairline)" }}
+        >
           {cities.map((entry) => (
             <li
               key={entry.city}

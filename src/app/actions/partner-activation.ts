@@ -7,6 +7,7 @@ import type {
   BrandActivationInput,
   CourierActivationInput,
 } from "@/server/partners/activation";
+import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 
 /**
  * Putting an approved partner into the catalogue — admin only.
@@ -48,13 +49,17 @@ const requireAdminSession = adminSession;
  * branch that exists in the database and nowhere else — the same class of
  * confusion as emptying the catalogue without redeploying.
  */
-function revalidateCatalogue() {
+async function revalidateCatalogue() {
   revalidatePath("/admin");
   revalidatePath("/");
   revalidatePath("/brands");
   revalidatePath("/search");
   revalidatePath("/locator");
   revalidatePath("/agents");
+  // The calls above only clear this (admin) deployment's own cache. This is
+  // the one that actually reaches the shop customers browse — see the module
+  // doc on notifyPublicSiteOfCatalogueChange for why both are needed.
+  await notifyPublicSiteOfCatalogueChange();
 }
 
 export async function activateBrand(
@@ -71,7 +76,7 @@ export async function activateBrand(
     const outcome = await activateBrandPartner(partnerId, input);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidateCatalogue();
+    await revalidateCatalogue();
     return { ok: true };
   } catch {
     return { ok: false, reason: "unavailable" };
@@ -92,7 +97,7 @@ export async function activateCourier(
     const outcome = await activateCourierPartner(partnerId, input);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidateCatalogue();
+    await revalidateCatalogue();
     return { ok: true };
   } catch {
     return { ok: false, reason: "unavailable" };

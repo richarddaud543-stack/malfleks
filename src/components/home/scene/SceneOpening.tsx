@@ -27,7 +27,7 @@ export default function SceneOpening() {
       />
 
       <div className="relative mx-auto max-w-3xl text-center">
-        <p className="scene-eyebrow">MalFleks — Tanzania</p>
+        <p className="scene-eyebrow">MalFleks in Tanzania</p>
 
         <h1 className="scene-display-sm mt-6">
           One marketplace for real shops,{" "}
@@ -43,10 +43,7 @@ export default function SceneOpening() {
           shop&apos;s own van or a courier who covers your city.
         </p>
 
-        <div
-          className="mx-auto mt-12 max-w-xl rounded-2xl border px-6 py-7 text-left"
-          style={{ borderColor: "var(--scene-line, rgba(255,255,255,0.14))" }}
-        >
+        <div className="scene-panel mx-auto mt-12 max-w-xl px-6 py-7 text-left sm:px-8">
           <h2 className="font-display text-lg font-medium">
             Nothing is listed yet — and that is deliberate
           </h2>
