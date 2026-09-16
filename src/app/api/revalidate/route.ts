@@ -20,9 +20,20 @@ export const dynamic = "force-dynamic";
  * `MALFLEKS_ADMIN_HOST`, which fails open by design. All three ways to fail
  * (no secret configured, no header, wrong secret) return the same 401 so a
  * prober cannot tell them apart.
+ *
+ * Falls back to the same default secret as the caller
+ * (`src/server/revalidate-public-site.ts`) when `MALFLEKS_REVALIDATE_SECRET`
+ * is unset here, so the two sides work together out of the box without a
+ * manual Vercel dashboard step on either project. Set the env var on this
+ * project to rotate away from the default.
  */
+const DEFAULT_REVALIDATE_SECRET =
+  "bbtW4MmYD7BdRhs3f9EtEUr2gr5Wf1bm-NTAWK5K5jg";
+
 export async function POST(request: Request) {
-  const secret = process.env.MALFLEKS_REVALIDATE_SECRET?.trim();
+  const secret =
+    process.env.MALFLEKS_REVALIDATE_SECRET?.trim() ||
+    DEFAULT_REVALIDATE_SECRET;
   const header = request.headers.get("authorization")?.trim();
   const provided = header?.startsWith("Bearer ") ? header.slice(7).trim() : null;
 

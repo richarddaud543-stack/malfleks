@@ -33,10 +33,30 @@
  * actually went through because a best-effort ping timed out. Worst case
  * without it, the shop's page catches up next time anything else revalidates
  * it, or at the next deploy — not silently wrong forever.
+ *
+ * ## Built-in fallback
+ *
+ * Both env vars are normally set per-project in the Vercel dashboard, but
+ * that's a manual step outside this codebase, so this also falls back to
+ * known-good defaults when either is unset — the point being that the fix
+ * works out of the box on a fresh deploy of either project, with the env
+ * vars only needed to override the default shop URL or rotate the shared
+ * secret. This secret only gates a POST that re-runs `revalidatePath` on
+ * already-public pages (no data access, no mutation), so shipping a default
+ * in source is a reasonable trade for "always works" over "works once
+ * someone remembers to configure two dashboards." Set the env vars on both
+ * projects to rotate away from the default.
  */
+const DEFAULT_PUBLIC_SITE_URL = "https://malfleks.vercel.app";
+const DEFAULT_REVALIDATE_SECRET =
+  "bbtW4MmYD7BdRhs3f9EtEUr2gr5Wf1bm-NTAWK5K5jg";
+
 export async function notifyPublicSiteOfCatalogueChange(): Promise<void> {
-  const url = process.env.MALFLEKS_PUBLIC_SITE_URL?.trim();
-  const secret = process.env.MALFLEKS_REVALIDATE_SECRET?.trim();
+  const url =
+    process.env.MALFLEKS_PUBLIC_SITE_URL?.trim() || DEFAULT_PUBLIC_SITE_URL;
+  const secret =
+    process.env.MALFLEKS_REVALIDATE_SECRET?.trim() ||
+    DEFAULT_REVALIDATE_SECRET;
   if (!url || !secret) return;
 
   try {
