@@ -24,6 +24,7 @@ const good: ProductListingInput = {
   description:
     "A one-owner hybrid saloon with full service history, sold from the showroom floor.",
   image: "sedan",
+  photoUrl: "",
   price: "48,500,000",
   inStock: true,
   specs: [{ key: "Year", value: "2024" }],

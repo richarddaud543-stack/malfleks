@@ -1,4 +1,5 @@
 import { PRODUCT_ICON_KEYS } from "./product-icons";
+import { isValidProductPhotoUrl } from "./product-photo";
 
 /**
  * Validating a product a partner wants to list.
@@ -27,6 +28,11 @@ export interface ProductListingInput {
   description: string;
   /** A `ProductIconKey`. Not a URL — see the note on `PRODUCT_ICON_KEYS`. */
   image: string;
+  /**
+   * A real, uploaded photo — optional, additive to `image`. Empty string
+   * means "no photo, just the icon," which is a valid, complete listing.
+   */
+  photoUrl: string;
   /** As typed. Parsed here, not by the caller. */
   price: string;
   inStock: boolean;
@@ -38,6 +44,7 @@ export const emptyProductListing: ProductListingInput = {
   category: "",
   description: "",
   image: "",
+  photoUrl: "",
   price: "",
   inStock: true,
   specs: [{ key: "", value: "" }],
@@ -55,6 +62,8 @@ export interface ValidatedProductListing {
   category: string;
   description: string;
   image: string;
+  /** Empty string, never undefined, when no photo was uploaded. */
+  photoUrl: string;
   /** Whole shillings, a positive integer. */
   priceTZS: number;
   inStock: boolean;
@@ -113,6 +122,15 @@ export function validateProductListing(
     errors.image = "That isn't one of the pictures we can show.";
   }
 
+  // Optional. `ProductPhotoUpload` only ever hands back a URL from our own
+  // bucket, so a non-empty value that fails this check means the upload
+  // itself failed partway — not a typo a partner could fix by re-typing it.
+  const photoUrl = input.photoUrl.trim();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  if (photoUrl !== "" && !isValidProductPhotoUrl(photoUrl, supabaseUrl)) {
+    errors.photoUrl = "That photo didn't finish uploading properly. Remove it and try again.";
+  }
+
   const price = input.price.trim().replace(/[,\s]/g, "");
   if (price === "") {
     errors.price = "Give the price in whole shillings.";
@@ -150,6 +168,7 @@ export function validateProductListing(
       category,
       description,
       image,
+      photoUrl,
       priceTZS: Number(price),
       inStock: input.inStock,
       specs,

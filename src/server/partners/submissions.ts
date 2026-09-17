@@ -1,4 +1,6 @@
 import { getPrisma } from "@/server/db/client";
+import { isValidProductPhotoUrl } from "@/lib/product-photo";
+import { supabaseAuthConfig } from "@/server/auth/config";
 
 /**
  * Product submissions — a branch partner proposes a product, an admin
@@ -31,6 +33,7 @@ export interface ReviewableSubmission {
   category: string;
   priceTZS: number;
   image: string;
+  photoUrl: string | null;
   description: string;
   inStock: boolean;
   specs: Array<{ key: string; value: string }>;
@@ -46,6 +49,8 @@ export interface SubmitProductInput {
   /** Whole shillings. A string from a form is parsed by the caller, not here. */
   priceTZS: number;
   image: string;
+  /** Optional. Empty/omitted means "icon only," a valid, complete listing. */
+  photoUrl?: string;
   description: string;
   inStock?: boolean;
   specs?: Array<{ key: string; value: string }>;
@@ -56,6 +61,7 @@ export type SubmitBlocker =
   | "not-a-branch-partner"
   | "partner-suspended"
   | "invalid-price"
+  | "invalid-photo"
   | "missing-field";
 
 export type SubmitOutcome =
@@ -167,6 +173,16 @@ export async function submitProduct(
     return { ok: false, reason: "invalid-price" };
   }
 
+  // Optional, but when present it must actually be one of our own uploaded
+  // photos — never an arbitrary URL a client could send instead. The browser
+  // copy of this same check (`product-listing.ts`) is a courtesy; this one is
+  // the boundary that counts, exactly as the module doc says for price.
+  const photoUrl = (input.photoUrl ?? "").trim();
+  const supabaseUrl = supabaseAuthConfig()?.url ?? "";
+  if (photoUrl !== "" && !isValidProductPhotoUrl(photoUrl, supabaseUrl)) {
+    return { ok: false, reason: "invalid-photo" };
+  }
+
   const specs = (input.specs ?? [])
     .map((spec) => ({ key: spec.key.trim(), value: spec.value.trim() }))
     .filter((spec) => spec.key !== "" && spec.value !== "");
@@ -180,6 +196,7 @@ export async function submitProduct(
       category,
       priceTZS: input.priceTZS,
       image,
+      photoUrl: photoUrl === "" ? null : photoUrl,
       description,
       inStock: input.inStock ?? true,
       specs: {
@@ -213,6 +230,7 @@ function mapSubmission(row: {
   category: string;
   priceTZS: number;
   image: string;
+  photoUrl: string | null;
   description: string;
   inStock: boolean;
   createdAt: Date;
@@ -231,6 +249,7 @@ function mapSubmission(row: {
     category: row.category,
     priceTZS: row.priceTZS,
     image: row.image,
+    photoUrl: row.photoUrl,
     description: row.description,
     inStock: row.inStock,
     specs: row.specs.map((s) => ({ key: s.key, value: s.value })),
@@ -274,6 +293,7 @@ export async function publishSubmission(
       category: true,
       priceTZS: true,
       image: true,
+      photoUrl: true,
       description: true,
       inStock: true,
       specs: { orderBy: { position: "asc" as const } },
@@ -356,6 +376,7 @@ export async function publishSubmission(
         category: submission.category,
         priceTZS: submission.priceTZS,
         image: submission.image,
+        photoUrl: submission.photoUrl,
         description: submission.description,
         inStock: submission.inStock,
         sortOrder: (last?.sortOrder ?? 0) + 1,

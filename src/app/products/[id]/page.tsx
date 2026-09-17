@@ -116,6 +116,7 @@ export default async function ProductPage({
               <ProductShowcase
                 accentColor={brand.accentColor}
                 icon={product.image}
+                photoUrl={product.photoUrl}
               />
             </div>
           </ViewTransition>

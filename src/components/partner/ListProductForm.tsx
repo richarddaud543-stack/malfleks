@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { listProductForPartner } from "@/app/actions/partner-products";
 import ProductIcon from "@/components/product/ProductIcon";
+import ProductPhotoUpload from "@/components/partner/ProductPhotoUpload";
 import { formatTZS } from "@/lib/format";
 import {
   PRODUCT_ICON_KEYS,
@@ -26,10 +27,11 @@ import {
  * `submitProduct` for real. The client copy is a courtesy — it saves a round
  * trip and puts the error next to the field — and it is never the control.
  *
- * The picture is a chooser rather than a text field or an upload. `Product.image`
- * is an icon identifier and there is no storage bucket in this app; offering an
- * upload would be promising something that does not exist, and a free text box
- * would let a typo render a phone beside a pickup truck.
+ * The icon chooser stays required — a typo-proof, always-available fallback
+ * that a free text box could never be. `ProductPhotoUpload` beside it is the
+ * optional upgrade: a real photo, uploaded to this project's own
+ * `product-photos` Supabase Storage bucket, that the card and detail page
+ * show in place of the icon when present.
  */
 
 const FIELD_ORDER: ProductListingField[] = [
@@ -38,6 +40,7 @@ const FIELD_ORDER: ProductListingField[] = [
   "price",
   "description",
   "image",
+  "photoUrl",
   "specs",
 ];
 
@@ -51,6 +54,8 @@ const FAILURE_TEXT: Record<string, string> = {
     "This account is suspended, so new listings can't be submitted.",
   "missing-field": "Something in the form came through empty. Check it over.",
   "invalid-price": "The price has to be a whole number of shillings.",
+  "invalid-photo":
+    "That photo didn't come through properly. Remove it and try uploading again.",
   failed:
     "We couldn't save this right now. Nothing was recorded — your answers are still here, so try again in a moment.",
 };
@@ -104,6 +109,7 @@ export default function ListProductForm() {
       category: result.value.category,
       description: result.value.description,
       image: result.value.image,
+      photoUrl: result.value.photoUrl || undefined,
       priceTZS: result.value.priceTZS,
       inStock: result.value.inStock,
       specs: result.value.specs,
@@ -266,8 +272,8 @@ export default function ListProductForm() {
             id={`${fieldId}-image-hint`}
             className="mt-1 text-xs text-muted"
           >
-            MalFleks draws products as symbols rather than photographs — choose the
-            closest one.
+            Shown until — or unless — you add a real photo below. Choose the
+            closest one either way.
           </p>
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
             {PRODUCT_ICON_KEYS.map((key) => {
@@ -309,6 +315,12 @@ export default function ListProductForm() {
             </p>
           )}
         </fieldset>
+
+        <ProductPhotoUpload
+          value={input.photoUrl}
+          onChange={(photoUrl) => update({ photoUrl })}
+          error={errors.photoUrl}
+        />
 
         <fieldset className="border-0 p-0">
           <legend className="text-sm font-medium">

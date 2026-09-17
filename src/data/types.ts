@@ -53,6 +53,8 @@ export interface Product {
   category: string;
   priceTZS: number;
   image: string;
+  /** A real uploaded photo. Absent on most rows — the icon is the fallback. */
+  photoUrl?: string;
   description: string;
   specs?: Record<string, string>;
   inStock: boolean;

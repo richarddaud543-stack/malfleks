@@ -32,6 +32,7 @@ export type ListProductResult =
         | "partner-suspended"
         | "missing-field"
         | "invalid-price"
+        | "invalid-photo"
         | "failed";
     };
 
@@ -40,6 +41,7 @@ export interface ListProductInput {
   category: string;
   description: string;
   image: string;
+  photoUrl?: string;
   priceTZS: number;
   inStock?: boolean;
   specs?: { key: string; value: string }[];
@@ -66,6 +68,7 @@ export async function listProductForPartner(
       category: input.category,
       description: input.description,
       image: input.image,
+      photoUrl: input.photoUrl,
       priceTZS: input.priceTZS,
       inStock: input.inStock,
       specs: input.specs,

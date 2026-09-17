@@ -117,6 +117,14 @@ model Product {
   description String
   inStock     Boolean
 
+  // A real, partner-uploaded photo. Optional and additive to `image` — the
+  // icon stays the required fallback (existing rows have no photo, and a
+  // partner can still skip this), this only upgrades the card and detail
+  // page to show it when present. Always a public URL under this project's
+  // own `product-photos` Supabase Storage bucket; `submitProduct` checks that
+  // shape before trusting a value from the client.
+  photoUrl String?
+
   sortOrder Int
 
   specs  ProductSpec[]
@@ -560,6 +568,10 @@ model ProductSubmission {
   image       String
   description String
   inStock     Boolean @default(true)
+
+  // Same field, same rules as `Product.photoUrl` — carried over verbatim by
+  // `publishSubmission` when the submission is approved.
+  photoUrl String?
 
   specs ProductSubmissionSpec[]
 

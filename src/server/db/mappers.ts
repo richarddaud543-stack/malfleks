@@ -100,6 +100,7 @@ export function mapProduct(row: ProductRowWithSpecs): Product {
     category: row.category,
     priceTZS: row.priceTZS,
     image: row.image,
+    photoUrl: orUndefined(row.photoUrl),
     description: row.description,
     // A product with no spec rows is indistinguishable from one whose specs
     // were never recorded, so both map to `undefined` — the same thing the

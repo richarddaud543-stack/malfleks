@@ -105,14 +105,23 @@ export default function ProductCard({
           update="none"
         >
           <div
-            className="flex h-32 items-center justify-center rounded-xl"
+            className="flex h-32 items-center justify-center overflow-hidden rounded-xl"
             style={{ background: `${accentColor}18` }}
           >
-            <ProductIcon
-              icon={product.image}
-              className="h-16 w-16"
-              style={{ color: iconAccent(accentColor) }}
-            />
+            {product.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={product.photoUrl}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <ProductIcon
+                icon={product.image}
+                className="h-16 w-16"
+                style={{ color: iconAccent(accentColor) }}
+              />
+            )}
           </div>
         </ViewTransition>
         <div className="mt-4 flex items-start justify-between gap-2">

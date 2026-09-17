@@ -23,9 +23,12 @@ import { iconAccent } from "@/lib/accent";
 export default function ProductShowcase({
   accentColor,
   icon,
+  photoUrl,
 }: {
   accentColor: string;
   icon: string;
+  /** A real uploaded photo. When present, replaces the icon puck below. */
+  photoUrl?: string;
 }) {
   const reduceMotion = useReducedMotion();
   const iconColor = iconAccent(accentColor);
@@ -84,7 +87,7 @@ export default function ProductShowcase({
       </div>
 
       <motion.div
-        className="relative flex h-28 w-28 items-center justify-center rounded-full sm:h-36 sm:w-36"
+        className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full sm:h-36 sm:w-36"
         style={{
           background: `${accentColor}1f`,
           boxShadow: `0 24px 48px -20px ${accentColor}55`,
@@ -96,11 +99,23 @@ export default function ProductShowcase({
             : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
         }
       >
-        <ProductIcon
-          icon={icon}
-          className="h-16 w-16 sm:h-20 sm:w-20"
-          style={{ color: iconColor }}
-        />
+        {photoUrl ? (
+          // A real uploaded photo fills the puck instead of floating an icon
+          // over it — eslint-disable, see ProductCard.tsx for why this is a
+          // plain img rather than next/image.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={photoUrl}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <ProductIcon
+            icon={icon}
+            className="h-16 w-16 sm:h-20 sm:w-20"
+            style={{ color: iconColor }}
+          />
+        )}
       </motion.div>
     </motion.div>
   );

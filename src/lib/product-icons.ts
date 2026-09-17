@@ -1,13 +1,19 @@
 /**
  * The pictures a product can carry.
  *
- * `Product.image` is **an icon identifier, not a URL.** There is no storage
- * bucket and no uploaded photography anywhere in this app; `ProductIcon` draws
- * one of these as a continuous-line contour from inline SVG paths and falls
- * back to `smartphone` for anything it does not recognise. That fallback is why
- * this list exists in a plain module rather than only inside the component: a
- * partner picking from a list cannot type a key that silently renders a phone
- * on a pickup truck.
+ * `Product.image` is **an icon identifier, not a URL** — always required, and
+ * `ProductIcon` draws one of these as a continuous-line contour from inline
+ * SVG paths, falling back to `smartphone` for anything it does not recognise.
+ * That fallback is why this list exists in a plain module rather than only
+ * inside the component: a partner picking from a list cannot type a key that
+ * silently renders a phone on a pickup truck.
+ *
+ * A real, partner-uploaded photo is a separate, optional field —
+ * `Product.photoUrl`, in the `product-photos` Supabase Storage bucket (see
+ * `ProductPhotoUpload`) — that the card and detail page show instead of this
+ * icon when present. The icon never goes away: it is what every existing row
+ * has, what a partner who skips the photo still gets, and what renders if an
+ * uploaded photo URL ever fails to load.
  *
  * `ProductIcon` imports `ProductIconKey` from here and types its path map as
  * `Record<ProductIconKey, …>`, so adding a key here without drawing it — or

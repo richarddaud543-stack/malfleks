@@ -59,10 +59,19 @@ export default function SubmissionReviewCard({
     <li className="glass-card rounded-2xl px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex min-w-0 gap-4">
-          <ProductIcon
-            icon={submission.image}
-            className="h-10 w-10 shrink-0 text-muted"
-          />
+          {submission.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={submission.photoUrl}
+              alt=""
+              className="h-10 w-10 shrink-0 rounded-lg object-cover"
+            />
+          ) : (
+            <ProductIcon
+              icon={submission.image}
+              className="h-10 w-10 shrink-0 text-muted"
+            />
+          )}
           <div className="min-w-0">
             <p className="font-display text-lg font-medium">{submission.name}</p>
             <p className="mt-0.5 text-sm text-muted">
