@@ -2,7 +2,17 @@
 
 import { verifySession } from "@/server/auth/dal";
 import { isAuthConfigured } from "@/server/auth/config";
+import { checkRateLimit } from "@/server/rate-limit";
 import type { PartnerApplicationInput } from "@/lib/partner-application";
+
+// A handful a day is generous for a genuine applicant (one brand, maybe a
+// correction re-submit) and still closes off scripted spam of the review
+// queue and the notification inbox behind it.
+const APPLICATION_RATE_LIMIT = {
+  action: "partner-application",
+  limit: 5,
+  windowMs: 24 * 60 * 60_000,
+};
 
 /**
  * A brand branch or a courier applying to join MalFleks.
@@ -22,7 +32,7 @@ export type ApplyResult =
   | { submitted: true }
   | {
       submitted: false;
-      reason: "signed-out" | "unavailable" | "rejected" | "quota";
+      reason: "signed-out" | "unavailable" | "rejected" | "quota" | "rate-limited";
     };
 
 export async function submitPartnerApplication(
@@ -34,6 +44,9 @@ export async function submitPartnerApplication(
   // claims about who is applying, this is the only answer the write path sees.
   const session = await verifySession();
   if (!session) return { submitted: false, reason: "signed-out" };
+
+  const limit = await checkRateLimit(session.uid, APPLICATION_RATE_LIMIT);
+  if (!limit.allowed) return { submitted: false, reason: "rate-limited" };
 
   try {
     // Dynamic: this module reaches the database, so it is only worth loading

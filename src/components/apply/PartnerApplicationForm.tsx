@@ -105,7 +105,9 @@ export default function PartnerApplicationForm({
           ? "You already have several applications waiting. We'll work through those first."
           : outcome.reason === "rejected"
             ? "Something in the form didn't pass our checks. Look over it and try again."
-            : "We couldn't record this right now. Nothing was saved — your answers are still here, so try again in a moment."
+            : outcome.reason === "rate-limited"
+              ? "You've submitted a few applications in quick succession. Wait a bit and try again."
+              : "We couldn't record this right now. Nothing was saved — your answers are still here, so try again in a moment."
     );
   }
 

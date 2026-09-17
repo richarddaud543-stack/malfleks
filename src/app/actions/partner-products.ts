@@ -4,6 +4,12 @@ import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
+import { checkRateLimit } from "@/server/rate-limit";
+
+// A real partner adding their catalogue is a handful of submissions in a
+// sitting, not dozens per minute — this bounds a compromised or scripted
+// session from flooding the admin review queue, not normal listing work.
+const LIST_PRODUCT_RATE_LIMIT = { action: "list-product", limit: 30, windowMs: 60 * 60_000 };
 
 /**
  * A partner listing a product of their own.
@@ -33,6 +39,7 @@ export type ListProductResult =
         | "missing-field"
         | "invalid-price"
         | "invalid-photo"
+        | "rate-limited"
         | "failed";
     };
 
@@ -54,6 +61,9 @@ export async function listProductForPartner(
 
   const session = await verifySession();
   if (!session) return { listed: false, reason: "signed-out" };
+
+  const limit = await checkRateLimit(session.uid, LIST_PRODUCT_RATE_LIMIT);
+  if (!limit.allowed) return { listed: false, reason: "rate-limited" };
 
   try {
     // Dynamic because these modules reach the database, and most page loads

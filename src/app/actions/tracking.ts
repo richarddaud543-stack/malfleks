@@ -4,6 +4,17 @@ import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
+import { checkRateLimit } from "@/server/rate-limit";
+
+// A courier tapping "update my location" every ~20s while actively en route
+// is a real, legitimate cadence — this bounds a runaway client or script, not
+// normal use. 120 per 10 minutes is a tap every 5s sustained, well above what
+// a person tapping a button produces.
+const DELIVERY_PING_RATE_LIMIT = {
+  action: "delivery-ping",
+  limit: 120,
+  windowMs: 10 * 60_000,
+};
 
 /**
  * Delivery tracking's two Server Action entry points: a partner reporting
@@ -29,7 +40,8 @@ export type PostDeliveryPingResult =
         | "not-a-partner"
         | "not-found"
         | "not-trackable"
-        | "invalid-location";
+        | "invalid-location"
+        | "rate-limited";
     };
 
 /**
@@ -51,6 +63,9 @@ export async function postDeliveryPingAction(
 
   const session = await verifySession();
   if (!session) return { ok: false, reason: "signed-out" };
+
+  const limit = await checkRateLimit(session.uid, DELIVERY_PING_RATE_LIMIT);
+  if (!limit.allowed) return { ok: false, reason: "rate-limited" };
 
   try {
     const { partnerForUser } = await import("@/server/partners/portal");

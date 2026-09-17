@@ -612,6 +612,30 @@ model ProductSubmissionSpec {
   @@index([submissionId, position])
 }
 
+// A fixed-window rate-limit hit: one row per accepted call, per caller, per
+// action. See `src/server/rate-limit.ts` for the counting logic — this table
+// is deliberately dumb, with no state beyond "this key was hit at this time".
+//
+// Postgres, not Redis: MalFleks has no Redis/Upstash account, every write
+// this guards already pays for a Postgres round trip, and the traffic these
+// endpoints see (one human, one form) is nowhere near what would need
+// something faster. Rows are cheap to write and cheap to clean up — see the
+// opportunistic delete in `checkRateLimit` — so this never needs a cron job
+// of its own.
+model RateLimitHit {
+  id String @id @default(cuid())
+
+  /// `<action>:<caller identity>` — see `checkRateLimit`. Never an IP alone:
+  /// Vercel's functions don't reliably expose one, and IPs are shared behind
+  /// carrier NAT in Tanzania, which would rate-limit strangers together.
+  key String
+
+  createdAt DateTime @default(now())
+
+  // Every read filters by key; most also filter by a recency cutoff.
+  @@index([key, createdAt])
+}
+
 // A signed-in customer's own copy of an order request.
 //
 // ## Why this is a separate table from `Order`

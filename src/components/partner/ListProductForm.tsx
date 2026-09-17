@@ -56,6 +56,8 @@ const FAILURE_TEXT: Record<string, string> = {
   "invalid-price": "The price has to be a whole number of shillings.",
   "invalid-photo":
     "That photo didn't come through properly. Remove it and try uploading again.",
+  "rate-limited":
+    "You've submitted a few of these in quick succession. Wait a bit and try again.",
   failed:
     "We couldn't save this right now. Nothing was recorded — your answers are still here, so try again in a moment.",
 };

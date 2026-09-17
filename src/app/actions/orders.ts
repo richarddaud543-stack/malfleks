@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
 import { adminSession } from "@/server/auth/admin-session";
 import { createOrder, type CreateOrderFailure } from "@/server/orders/create-order";
+import { checkRateLimit, clientIp } from "@/server/rate-limit";
 import type { TransitionBlocker } from "@/server/orders/status";
 import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
 
@@ -36,13 +37,26 @@ import type { SaveOrderRequestInput } from "@/server/orders/build-order-request"
 
 export type SubmitOrderResult =
   | { ok: true; reference: string }
-  | { ok: false; reason: CreateOrderFailure | "unavailable" };
+  | { ok: false; reason: CreateOrderFailure | "unavailable" | "rate-limited" };
+
+// This is the one write action in this file with no session requirement at
+// all (see the doc comment above), so it is the one place in the app that
+// genuinely has no uid to key a rate limit by for a signed-out caller — see
+// `clientIp`'s own doc comment for why that makes this limit deliberately
+// loose rather than a precise per-person throttle. A signed-in customer still
+// gets keyed by their own uid, which is the tight, meaningful limit.
+const ORDER_RATE_LIMIT = { action: "submit-order", limit: 8, windowMs: 10 * 60_000 };
 
 export async function submitOrder(
   input: SaveOrderRequestInput
 ): Promise<SubmitOrderResult> {
   try {
     const session = await verifySession();
+
+    const identity = session?.uid ? `uid:${session.uid}` : `ip:${await clientIp()}`;
+    const limit = await checkRateLimit(identity, ORDER_RATE_LIMIT);
+    if (!limit.allowed) return { ok: false, reason: "rate-limited" };
+
     const outcome = await createOrder(input, session?.uid ?? null);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 

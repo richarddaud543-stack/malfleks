@@ -72,7 +72,9 @@ export default function DeliveryPingButton({
             setErrorMessage(
               result.reason === "not-trackable"
                 ? "This order can no longer take a location update."
-                : "Couldn't send that. Try again in a moment.",
+                : result.reason === "rate-limited"
+                  ? "That's a lot of updates in a row — wait a few seconds and try again."
+                  : "Couldn't send that. Try again in a moment.",
             );
           }
         } catch {

@@ -3,7 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
 import { isAuthConfigured } from "@/server/auth/config";
+import { checkRateLimit } from "@/server/rate-limit";
 import type { SaveOrderRequestInput } from "@/server/orders/saved-requests";
+
+// Signed in only (see below), so the uid is always available — a tighter,
+// meaningful limit than the IP-based backstop `submitOrder` needs.
+const SAVE_REQUEST_RATE_LIMIT = {
+  action: "save-order-request",
+  limit: 20,
+  windowMs: 60 * 60_000,
+};
 
 /**
  * Saving an order request to a signed-in customer's account.
@@ -20,7 +29,10 @@ import type { SaveOrderRequestInput } from "@/server/orders/saved-requests";
 
 export type SaveResult =
   | { saved: true; reference: string }
-  | { saved: false; reason: "signed-out" | "unavailable" | "rejected" | "quota" };
+  | {
+      saved: false;
+      reason: "signed-out" | "unavailable" | "rejected" | "quota" | "rate-limited";
+    };
 
 export async function saveOrderRequest(
   input: SaveOrderRequestInput
@@ -31,6 +43,9 @@ export async function saveOrderRequest(
   // about who the customer is, this is the only answer the write path sees.
   const session = await verifySession();
   if (!session) return { saved: false, reason: "signed-out" };
+
+  const limit = await checkRateLimit(session.uid, SAVE_REQUEST_RATE_LIMIT);
+  if (!limit.allowed) return { saved: false, reason: "rate-limited" };
 
   try {
     // Dynamic: this module reaches the database, so it is only worth loading
