@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
+import { logServerError } from "@/server/error-log";
 import type { TransitionBlocker } from "@/server/orders/status";
 
 /**
@@ -67,10 +68,11 @@ export async function markOrderFulfilledByPartnerAction(
     // The admin queue shows the same order and the same status.
     revalidatePath("/admin/orders");
     return { ok: true };
-  } catch {
+  } catch (error) {
     // Opaque on purpose, matching every other action in this codebase: the
     // reason a write failed is not the caller's business and may name
     // internals.
+    await logServerError("mark-order-fulfilled-by-partner", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { verifySession } from "@/server/auth/dal";
 import { isAuthConfigured } from "@/server/auth/config";
 import { checkRateLimit } from "@/server/rate-limit";
+import { logServerError } from "@/server/error-log";
 import type { SaveOrderRequestInput } from "@/server/orders/saved-requests";
 
 // Signed in only (see below), so the uid is always available — a tighter,
@@ -63,10 +64,11 @@ export async function saveOrderRequest(
 
     revalidatePath("/account");
     return { saved: true, reference: outcome.reference };
-  } catch {
+  } catch (error) {
     // A database outage must not cost the customer their order request: the
     // browser copy is already written by this point, so the flow continues and
     // the confirmation screen simply does not claim it was saved.
+    await logServerError("save-order-request", error, session.uid);
     return { saved: false, reason: "unavailable" };
   }
 }
@@ -108,9 +110,10 @@ export async function deleteOrderRequest(id: string): Promise<DeleteResult> {
 
     revalidatePath("/account");
     return { deleted: true };
-  } catch {
+  } catch (error) {
     // Unlike the save path, there is no local copy to fall back on: the
     // customer asked for something to be gone and it is not gone. Say so.
+    await logServerError("delete-order-request", error, session.uid);
     return { deleted: false, reason: "unavailable" };
   }
 }

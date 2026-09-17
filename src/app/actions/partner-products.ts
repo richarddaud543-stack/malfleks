@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
 import { checkRateLimit } from "@/server/rate-limit";
+import { logServerError } from "@/server/error-log";
 
 // A real partner adding their catalogue is a handful of submissions in a
 // sitting, not dozens per minute — this bounds a compromised or scripted
@@ -89,9 +90,10 @@ export async function listProductForPartner(
     // The dashboard counts and the listing table both change.
     revalidatePath("/partner");
     return { listed: true, id: outcome.value.id };
-  } catch {
+  } catch (error) {
     // Deliberately opaque to the caller. The reason a write failed is not the
     // partner's business and may name internals.
+    await logServerError("list-product-for-partner", error, session.uid);
     return { listed: false, reason: "failed" };
   }
 }

@@ -8,6 +8,8 @@ import {
 import { getAllBrands } from "@/server/repositories";
 import ApplicationReviewCard from "@/components/admin/ApplicationReviewCard";
 import NotificationCheck from "@/components/admin/NotificationCheck";
+import RecentErrorsPanel from "@/components/admin/RecentErrorsPanel";
+import { recentServerErrors } from "@/server/error-log";
 import PartnerActivationCard from "@/components/admin/PartnerActivationCard";
 import {
   listActivatablePartners,
@@ -51,7 +53,7 @@ export default async function AdminPage() {
   const emailProvider = notifyProvider();
   const emailTo = notifyAddress();
 
-  const [pending, reviewed, brands, waitingToGoLive, catalogueBrands] =
+  const [pending, reviewed, brands, waitingToGoLive, catalogueBrands, recentErrors] =
     await Promise.all([
       listPendingApplications(),
       listReviewedApplications(),
@@ -62,6 +64,9 @@ export default async function AdminPage() {
       // submitted, and no courier ever entered the routing.
       listActivatablePartners(),
       listBrandsForActivation(),
+      // The fallback for real error monitoring — see src/server/error-log.ts
+      // for why this is Postgres rather than a Sentry account.
+      recentServerErrors(20),
     ]);
 
   const brandNames = Object.fromEntries(brands.map((b) => [b.id, b.name]));
@@ -130,6 +135,8 @@ export default async function AdminPage() {
         provider={emailProvider}
         to={emailTo}
       />
+
+      <RecentErrorsPanel errors={recentErrors} />
 
       <section aria-labelledby="pending-heading" className="mt-12">
         <h2

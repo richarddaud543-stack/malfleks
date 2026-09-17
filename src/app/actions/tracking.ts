@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
 import { checkRateLimit } from "@/server/rate-limit";
+import { logServerError } from "@/server/error-log";
 
 // A courier tapping "update my location" every ~20s while actively en route
 // is a real, legitimate cadence — this bounds a runaway client or script, not
@@ -82,9 +83,10 @@ export async function postDeliveryPingAction(
 
     revalidatePath("/partner/orders");
     return { ok: true, ping: outcome.ping };
-  } catch {
+  } catch (error) {
     // Opaque on purpose, matching listProductForPartner: the reason a write
     // failed is not the caller's business and may name internals.
+    await logServerError("post-delivery-ping", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -156,7 +158,11 @@ export async function fetchCustomerTrackingAction(
         pings: order.pings,
       },
     };
-  } catch {
+  } catch (error) {
+    // Polled every ~20s by LiveTrackingPanel, so a genuine outage logs a
+    // burst rather than one row — accepted: `recentServerErrors`' cap and
+    // this table's own 30-day cleanup keep that from being a real cost.
+    await logServerError("fetch-customer-tracking", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }

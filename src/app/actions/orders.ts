@@ -5,6 +5,7 @@ import { verifySession } from "@/server/auth/dal";
 import { adminSession } from "@/server/auth/admin-session";
 import { createOrder, type CreateOrderFailure } from "@/server/orders/create-order";
 import { checkRateLimit, clientIp } from "@/server/rate-limit";
+import { logServerError } from "@/server/error-log";
 import type { TransitionBlocker } from "@/server/orders/status";
 import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
 
@@ -66,11 +67,12 @@ export async function submitOrder(
     await notifyOfOrder(outcome.value.reference);
 
     return { ok: true, reference: outcome.value.reference };
-  } catch {
+  } catch (error) {
     // The browser's own copy is already written by the time this runs (see
     // OrderRequestForm), so a failure here costs the customer nothing they
     // had a moment ago — they still reach the confirmation screen with a
     // reference they can quote.
+    await logServerError("submit-order", error);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -118,7 +120,8 @@ export async function confirmOrder(orderId: string): Promise<OrderTransitionResu
 
     revalidatePath("/admin/orders");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("confirm-order", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -138,7 +141,8 @@ export async function cancelOrder(
 
     revalidatePath("/admin/orders");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("cancel-order", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -157,7 +161,8 @@ export async function markOrderFulfilled(
 
     revalidatePath("/admin/orders");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("mark-order-fulfilled", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -185,7 +190,11 @@ async function notifyOfOrder(reference: string): Promise<void> {
       siteUrl: resolveSiteUrl(),
     });
     await sendNotification(subject, body);
-  } catch {
-    // The order is saved. Nothing here is worth failing it for.
+  } catch (error) {
+    // The order is saved. Nothing here is worth failing it for — but a
+    // Brevo outage is exactly what the launch checklist's "unproven" flag on
+    // notifications is waiting to catch, so it goes in the log rather than
+    // vanishing silently.
+    await logServerError("notify-of-order", error);
   }
 }

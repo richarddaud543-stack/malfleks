@@ -3,6 +3,7 @@
 import { verifySession } from "@/server/auth/dal";
 import { isAuthConfigured } from "@/server/auth/config";
 import { checkRateLimit } from "@/server/rate-limit";
+import { logServerError } from "@/server/error-log";
 import type { PartnerApplicationInput } from "@/lib/partner-application";
 
 // A handful a day is generous for a genuine applicant (one brand, maybe a
@@ -73,10 +74,11 @@ export async function submitPartnerApplication(
     await notifyOfApplication(input);
 
     return { submitted: true };
-  } catch {
+  } catch (error) {
     // Unlike an order request, there is no browser-side copy to fall back on —
     // if this fails the application does not exist anywhere. Say so, and keep
     // what they typed on screen so they can retry without re-entering it.
+    await logServerError("submit-partner-application", error, session.uid);
     return { submitted: false, reason: "unavailable" };
   }
 }
@@ -104,7 +106,9 @@ async function notifyOfApplication(input: PartnerApplicationInput): Promise<void
       siteUrl: resolveSiteUrl(),
     });
     await sendNotification(subject, body);
-  } catch {
-    // Nothing to do and nobody to tell. The application is already saved.
+  } catch (error) {
+    // Nothing to do and nobody to tell. The application is already saved —
+    // but the same Brevo-outage question `notifyOfOrder` logs applies here.
+    await logServerError("notify-of-application", error);
   }
 }

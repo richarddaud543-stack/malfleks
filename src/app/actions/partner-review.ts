@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { adminSession } from "@/server/auth/admin-session";
+import { logServerError } from "@/server/error-log";
 
 /**
  * Approving and rejecting partner applications.
@@ -46,7 +47,8 @@ export async function approvePartnerApplication(
 
     revalidatePath("/admin");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("approve-partner-application", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -65,7 +67,8 @@ export async function rejectPartnerApplication(
 
     revalidatePath("/admin");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("reject-partner-application", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }

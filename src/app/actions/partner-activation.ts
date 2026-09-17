@@ -8,6 +8,7 @@ import type {
   CourierActivationInput,
 } from "@/server/partners/activation";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
+import { logServerError } from "@/server/error-log";
 
 /**
  * Putting an approved partner into the catalogue — admin only.
@@ -78,7 +79,8 @@ export async function activateBrand(
 
     await revalidateCatalogue();
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("activate-brand", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -99,7 +101,8 @@ export async function activateCourier(
 
     await revalidateCatalogue();
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("activate-courier", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }

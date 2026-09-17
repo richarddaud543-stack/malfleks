@@ -636,6 +636,43 @@ model RateLimitHit {
   @@index([key, createdAt])
 }
 
+// A server-side error, captured where a Server Action's outer `catch` would
+// otherwise have swallowed it and told the caller only "unavailable" or
+// "failed" — see `src/server/error-log.ts`.
+//
+// Postgres, not a real error-monitoring account: Sentry (or similar) needs a
+// new paid-account signup this session cannot do on the owner's behalf, so
+// this is the fallback that ships without one. It answers the one question
+// that actually matters day to day — "did anything break, and what" — from
+// `/admin`, and can be swapped for a real provider later without touching any
+// call site, since every one of them calls the same `logServerError`.
+model ServerErrorLog {
+  id String @id @default(cuid())
+
+  /// A short, stable name for where this came from, e.g. `"submit-order"` —
+  /// the same vocabulary as `RateLimitHit.key`'s action segment, so the two
+  /// logs read as one system rather than two.
+  context String
+
+  /// `error.message`, or `String(error)` for a thrown non-Error. Truncated by
+  /// the logger before this is ever written — see its own doc comment.
+  message String
+
+  /// `error.stack`, when the thrown value had one. Absent for a thrown
+  /// non-Error and for anything the truncation dropped.
+  stack String?
+
+  /// The signed-in caller's uid, when the action had a session — never a name
+  /// or email, and never populated for a signed-out caller.
+  uid String?
+
+  createdAt DateTime @default(now())
+
+  // The only read this table has: newest first, optionally by context.
+  @@index([createdAt])
+  @@index([context, createdAt])
+}
+
 // A signed-in customer's own copy of an order request.
 //
 // ## Why this is a separate table from `Order`

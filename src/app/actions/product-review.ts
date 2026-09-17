@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { adminSession } from "@/server/auth/admin-session";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
+import { logServerError } from "@/server/error-log";
 
 /**
  * Publishing or turning down a product a partner submitted — admin only.
@@ -70,7 +71,8 @@ export async function publishProductSubmission(
 
     await revalidateCatalogue();
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("publish-product-submission", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
@@ -92,7 +94,8 @@ export async function rejectProductSubmission(
     revalidatePath("/admin/submissions");
     revalidatePath("/partner");
     return { ok: true };
-  } catch {
+  } catch (error) {
+    await logServerError("reject-product-submission", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
