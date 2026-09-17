@@ -7,6 +7,7 @@ import {
   type SaveOrderRequestFailure,
   type SaveOrderRequestInput,
 } from "./build-order-request";
+import { quoteForOrder } from "./quote-order";
 
 /**
  * Persisting an order request as a real, queryable backend record.
@@ -105,6 +106,12 @@ async function insertOrder(
   order: OrderRequest,
   customerId: string | null
 ): Promise<CreatedOrder> {
+  // Computed once, here, and never recomputed later — see the schema comment
+  // on `Order`'s quote columns. `null` when the owner hasn't set this city's
+  // delivery fee yet (true for every agent route today); the order is still
+  // created exactly as it always was, just without a fee snapshot attached.
+  const quote = quoteForOrder(order);
+
   const row = await getPrisma().order.create({
     data: {
       customerId,
@@ -132,6 +139,12 @@ async function insertOrder(
       customerAddress: order.customer.address,
       quantity: order.quantity,
       lineTotalTZS: order.lineTotalTZS,
+      quoteGoodsRungTZS: quote?.goodsRungTZS ?? null,
+      quoteDeliveryFeeTZS: quote?.deliveryFeeTZS ?? null,
+      quoteDeliveryRungTZS: quote?.deliveryRungTZS ?? null,
+      quoteDepositTZS: quote?.depositTZS ?? null,
+      quoteDoorPaymentTZS: quote?.doorPaymentTZS ?? null,
+      quoteOrderTotalTZS: quote?.orderTotalTZS ?? null,
       reference: order.reference,
       requestedAt: new Date(order.requestedAt),
     },

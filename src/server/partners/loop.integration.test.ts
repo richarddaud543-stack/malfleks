@@ -401,25 +401,34 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     expect(history.every((event) => event.actorUid === ADMIN)).toBe(true);
 
     // ---------------------------------------------------------------------
-    // 15. The money. **None of this happened.**
+    // 15. The money. **Wired, but still unquotable for this order.**
     //
-    //     A delivered order is where a marketplace settles up, so this is the
-    //     natural place to assert what MalFleks does about money — which is
-    //     nothing. `src/lib/fees` computes a complete quote and is imported by
-    //     nothing outside its own directory: no page renders it, no action
-    //     calls it, and the `Order` row below has no column to put it in.
+    //     `src/lib/fees` is now wired into `createOrder` — every order gets a
+    //     quote snapshot attempt via `quoteForOrder`
+    //     (`src/server/orders/quote-order.ts`), stored on `Order` itself
+    //     rather than nowhere. MalFleks still takes no payment: this asserts
+    //     what actually got stored for *this* order, not that nothing did.
     //
-    //     These assertions exist so that stays a decision rather than a
-    //     discovery. If someone wires the fee module into the order flow, this
-    //     block fails and they have to come here and say so.
+    //     This order is an agent route into Dar es Salaam, and the owner has
+    //     not set a delivery fee for any city yet (`CITY_DELIVERY_FEES` in
+    //     `src/lib/fees/tables.ts`), so the six quote columns below are null
+    //     together — the honest outcome, not a bug. The moment the owner sets
+    //     Dar es Salaam's fee, an order exactly like this one starts getting a
+    //     real quote with no further code change. `quote-order.test.ts` proves
+    //     that branch directly; this test proves the wiring reaches a real row
+    //     in a real database.
     // ---------------------------------------------------------------------
     const settled = await db.order.findUniqueOrThrow({ where: { id: orderId } });
 
-    // Every money word the schema knows. `lineTotalTZS` is what the customer
-    // was quoted for the goods and nothing else.
-    expect(Object.keys(settled).filter((key) => /fee|deposit|rung|payout|paid|balance/i.test(key)))
-      .toEqual([]);
     expect(settled.lineTotalTZS).toBe(320_000);
+    expect([
+      settled.quoteGoodsRungTZS,
+      settled.quoteDeliveryFeeTZS,
+      settled.quoteDeliveryRungTZS,
+      settled.quoteDepositTZS,
+      settled.quoteDoorPaymentTZS,
+      settled.quoteOrderTotalTZS,
+    ]).toEqual([null, null, null, null, null, null]);
 
     // A real quote for this delivery cannot be produced at all: the four city
     // delivery fees are unset on purpose, and `quoteOrder` refuses rather than

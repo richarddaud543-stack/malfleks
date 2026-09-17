@@ -275,6 +275,22 @@ model Order {
   quantity     Int
   lineTotalTZS Int
 
+  // ---- Money: the quote snapshot, computed once at order time ----------
+  // `src/lib/fees` (`quoteOrder`, via `quoteForOrder` in
+  // `src/server/orders/quote-order.ts`) computes this once, here, and it is
+  // never recomputed from a later fee table — the same discipline as every
+  // snapshot column above. All six are null together when no honest quote
+  // could be produced (an agent route into a city with no delivery fee set —
+  // true for every city as of 2026-09-17, see `src/lib/fees/tables.ts`),
+  // never a mix of some set and some null. MalFleks still takes no payment:
+  // this is a record of what would be owed, not a charge.
+  quoteGoodsRungTZS    Int?
+  quoteDeliveryFeeTZS  Int?
+  quoteDeliveryRungTZS Int?
+  quoteDepositTZS      Int?
+  quoteDoorPaymentTZS  Int?
+  quoteOrderTotalTZS   Int?
+
   // Read aloud to a branch on the phone (see `generateOrderReference` in
   // src/lib/order.ts), so it has to be unambiguous — and now that it
   // outlives a browser tab, it also has to be unique. The alphabet is 28
