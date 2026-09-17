@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { Geist, Geist_Mono, Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/layout/Navbar";
@@ -65,6 +66,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </main>
           <Footer />
         </SmoothScrollProvider>
+        {/* Vercel Web Analytics. Same root layout serves both the public
+            `malfleks` deployment and the hostname-gated `malfleks-admin`
+            one, so this one addition covers both — the script reports to
+            whichever Vercel project the running deployment belongs to,
+            resolved from Vercel's own build-time environment, never
+            configured here. A no-op locally and on any non-Vercel host. */}
+        <Analytics />
       </body>
     </html>
   );
