@@ -1,8 +1,19 @@
 import { describe, it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import ProductIcon from "./ProductIcon";
+import { PRODUCT_ICON_KEYS } from "@/lib/product-icons";
 
 describe("ProductIcon", () => {
+  // Every key `product-icons.ts` lists must actually have a hand-drawn entry
+  // in this component's `icons` map — that pairing is normally enforced by
+  // TypeScript (`Record<ProductIconKey, ...>`), but this catches the one
+  // thing the type system can't: an entry present but empty (no <path>s), so
+  // a real key silently renders a blank square instead of a picture.
+  it.each(PRODUCT_ICON_KEYS)("renders %s with at least one path", (key) => {
+    const { container } = render(<ProductIcon icon={key} />);
+    expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
+  });
+
   it("renders a known icon key without crashing", () => {
     const { container } = render(<ProductIcon icon="sedan" />);
     expect(container.querySelector("svg")).toBeTruthy();

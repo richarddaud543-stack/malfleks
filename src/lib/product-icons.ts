@@ -20,8 +20,9 @@
  * drawing one without listing it — is a type error rather than a blank square.
  *
  * Order matters: this is the order the partner's picture chooser renders in, so
- * it runs devices → audio → power → connectivity → vehicles rather than
- * alphabetically.
+ * it runs devices → audio → power → connectivity → screens/capture/gaming →
+ * vehicles (four wheels, then two) → home & backup-power appliances, rather
+ * than alphabetically.
  */
 export const PRODUCT_ICON_KEYS = [
   "smartphone",
@@ -36,10 +37,22 @@ export const PRODUCT_ICON_KEYS = [
   "cable",
   "router",
   "simcard",
+  "tv",
+  "camera",
+  "console",
+  "printer",
   "sedan",
   "suv",
   "pickup",
   "van",
+  "motorcycle",
+  "bicycle",
+  "generator",
+  "fridge",
+  "ac",
+  "fan",
+  "microwave",
+  "gas-cylinder",
 ] as const;
 
 export type ProductIconKey = (typeof PRODUCT_ICON_KEYS)[number];
@@ -58,12 +71,66 @@ export const PRODUCT_ICON_LABELS: Record<ProductIconKey, string> = {
   cable: "Charging cable",
   router: "Router",
   simcard: "SIM card",
+  tv: "TV",
+  camera: "Camera",
+  console: "Game console",
+  printer: "Printer",
   sedan: "Car — sedan",
   suv: "Car — SUV",
   pickup: "Pickup truck",
   van: "Van",
+  motorcycle: "Motorcycle",
+  bicycle: "Bicycle",
+  generator: "Generator",
+  fridge: "Fridge",
+  ac: "Air conditioner",
+  fan: "Fan",
+  microwave: "Microwave",
+  "gas-cylinder": "Gas cylinder",
 };
 
 export function isProductIconKey(value: string): value is ProductIconKey {
   return (PRODUCT_ICON_KEYS as readonly string[]).includes(value);
 }
+
+/**
+ * Search terms a partner might actually type — brand/model names, local
+ * usage (`boda` for a motorcycle, `friji` for a fridge), and synonyms — that
+ * point back to one icon key. This is what `matchProductIcons` (see
+ * `product-icon-match.ts`) ranks against as the partner types their product's
+ * name and category, so the right icon can surface before they've finished
+ * typing rather than making them scan the whole grid.
+ *
+ * Keep this list generous rather than tidy: a term that matches nothing costs
+ * nothing, a term that's missing costs the partner a scroll.
+ */
+export const PRODUCT_ICON_KEYWORDS: Record<ProductIconKey, string[]> = {
+  smartphone: ["phone", "smartphone", "iphone", "android", "samsung", "mobile", "cell", "galaxy"],
+  tablet: ["tablet", "ipad", "tab"],
+  laptop: ["laptop", "macbook", "notebook", "computer", "pc", "chromebook"],
+  smartwatch: ["watch", "smartwatch", "fitness band", "wearable", "band"],
+  earbuds: ["earbuds", "airpods", "buds", "earphones", "in-ear"],
+  headphones: ["headphones", "headset", "over-ear", "cans"],
+  speaker: ["speaker", "bluetooth speaker", "boombox", "sound", "soundbar"],
+  powerbank: ["power bank", "powerbank", "battery pack", "portable charger"],
+  charger: ["charger", "adapter", "plug", "wall charger", "fast charger"],
+  cable: ["cable", "cord", "usb cable", "charging cable", "lightning cable", "type-c"],
+  router: ["router", "wifi", "modem", "hotspot", "internet"],
+  simcard: ["sim", "sim card", "simu", "line", "starter pack"],
+  tv: ["tv", "television", "smart tv", "screen"],
+  camera: ["camera", "dslr", "mirrorless", "gopro", "action cam", "camcorder"],
+  console: ["console", "playstation", "xbox", "game", "gaming", "controller", "ps5", "ps4", "nintendo"],
+  printer: ["printer", "print", "inkjet", "laser printer", "scanner"],
+  sedan: ["sedan", "saloon", "corolla", "camry", "car", "3 series", "1 series", "5 series", "focus"],
+  suv: ["suv", "land cruiser", "prado", "rav4", "x1", "x3", "x5", "territory", "everest", "crossover"],
+  pickup: ["pickup", "hilux", "ranger", "double cab", "truck", "bakkie", "raptor"],
+  van: ["van", "hiace", "transit", "minibus", "daladala"],
+  motorcycle: ["motorcycle", "motorbike", "bike", "boda", "boda boda", "bajaj", "scooter", "piki piki"],
+  bicycle: ["bicycle", "bike", "cycle", "baiskeli", "pushbike"],
+  generator: ["generator", "genset", "jenereta", "standby power", "backup power"],
+  fridge: ["fridge", "refrigerator", "freezer", "friji"],
+  ac: ["ac", "air conditioner", "aircon", "split unit", "cooling"],
+  fan: ["fan", "stand fan", "pedestal fan", "ceiling fan", "feni"],
+  microwave: ["microwave", "microwave oven", "oven"],
+  "gas-cylinder": ["gas cylinder", "cooking gas", "lpg", "gas cooker", "mtungi"],
+};

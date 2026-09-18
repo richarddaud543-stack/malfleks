@@ -246,6 +246,134 @@ const icons: Record<
       </>
     ),
   },
+  motorcycle: {
+    contour: (
+      <>
+        <path d="M10 32a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0 -11Z" />
+        <path d="M34 32a5.5 5.5 0 1 0 0 11a5.5 5.5 0 1 0 0 -11Z" />
+        <path d="M10 32 16 22h8l3-8h4l4 8-1 10" />
+        <path d="M19 24h6a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-6a1.5 1.5 0 0 1-1.5-1.5v-3a1.5 1.5 0 0 1 1.5-1.5Z" />
+      </>
+    ),
+    accent: <path d="M34.5 20h0" />,
+  },
+  bicycle: {
+    contour: (
+      <>
+        <path d="M9 30a6 6 0 1 0 0 12a6 6 0 1 0 0 -12Z" />
+        <path d="M33 30a6 6 0 1 0 0 12a6 6 0 1 0 0 -12Z" />
+        <path d="M9 30 17 15h6" />
+        <path d="M17 15 23 30h10" />
+        <path d="M23 30 27 15h4" />
+      </>
+    ),
+    accent: <path d="M14 10h6" />,
+  },
+  tv: {
+    contour: (
+      <>
+        <path d="M9 6h26a3 3 0 0 1 3 3v18a3 3 0 0 1-3 3H9a3 3 0 0 1-3-3V9a3 3 0 0 1 3-3Z" />
+        <path d="M16 38h12M22 30v8" />
+      </>
+    ),
+    accent: <path d="M9 32h0" />,
+  },
+  camera: {
+    contour: (
+      <>
+        <path d="M6 15h6l2.5-3.5h11L28 15h10a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V17a2 2 0 0 1 2-2Z" />
+        <path d="M22 21a6 6 0 1 0 0 12a6 6 0 1 0 0 -12Z" />
+      </>
+    ),
+    accent: <path d="M33 18.5h0" />,
+  },
+  console: {
+    contour: (
+      <>
+        <path d="M14 16h16a6 6 0 0 1 6 6a6 6 0 0 1-6 6h-2l-2-2h-8l-2 2h-2a6 6 0 0 1-6-6a6 6 0 0 1 6-6Z" />
+        <path d="M16 22h4M18 20v4" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M28 20.3h0" />
+        <path d="M31 23.3h0" />
+      </>
+    ),
+  },
+  printer: {
+    contour: (
+      <>
+        <path d="M10 16h24a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-3v6H13v-6h-3a3 3 0 0 1-3-3v-9a3 3 0 0 1 3-3Z" />
+        <path d="M14 16V6h16v10" />
+        <path d="M14 31h16v6H14Z" />
+      </>
+    ),
+    accent: <path d="M32 21h0" />,
+  },
+  generator: {
+    contour: (
+      <>
+        <path d="M8 16h20a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3V19a3 3 0 0 1 3-3Z" />
+        <path d="M14 16v-3a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v3" />
+        <path d="M10 32v3M26 32v3" />
+        <path d="M31 19h5a2 2 0 0 1 2 2v3" />
+      </>
+    ),
+    accent: <path d="M12 22a1.3 1.3 0 1 0 0 2.6a1.3 1.3 0 1 0 0 -2.6Z" />,
+  },
+  fridge: {
+    contour: (
+      <>
+        <path d="M11 4h22a2 2 0 0 1 2 2v32a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z" />
+        <path d="M9 17h26" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M28 8v5" />
+        <path d="M28 21v5" />
+      </>
+    ),
+  },
+  ac: {
+    contour: (
+      <>
+        <path d="M6 12h32a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H6a3 3 0 0 1-3-3v-6a3 3 0 0 1 3-3Z" />
+        <path d="M11 24v3M33 24v3" />
+      </>
+    ),
+    accent: <path d="M14 18h4M20 18h4M26 18h4" />,
+  },
+  fan: {
+    contour: (
+      <>
+        <path d="M22 22a7.5 7.5 0 1 0 0 15a7.5 7.5 0 1 0 0 -15Z" />
+        <path d="M18.5 6a4 4 0 0 1 3.5 4v8.5a4 4 0 0 1-3.5-4Z" />
+        <path d="M38 18.5a4 4 0 0 1-4 3.5h-8.5a4 4 0 0 1 4-3.5Z" />
+        <path d="M22 39v3M17 42h10" />
+      </>
+    ),
+    accent: <path d="M22 27.5a2 2 0 1 0 0 4a2 2 0 1 0 0 -4Z" />,
+  },
+  microwave: {
+    contour: (
+      <>
+        <path d="M6 12h32a2 2 0 0 1 2 2v18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V14a2 2 0 0 1 2-2Z" />
+        <path d="M10 16h16a1.5 1.5 0 0 1 1.5 1.5v11a1.5 1.5 0 0 1-1.5 1.5H10a1.5 1.5 0 0 1-1.5-1.5v-11a1.5 1.5 0 0 1 1.5-1.5Z" />
+      </>
+    ),
+    accent: <path d="M33 20h0M33 24h0M33 28h0" />,
+  },
+  "gas-cylinder": {
+    contour: (
+      <>
+        <path d="M14 14h16v20a6 6 0 0 1-6 6h-4a6 6 0 0 1-6-6V14Z" />
+        <path d="M17 14v-4a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v4" />
+      </>
+    ),
+    accent: <path d="M20 6.5h4" />,
+  },
 };
 
 export default function ProductIcon({

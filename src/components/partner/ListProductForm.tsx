@@ -11,6 +11,7 @@ import {
   PRODUCT_ICON_KEYS,
   PRODUCT_ICON_LABELS,
 } from "@/lib/product-icons";
+import { matchProductIcons } from "@/lib/product-icon-match";
 import {
   MAX_DESCRIPTION,
   emptyProductListing,
@@ -178,6 +179,12 @@ export default function ListProductForm() {
     ? formatTZS(Number(input.price.replace(/[,\s]/g, "")))
     : null;
 
+  // Ranked as they type the name and category — see `matchProductIcons` for
+  // the scoring. Empty until either field has something worth matching
+  // against, so a blank form shows the full grid rather than an empty
+  // "Suggested" row with nothing in it.
+  const suggestedIcons = matchProductIcons(`${input.name} ${input.category}`);
+
   return (
     <form
       ref={formRef}
@@ -277,7 +284,48 @@ export default function ListProductForm() {
             Shown until — or unless — you add a real photo below. Choose the
             closest one either way.
           </p>
-          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5">
+          {suggestedIcons.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                Suggested for &ldquo;{input.name || input.category}&rdquo;
+              </p>
+              <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
+                {suggestedIcons.map((key) => {
+                  const selected = input.image === key;
+                  return (
+                    <label
+                      key={`suggested-${key}`}
+                      className={`flex cursor-pointer flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-colors ${
+                        selected
+                          ? "border-accent bg-accent/5"
+                          : "border-accent/40 bg-accent/[0.03] hover:border-accent/70"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="image"
+                        value={key}
+                        checked={selected}
+                        onChange={() => update({ image: key })}
+                        className="sr-only"
+                      />
+                      <ProductIcon
+                        icon={key}
+                        className={`h-8 w-8 ${selected ? "text-accent" : "text-foreground/70"}`}
+                      />
+                      <span className="text-[11px] leading-tight text-muted">
+                        {PRODUCT_ICON_LABELS[key]}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <p className="mt-4 text-[11px] font-medium uppercase tracking-wide text-muted">
+            {suggestedIcons.length > 0 ? "All pictures" : "Choose one"}
+          </p>
+          <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
             {PRODUCT_ICON_KEYS.map((key) => {
               const selected = input.image === key;
               return (
