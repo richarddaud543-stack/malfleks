@@ -44,6 +44,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.5",
+    "autoskills": "^0.3.6",
     "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.0",
