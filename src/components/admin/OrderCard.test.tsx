@@ -14,10 +14,12 @@ import type { ListedOrder } from "@/server/orders/list-orders";
 const confirmOrder = vi.fn();
 const cancelOrder = vi.fn();
 const markOrderFulfilled = vi.fn();
+const sendPaymentLink = vi.fn();
 vi.mock("@/app/actions/orders", () => ({
   confirmOrder: (...args: unknown[]) => confirmOrder(...args),
   cancelOrder: (...args: unknown[]) => cancelOrder(...args),
   markOrderFulfilled: (...args: unknown[]) => markOrderFulfilled(...args),
+  sendPaymentLink: (...args: unknown[]) => sendPaymentLink(...args),
 }));
 
 const ORDER: ListedOrder = {
@@ -45,6 +47,7 @@ const ORDER: ListedOrder = {
   decisionNote: null,
   requestedAt: new Date("2026-08-20").toISOString(),
   createdAt: new Date("2026-08-20").toISOString(),
+  payment: null,
 };
 
 function renderCard(order: ListedOrder = ORDER) {
@@ -55,9 +58,11 @@ beforeEach(() => {
   confirmOrder.mockReset();
   cancelOrder.mockReset();
   markOrderFulfilled.mockReset();
+  sendPaymentLink.mockReset();
   confirmOrder.mockResolvedValue({ ok: true });
   cancelOrder.mockResolvedValue({ ok: true });
   markOrderFulfilled.mockResolvedValue({ ok: true });
+  sendPaymentLink.mockResolvedValue({ ok: true, checkoutLink: "https://pay.example/x", reused: false });
 });
 
 describe("OrderCard — pending order", () => {

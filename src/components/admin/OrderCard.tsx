@@ -5,6 +5,7 @@ import {
   cancelOrder,
   confirmOrder,
   markOrderFulfilled,
+  sendPaymentLink,
 } from "@/app/actions/orders";
 import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 import type { ListedOrder } from "@/server/orders/list-orders";
@@ -37,7 +38,7 @@ function timeAgo(iso: string): string {
  * name in the cancelling flow.
  */
 
-type Mode = "idle" | "confirming" | "fulfilling" | "cancelling";
+type Mode = "idle" | "confirming" | "fulfilling" | "cancelling" | "paying";
 
 const STATUS_STYLE: Record<string, string> = {
   pending: "bg-accent/10 text-accent",
@@ -45,6 +46,37 @@ const STATUS_STYLE: Record<string, string> = {
   fulfilled: "bg-emerald-600/10 text-emerald-600",
   cancelled: "bg-red-600/10 text-red-600",
 };
+
+const PAYMENT_STYLE: Record<string, string> = {
+  pending: "bg-accent/10 text-accent",
+  captured: "bg-emerald-600/10 text-emerald-600",
+  failed: "bg-red-600/10 text-red-600",
+};
+
+const PAYMENT_LABEL: Record<string, string> = {
+  pending: "payment link sent",
+  captured: "paid",
+  failed: "payment failed",
+};
+
+function paymentErrorMessage(reason: string | undefined): string {
+  switch (reason) {
+    case "wrong-status":
+      return "Only a confirmed order can be sent a payment link.";
+    case "unquotable":
+      return "No delivery fee is set for this route yet, so there's no total to charge.";
+    case "already-paid":
+      return "This order is already paid.";
+    case "checkout-link-failed":
+      return "ClickPesa didn't return a checkout link. Try again in a moment.";
+    case "not-found":
+      return "This order no longer exists.";
+    case "forbidden":
+      return "Your session no longer has admin access. Sign in again.";
+    default:
+      return "Couldn't create a payment link. Nothing changed — try again.";
+  }
+}
 
 function errorMessage(reason: string | undefined): string {
   switch (reason) {
@@ -71,6 +103,9 @@ export default function OrderCard({
   const [mode, setMode] = useState<Mode>("idle");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [paymentLink, setPaymentLink] = useState<string | null>(
+    order.payment?.status === "pending" ? order.payment.checkoutLink : null
+  );
   const [pending, startTransition] = useTransition();
 
   function run(work: () => Promise<{ ok: boolean; reason?: string }>) {
@@ -80,6 +115,19 @@ export default function OrderCard({
       setMode("idle");
       if (result.ok) return; // revalidatePath refreshes the badge and controls
       setError(errorMessage(result.reason));
+    });
+  }
+
+  function runPayment() {
+    setError(null);
+    startTransition(async () => {
+      const result = await sendPaymentLink(order.id);
+      setMode("idle");
+      if (result.ok) {
+        setPaymentLink(result.checkoutLink);
+        return;
+      }
+      setError(paymentErrorMessage(result.reason));
     });
   }
 
@@ -98,6 +146,15 @@ export default function OrderCard({
             >
               {order.status}
             </span>
+            {order.payment && (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                  PAYMENT_STYLE[order.payment.status] ?? "bg-border/40 text-muted"
+                }`}
+              >
+                {PAYMENT_LABEL[order.payment.status] ?? order.payment.status}
+              </span>
+            )}
             <span className="font-mono">{order.reference}</span>
           </p>
           <h3 className="font-display mt-1 text-lg font-medium">
@@ -195,6 +252,18 @@ export default function OrderCard({
         </div>
       )}
 
+      {paymentLink && (
+        <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
+          <p className="text-xs text-muted">
+            Payment link — copy and send this to the customer yourself
+            (SMS/WhatsApp). Nothing here sends it for you.
+          </p>
+          <p className="mt-1.5 break-all font-mono text-xs text-foreground select-all">
+            {paymentLink}
+          </p>
+        </div>
+      )}
+
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-600">
           {error}
@@ -237,6 +306,18 @@ export default function OrderCard({
               >
                 Mark fulfilled
               </button>
+              {order.payment?.status !== "captured" && (
+                <button
+                  type="button"
+                  onClick={() => setMode("paying")}
+                  aria-label={`Send a payment link for ${order.reference}`}
+                  className="rounded-full border border-accent-2 px-4 py-1.5 text-sm font-medium text-accent-2 transition-colors hover:bg-accent-2 hover:text-background"
+                >
+                  {order.payment?.status === "pending"
+                    ? "View payment link"
+                    : "Send payment link"}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setMode("cancelling")}
@@ -244,6 +325,32 @@ export default function OrderCard({
                 className="rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-red-600/40 hover:text-red-600"
               >
                 Cancel
+              </button>
+            </>
+          )}
+
+          {mode === "paying" && (
+            <>
+              <span className="mr-auto text-sm text-muted">
+                Create a ClickPesa payment link for {order.reference}? You send it
+                to the customer yourself — nothing here does that automatically.
+              </span>
+              <button
+                type="button"
+                onClick={() => setMode("idle")}
+                disabled={pending}
+                className="rounded-full border border-border px-4 py-1.5 text-sm text-muted disabled:opacity-50"
+              >
+                Back
+              </button>
+              <button
+                type="button"
+                disabled={pending}
+                onClick={runPayment}
+                aria-label={`Yes, create a payment link for ${order.reference}`}
+                className="rounded-full border border-accent-2 bg-accent-2 px-4 py-1.5 text-sm font-medium text-background disabled:opacity-50"
+              >
+                {pending ? "Creating…" : "Yes, create link"}
               </button>
             </>
           )}

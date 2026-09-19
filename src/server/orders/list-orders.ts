@@ -44,6 +44,14 @@ export interface ListedOrder {
 
   requestedAt: string;
   createdAt: string;
+
+  /**
+   * The most recent `OrderPayment` attempt against this order, if any --
+   * `null` for every pre-escrow order and for a `pending`/`cancelled` order
+   * nobody has requested payment for yet. Added 19 Sep 2026 so
+   * `/admin/orders` can show payment state without a second query per card.
+   */
+  payment: { status: string; checkoutLink: string | null } | null;
 }
 
 export interface ListOrdersFilter {
@@ -80,6 +88,7 @@ function serialise(row: {
   id: string;
   status: string;
   reference: string;
+  payments: { status: string; checkoutLink: string | null }[];
   customerId: string | null;
   customerFullName: string;
   customerPhone: string;
@@ -102,11 +111,15 @@ function serialise(row: {
   requestedAt: Date;
   createdAt: Date;
 }): ListedOrder {
+  const { payments, ...rest } = row;
   return {
-    ...row,
+    ...rest,
     decidedAt: row.decidedAt ? row.decidedAt.toISOString() : null,
     requestedAt: row.requestedAt.toISOString(),
     createdAt: row.createdAt.toISOString(),
+    payment: payments[0]
+      ? { status: payments[0].status, checkoutLink: payments[0].checkoutLink }
+      : null,
   };
 }
 
@@ -133,6 +146,13 @@ export async function listOrders(
     },
     orderBy: { createdAt: "desc" },
     take: limit,
+    include: {
+      payments: {
+        orderBy: { initiatedAt: "desc" },
+        take: 1,
+        select: { status: true, checkoutLink: true },
+      },
+    },
   });
   return rows.map(serialise);
 }

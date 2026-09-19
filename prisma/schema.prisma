@@ -325,6 +325,12 @@ model Order {
   /// See `DeliveryPing`.
   deliveryPings DeliveryPing[]
 
+  /// Captured-or-attempted payments against this order. See `OrderPayment`.
+  payments OrderPayment[]
+
+  /// Money movements in or out of MalFleks's held balance for this order. See `LedgerEntry`.
+  ledgerEntries LedgerEntry[]
+
   // What an admin or branch view would query by: orders waiting on a
   // decision, a branch's own orders, newest first.
   @@index([status])
@@ -412,6 +418,116 @@ model DeliveryPing {
 
   // The only read this table has: one order's pings, newest first.
   @@index([orderId, createdAt])
+}
+
+// One captured-or-attempted payment against an order -- the money actually
+// collected from the customer via the merchant account (ClickPesa). Distinct
+// from Order's quote* snapshot columns, which only ever recorded what would
+// be owed; this records what was actually taken, when, and by which provider
+// reference. Same "evidence vs projection" split Order's own quote columns
+// already draw against src/lib/fees -- extended to the collection itself.
+// See malfleks-escrow-ledger-design.md.
+//
+// Multiple rows per order are expected and fine: a declined or timed-out
+// mobile money prompt is a real, retryable event, not an error to hide. At
+// most one row per order should ever reach "captured" -- enforced at the
+// write site (a guarded update, same discipline as status.ts), not by a
+// partial unique index.
+model OrderPayment {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // The provider's own transaction id -- ClickPesa's paymentReference.
+  // Unique so a webhook retry can never double-record the same collection.
+  providerRef String @unique
+  provider    String // "clickpesa" today; text, not enum -- same convention as Order.status
+
+  // The FULL quoteOrderTotalTZS, not depositTZS. Snapshotted from the quote
+  // at checkout-initiation time, same discipline as Order's own quote*
+  // columns: never recomputed from a later fee table.
+  amountTZS Int
+
+  // The ClickPesa hosted-checkout URL returned at creation, stored so an
+  // admin re-opening this order (or clicking "Send payment link" again)
+  // doesn't need a second ClickPesa call -- ClickPesa 409s on a repeat
+  // `orderReference`, and the pre-KYC account also caps API calls/day.
+  checkoutLink String?
+
+  status String @default("pending") // pending | captured | failed
+
+  initiatedAt DateTime  @default(now())
+  capturedAt  DateTime?
+  failedAt    DateTime?
+  failureNote String?
+
+  ledgerEntries LedgerEntry[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+// One money movement in or out of MalFleks's held balance for an order --
+// append-only, the exact discipline OrderEvent already states on itself.
+// Nothing here updates or deletes a row; a mistake is corrected with a
+// reversing entry, never an edit. See malfleks-escrow-ledger-design.md.
+model LedgerEntry {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  paymentId String?
+  payment   OrderPayment? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+
+  // Closed vocabulary, enforced in code (like Order.status), not a DB enum:
+  // "collected" | "branch_payout" | "courier_payout" | "malfleks_fee" |
+  // "refund" | "reversal"
+  kind String
+
+  // Always positive. Direction is implied by `kind`, not by sign.
+  amountTZS Int
+
+  // Set once this entry has been grouped into a disbursement run. Null
+  // until then. Only branch_payout and courier_payout entries ever get one.
+  payoutBatchId String?
+  payoutBatch   PayoutBatch? @relation(fields: [payoutBatchId], references: [id], onDelete: SetNull)
+
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([kind])
+  @@index([payoutBatchId])
+}
+
+// One disbursement run to one payee (a branch or a courier), covering every
+// un-batched LedgerEntry accrued for them. See malfleks-escrow-ledger-design.md.
+model PayoutBatch {
+  id String @id @default(cuid())
+
+  payeeType String // "branch" | "agent"
+  // Branch.id or DeliveryAgent.id. Deliberately no FK -- a batch is a record
+  // of money that moved and must survive the payee record being edited or
+  // deleted, the same reasoning Order's own loose catalogue references
+  // already state.
+  payeeId   String
+
+  totalTZS Int
+  status   String @default("pending") // pending | paid | failed
+
+  providerRef String?   @unique // set once the disbursement actually goes out
+  paidAt      DateTime?
+  failedAt    DateTime?
+  failureNote String?
+
+  createdAt DateTime @default(now())
+
+  entries LedgerEntry[]
+
+  @@index([payeeType, payeeId])
+  @@index([status])
 }
 
 // A brand branch or a courier asking to join MalFleks.

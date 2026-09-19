@@ -8,6 +8,10 @@ import { checkRateLimit, clientIp } from "@/server/rate-limit";
 import { logServerError } from "@/server/error-log";
 import type { TransitionBlocker } from "@/server/orders/status";
 import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
+import {
+  requestPaymentForOrder,
+  type RequestPaymentFailure,
+} from "@/server/orders/create-order-with-payment";
 
 /**
  * Persisting an order request as a real backend record.
@@ -163,6 +167,36 @@ export async function markOrderFulfilled(
     return { ok: true };
   } catch (error) {
     await logServerError("mark-order-fulfilled", error, session.uid);
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
+/**
+ * Admin clicks "Send payment link" on an order already `confirmed` --
+ * generates (or reuses) a ClickPesa hosted-checkout URL for the full
+ * `quoteOrderTotalTZS`, and hands it back for the admin to copy and send
+ * themselves. See `requestPaymentForOrder`'s own doc comment in
+ * `create-order-with-payment.ts` for exactly what this does and, just as
+ * importantly, what it deliberately does not do: it never moves
+ * `Order.status`, and it is not reachable from anywhere a signed-out
+ * customer or the order-submission flow could trigger it.
+ */
+export type SendPaymentLinkResult =
+  | { ok: true; checkoutLink: string; reused: boolean }
+  | { ok: false; reason: "forbidden" | "unavailable" | RequestPaymentFailure };
+
+export async function sendPaymentLink(
+  orderId: string
+): Promise<SendPaymentLinkResult> {
+  const session = await requireAdminSession();
+  if (!session) return { ok: false, reason: "forbidden" };
+
+  try {
+    const outcome = await requestPaymentForOrder(orderId);
+    if (!outcome.ok) return { ok: false, reason: outcome.reason };
+    return { ok: true, checkoutLink: outcome.checkoutLink, reused: outcome.reused };
+  } catch (error) {
+    await logServerError("send-payment-link", error, session.uid);
     return { ok: false, reason: "unavailable" };
   }
 }
