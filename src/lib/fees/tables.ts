@@ -129,13 +129,19 @@ export const BRAND_FLEET_EARNS_DELIVERY_RUNG = false;
 /**
  * A minimum order value, below which MalFleks will not take an order at all.
  *
- * OWNER_DEFAULT — open question 4 in §5, "The bottom rung". The cheapest
- * product in the catalogue is TZS 2,000 and a 500 TZS fee on it is 25%. The
- * document offers three ways out: accept it, add a narrower first rung, or set
- * a minimum order value. `null` is "accept it", which is today's behaviour and
- * the only one of the three that invents no number.
+ * DECIDED 18 Sep 2026 — open question 4 in §5, "The bottom rung". The
+ * cheapest product in the catalogue is TZS 2,000 and a 500 TZS fee on it is
+ * 25%. Of the three ways out the document offered — accept it, a narrower
+ * first rung, or a minimum order value — the owner chose a minimum order
+ * value: it says the marketplace is not for single earbuds, which is
+ * probably true anyway given a courier trip does not make sense for a
+ * 2,000 TZS item either way. Enforced in `validateOrderRequest`
+ * (`src/lib/order.ts`) against the goods line total, independent of
+ * `quoteOrder` below — it blocks the order outright rather than merely
+ * skipping the fee quote, so it holds even while every city's delivery fee
+ * is still unset and every quote is null anyway.
  */
-export const MINIMUM_ORDER_VALUE_TZS: TZS | null = null;
+export const MINIMUM_ORDER_VALUE_TZS: TZS | null = 5_000;
 
 /**
  * A weight or size surcharge on delivery.

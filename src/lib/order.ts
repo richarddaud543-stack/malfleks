@@ -6,7 +6,8 @@ import type {
   DeliveryEta,
   Product,
 } from "@/data";
-import { formatEta } from "./format";
+import { formatEta, formatTZS } from "./format";
+import { MINIMUM_ORDER_VALUE_TZS } from "@/lib/fees";
 
 /**
  * Order request logic.
@@ -298,7 +299,8 @@ const MIN_ADDRESS_LENGTH = 6;
 
 export function validateOrderRequest(
   input: OrderRequestInput,
-  route: DeliveryRoute
+  route: DeliveryRoute,
+  unitPriceTZS: number
 ): OrderValidation {
   const errors: OrderErrors = {};
 
@@ -312,6 +314,14 @@ export function validateOrderRequest(
     errors.quantity = "Quantity must be at least 1.";
   } else if (rawQuantity > MAX_QUANTITY) {
     errors.quantity = `For more than ${MAX_QUANTITY} units, contact the branch directly.`;
+  } else if (
+    MINIMUM_ORDER_VALUE_TZS !== null &&
+    rawQuantity * unitPriceTZS < MINIMUM_ORDER_VALUE_TZS
+  ) {
+    // A whole-order rule, not really about the quantity field — but it's the
+    // one thing the customer can change to fix it, and reusing `quantity`
+    // avoids inventing a new error slot `OrderErrors`/the form don't have.
+    errors.quantity = `MalFleks orders start at ${formatTZS(MINIMUM_ORDER_VALUE_TZS)}. Add more to reach the minimum.`;
   }
   const quantity = parseQuantity(input.quantity);
 

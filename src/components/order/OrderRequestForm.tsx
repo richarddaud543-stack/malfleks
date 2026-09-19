@@ -67,7 +67,7 @@ export default function OrderRequestForm({
     const next = { ...input, ...patch };
     setInput(next);
     if (attempted) {
-      const result = validateOrderRequest(next, route);
+      const result = validateOrderRequest(next, route, product.priceTZS);
       setErrors(result.ok ? {} : result.errors);
     }
   }
@@ -87,7 +87,7 @@ export default function OrderRequestForm({
     event.preventDefault();
     setAttempted(true);
 
-    const result = validateOrderRequest(input, route);
+    const result = validateOrderRequest(input, route, product.priceTZS);
     if (!result.ok) {
       setErrors(result.errors);
       // The inputs are already in the DOM — only their aria state changes — so

@@ -319,9 +319,14 @@ describe("formatPhone", () => {
   });
 });
 
+// Toyota-range price, comfortably above MINIMUM_ORDER_VALUE_TZS, so these
+// cases exercise the rest of validation without tripping the minimum-order
+// check by accident.
+const UNIT_PRICE_TZS = 68_000_000;
+
 describe("validateOrderRequest", () => {
   it("accepts a complete brand-delivered request", () => {
-    const result = validateOrderRequest(input({ quantity: "2" }), brandRoute);
+    const result = validateOrderRequest(input({ quantity: "2" }), brandRoute, UNIT_PRICE_TZS);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.value.quantity).toBe(2);
@@ -333,7 +338,8 @@ describe("validateOrderRequest", () => {
   it("trims the free-text fields it keeps", () => {
     const result = validateOrderRequest(
       input({ fullName: "  Neema Mushi  ", address: "  Sokoine Road  " }),
-      brandRoute
+      brandRoute,
+      UNIT_PRICE_TZS
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -342,14 +348,15 @@ describe("validateOrderRequest", () => {
   });
 
   it("requires an agent on an agent route and resolves the chosen one", () => {
-    const missing = validateOrderRequest(input(), agentRoute);
+    const missing = validateOrderRequest(input(), agentRoute, UNIT_PRICE_TZS);
     expect(missing.ok).toBe(false);
     if (missing.ok) return;
     expect(missing.errors.agentId).toMatch(/select an agent/i);
 
     const chosen = validateOrderRequest(
       input({ agentId: "arusha-swift-couriers" }),
-      agentRoute
+      agentRoute,
+      UNIT_PRICE_TZS
     );
     expect(chosen.ok).toBe(true);
     if (!chosen.ok) return;
@@ -359,7 +366,8 @@ describe("validateOrderRequest", () => {
   it("rejects an agent that does not serve this branch's city", () => {
     const result = validateOrderRequest(
       input({ agentId: "mwanza-express-riders" }),
-      agentRoute
+      agentRoute,
+      UNIT_PRICE_TZS
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -369,7 +377,8 @@ describe("validateOrderRequest", () => {
   it("drops a stray agent choice on a brand route instead of failing", () => {
     const result = validateOrderRequest(
       input({ agentId: "fargo-courier" }),
-      brandRoute
+      brandRoute,
+      UNIT_PRICE_TZS
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -378,7 +387,7 @@ describe("validateOrderRequest", () => {
 
   it("explains each way a quantity can be wrong", () => {
     const errorFor = (quantity: string) => {
-      const result = validateOrderRequest(input({ quantity }), brandRoute);
+      const result = validateOrderRequest(input({ quantity }), brandRoute, UNIT_PRICE_TZS);
       return result.ok ? undefined : result.errors.quantity;
     };
 
@@ -392,8 +401,8 @@ describe("validateOrderRequest", () => {
   });
 
   it("distinguishes a missing phone from an implausible one", () => {
-    const blank = validateOrderRequest(input({ phone: "  " }), brandRoute);
-    const wrong = validateOrderRequest(input({ phone: "12345" }), brandRoute);
+    const blank = validateOrderRequest(input({ phone: "  " }), brandRoute, UNIT_PRICE_TZS);
+    const wrong = validateOrderRequest(input({ phone: "12345" }), brandRoute, UNIT_PRICE_TZS);
     expect(blank.ok).toBe(false);
     expect(wrong.ok).toBe(false);
     if (blank.ok || wrong.ok) return;
@@ -404,7 +413,8 @@ describe("validateOrderRequest", () => {
   it("requires a real name and a findable address", () => {
     const result = validateOrderRequest(
       input({ fullName: "N", address: "12" }),
-      brandRoute
+      brandRoute,
+      UNIT_PRICE_TZS
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -415,7 +425,8 @@ describe("validateOrderRequest", () => {
   it("reports every broken field at once, not just the first", () => {
     const result = validateOrderRequest(
       { quantity: "0", fullName: "", phone: "", address: "", agentId: null },
-      agentRoute
+      agentRoute,
+      UNIT_PRICE_TZS
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -426,6 +437,29 @@ describe("validateOrderRequest", () => {
       "phone",
       "quantity",
     ]);
+  });
+
+  it("blocks an order below the minimum order value, even with an otherwise valid quantity", () => {
+    // 2,000 TZS unit price x 2 = 4,000 TZS, under the 5,000 TZS minimum.
+    const result = validateOrderRequest(input({ quantity: "2" }), brandRoute, 2_000);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.quantity).toMatch(/orders start at/i);
+  });
+
+  it("does not block a quantity below the minimum on its own quantity-range checks", () => {
+    // A single unit at 2,000 TZS is still a valid *quantity* (>= 1) — the
+    // minimum-order message should be the only complaint, not a second,
+    // contradictory one.
+    const result = validateOrderRequest(input({ quantity: "1" }), brandRoute, 2_000);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.quantity).toMatch(/orders start at/i);
+  });
+
+  it("allows an order right at the minimum order value", () => {
+    const result = validateOrderRequest(input({ quantity: "1" }), brandRoute, 5_000);
+    expect(result.ok).toBe(true);
   });
 });
 

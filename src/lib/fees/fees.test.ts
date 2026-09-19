@@ -11,6 +11,7 @@ import {
   FeeQuoteError,
   GOODS_FEE_LADDER,
   goodsRung,
+  MINIMUM_ORDER_VALUE_TZS,
   quoteOrder,
   type CityFeeTable,
   type DeliveryCity,
@@ -193,10 +194,19 @@ describe("the three worked examples in docs/marketplace-model.md §2", () => {
 });
 
 describe("reconciliation, across the whole real catalogue", () => {
-  // Every product × every city × both route kinds. This is the property that
-  // matters: the arithmetic must balance to the shilling for anything the
-  // catalogue can actually produce, not just for three worked rows.
-  const cases = products.flatMap((product) =>
+  // Every *quotable* product × every city × both route kinds — quotable
+  // meaning `quoteOrder` will not refuse it outright. Since 18 Sep 2026,
+  // that excludes anything priced under `MINIMUM_ORDER_VALUE_TZS`: refusing
+  // those is correct, tested separately below, not a case this reconciliation
+  // property should be exercising. This is the property that matters: the
+  // arithmetic must balance to the shilling for anything the catalogue can
+  // actually produce and sell, not just for three worked rows.
+  const quotableProducts = products.filter(
+    (product) =>
+      MINIMUM_ORDER_VALUE_TZS === null ||
+      product.priceTZS >= MINIMUM_ORDER_VALUE_TZS,
+  );
+  const cases = quotableProducts.flatMap((product) =>
     DELIVERY_CITIES.flatMap((city) =>
       (["brand", "agent"] as const).map((routeKind) => ({
         product,
@@ -206,9 +216,13 @@ describe("reconciliation, across the whole real catalogue", () => {
     ),
   );
 
-  it(`covers every product in every city on both routes (${cases.length} cases)`, () => {
-    expect(cases.length).toBe(products.length * DELIVERY_CITIES.length * 2);
-    expect(products.length).toBeGreaterThan(0);
+  it(`covers every quotable product in every city on both routes (${cases.length} cases)`, () => {
+    expect(cases.length).toBe(quotableProducts.length * DELIVERY_CITIES.length * 2);
+    expect(quotableProducts.length).toBeGreaterThan(0);
+    // Confirms this filter is actually doing something against the real
+    // catalogue, not silently vacuous — see the "below the minimum order
+    // value" describe block below for the products this excludes.
+    expect(quotableProducts.length).toBeLessThan(products.length);
   });
 
   it("deposit + door payment always equals the order total, exactly", () => {
@@ -270,6 +284,51 @@ describe("reconciliation, across the whole real catalogue", () => {
         expect(q.branchPayoutTZS + q.courierPayoutTZS).toBe(q.doorPaymentTZS);
       }
     }
+  });
+});
+
+describe("products below the minimum order value", () => {
+  // The two Halotel SIM starter packs are the catalogue's cheapest listing
+  // at 2,000 TZS today, documented in `tables.ts` as the reason
+  // MINIMUM_ORDER_VALUE_TZS exists at all. This block would (usefully) fail
+  // to prove anything if a future catalogue edit ever priced everything at
+  // or above the minimum — the `.length).toBeGreaterThan(0)` below is that
+  // check, not decoration.
+  const belowMinimum = products.filter(
+    (product) =>
+      MINIMUM_ORDER_VALUE_TZS !== null &&
+      product.priceTZS < MINIMUM_ORDER_VALUE_TZS,
+  );
+
+  it("the catalogue still has at least one product this applies to", () => {
+    expect(belowMinimum.length).toBeGreaterThan(0);
+  });
+
+  it("refuses to quote any of them, on either route", () => {
+    for (const product of belowMinimum) {
+      expect(() =>
+        quoteOrder(
+          { goodsTotalTZS: product.priceTZS, city: "Dar es Salaam", routeKind: "brand" },
+          TEST_CITY_FEES,
+        ),
+      ).toThrow(FeeQuoteError);
+      expect(() =>
+        quoteOrder(
+          { goodsTotalTZS: product.priceTZS, city: "Dar es Salaam", routeKind: "agent" },
+          TEST_CITY_FEES,
+        ),
+      ).toThrow(FeeQuoteError);
+    }
+  });
+
+  it("says the minimum in the error, not just that something is wrong", () => {
+    const product = belowMinimum[0];
+    expect(() =>
+      quoteOrder(
+        { goodsTotalTZS: product.priceTZS, city: "Dar es Salaam", routeKind: "brand" },
+        TEST_CITY_FEES,
+      ),
+    ).toThrow(String(MINIMUM_ORDER_VALUE_TZS));
   });
 });
 

@@ -176,7 +176,8 @@ export function buildOrderRequest(
       address: input.address,
       agentId: input.agentId,
     },
-    route
+    route,
+    product.priceTZS
   );
   if (!validated.ok) return { ok: false, reason: "invalid" };
 
