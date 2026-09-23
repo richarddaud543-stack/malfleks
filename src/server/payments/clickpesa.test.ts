@@ -135,6 +135,25 @@ describe("generateCheckoutLink", () => {
     });
   });
 
+  // Regression, 23 Sep 2026. The live API returns the token already prefixed:
+  // {"success":true,"token":"Bearer eyJhbGci..."}. Every mock above returns a
+  // BARE token, which is why `Bearer ${token}` looked correct for four days and
+  // would have sent `Bearer Bearer eyJ...` the moment auth started working.
+  it("does not double up the Bearer prefix ClickPesa already sends", async () => {
+    const fetchMock = mockFetchSequence(
+      { json: async () => ({ success: true, token: "Bearer jwt-token" }) },
+      { json: async () => ({ checkoutLink: "https://checkout.clickpesa.com/xyz" }) },
+    );
+
+    const result = await generateCheckoutLink(input);
+
+    expect(result).toEqual({ ok: true, checkoutLink: "https://checkout.clickpesa.com/xyz" });
+    const [, checkoutCall] = fetchMock.mock.calls;
+    expect((checkoutCall[1] as RequestInit).headers).toMatchObject({
+      Authorization: "Bearer jwt-token",
+    });
+  });
+
   it("reuses a cached token across calls", async () => {
     const fetchMock = mockFetchSequence(
       { json: async () => ({ success: true, token: "jwt-token" }) },

@@ -150,8 +150,15 @@ async function getAuthToken(): Promise<string> {
     throw new Error("ClickPesa generate-token responded without a token");
   }
 
-  cachedToken = { token: data.token, expiresAt: Date.now() + 55 * 60_000 };
-  return data.token;
+  // ClickPesa returns the token ALREADY PREFIXED -- the live response is
+  // `{"success":true,"token":"Bearer eyJhbGci..."}`, verified against the real
+  // API on 23 Sep 2026. `generateCheckoutLink` then sends
+  // `Authorization: Bearer ${token}`, which without this strip would produce
+  // `Bearer Bearer eyJ...` and be rejected. Storing the bare token keeps the
+  // prefix in exactly one place: the header that needs it.
+  const bare = data.token.trim().replace(/^Bearer\s+/i, "");
+  cachedToken = { token: bare, expiresAt: Date.now() + 55 * 60_000 };
+  return bare;
 }
 
 // ---- Checkout link ------------------------------------------------------
