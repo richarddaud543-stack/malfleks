@@ -1,6 +1,7 @@
 import { getPrisma } from "@/server/db/client";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { generateCheckoutLink } from "@/server/payments/clickpesa";
+import { logServerError } from "@/server/error-log";
 import { createOrder, type CreateOrderFailure } from "./create-order";
 import type { SaveOrderRequestInput } from "./build-order-request";
 
@@ -52,6 +53,25 @@ export type InitiateEscrowCheckoutOutcome =
   | { ok: true; reference: string; checkoutLink: string }
   | { ok: false; reason: InitiateEscrowCheckoutFailure };
 
+/**
+ * ClickPesa rejects any `orderReference` that is not purely alphanumeric --
+ * `400 Invalid Order Reference, should only contain alphanumeric characters`,
+ * per its generate-checkout-link API reference. Every MalFleks reference is
+ * `BRAND-CITY-CODE` (ORA-DOD-N6CD), so every one of them was rejected and no
+ * order could ever be sent a payment link. Confirmed live 23 Sep 2026.
+ *
+ * The stripped form is what gets STORED as `OrderPayment.providerRef`, not
+ * merely what gets sent. The webhook in
+ * `src/app/api/payments/clickpesa/route.ts` looks a payment up by
+ * `providerRef` against the `orderReference` ClickPesa echoes back, so if the
+ * two ever diverge a customer pays, the lookup finds nothing, and the money
+ * is collected with nothing recorded against it. Same string to ClickPesa and
+ * to the database, on every path, always.
+ */
+export function toClickPesaReference(reference: string): string {
+  return reference.replace(/[^a-zA-Z0-9]/g, "");
+}
+
 export async function initiateEscrowCheckout(
   input: SaveOrderRequestInput,
   customerId: string | null,
@@ -88,14 +108,16 @@ export async function initiateEscrowCheckout(
   // paymentReference the moment a payment captures, guarded the same way
   // `writeTransition` guards `Order.status` -- see that route for the match.
   //
-  // `orderReference` sent to ClickPesa is `order.reference` itself -- this
-  // is always an order's *first* payment attempt (a fresh `Order` just got
-  // created above), so it matches `requestPaymentForOrder`'s own
-  // first-attempt convention below, and the webhook route
+  // `orderReference` sent to ClickPesa is `order.reference` stripped to
+  // alphanumerics (see `toClickPesaReference`) -- this is always an order's
+  // *first* payment attempt (a fresh `Order` just got created above), so it
+  // matches `requestPaymentForOrder`'s own first-attempt convention below, and the webhook route
   // (`src/app/api/payments/clickpesa/route.ts`) matches by
   // `OrderPayment.providerRef`, whichever convention produced it.
+  const providerRef = toClickPesaReference(order.reference);
+
   const checkout = await generateCheckoutLink({
-    orderReference: order.reference,
+    orderReference: providerRef,
     totalPriceTZS: order.quoteOrderTotalTZS,
     customerName: order.customerFullName,
     customerPhone: order.customerPhone,
@@ -103,13 +125,17 @@ export async function initiateEscrowCheckout(
   });
 
   if (!checkout.ok) {
+    await logServerError(
+      "clickpesa-checkout-link",
+      new Error(`${checkout.reason}: ${checkout.detail ?? "no detail given"}`),
+    );
     return { ok: false, reason: "checkout-link-failed" };
   }
 
   await db.orderPayment.create({
     data: {
       orderId: order.id,
-      providerRef: order.reference,
+      providerRef,
       provider: "clickpesa",
       amountTZS: order.quoteOrderTotalTZS,
       checkoutLink: checkout.checkoutLink,
@@ -186,12 +212,13 @@ export async function requestPaymentForOrder(
 
   // The webhook route matches by `OrderPayment.providerRef`, not
   // `Order.reference` -- see that route's own doc comment (rule 4). The
-  // first attempt uses `order.reference` itself, same as
+  // first attempt uses the stripped `order.reference`, same as
   // `initiateEscrowCheckout`; every attempt after a `failed` one gets a
   // suffix, since ClickPesa 409s on a repeated `orderReference` and
   // `providerRef` is `@unique` in the schema.
+  const base = toClickPesaReference(order.reference);
   const providerRef =
-    attempts.length === 0 ? order.reference : `${order.reference}-P${attempts.length + 1}`;
+    attempts.length === 0 ? base : `${base}P${attempts.length + 1}`;
 
   const checkout = await generateCheckoutLink({
     orderReference: providerRef,
@@ -201,6 +228,10 @@ export async function requestPaymentForOrder(
     callbackUrl: `${resolveSiteUrl()}/api/payments/clickpesa`,
   });
   if (!checkout.ok) {
+    await logServerError(
+      "clickpesa-checkout-link",
+      new Error(`${checkout.reason}: ${checkout.detail ?? "no detail given"}`),
+    );
     return { ok: false, reason: "checkout-link-failed" };
   }
 

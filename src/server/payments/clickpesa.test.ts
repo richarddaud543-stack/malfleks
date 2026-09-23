@@ -11,6 +11,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createChecksum,
   generateCheckoutLink,
+  normalizeCustomerPhone,
+  resetAuthTokenCache,
   verifyChecksum,
 } from "./clickpesa";
 
@@ -22,6 +24,11 @@ beforeEach(() => {
   process.env.CLICKPESA_CLIENT_ID = "test-client-id";
   process.env.CLICKPESA_API_KEY = "test-api-key";
   process.env.CLICKPESA_CHECKSUM_SECRET = "test-checksum-secret";
+  // The token cache is module-level and outlives an `it` block. Without this
+  // the first test to fetch a token warms it for every test after, and the
+  // call-count and failure-reason assertions below quietly stop meaning
+  // anything.
+  resetAuthTokenCache();
 });
 
 afterEach(() => {
@@ -82,6 +89,9 @@ describe("generateCheckoutLink", () => {
         ok: r.ok ?? true,
         status: r.status ?? 200,
         json: r.json ?? (async () => ({})),
+        // A real Response always has text(); the failure path reads it for the
+        // diagnostic detail, so the mock has to model it too.
+        text: r.text ?? (async () => ""),
       } as Response);
     }
     vi.stubGlobal("fetch", fn);
@@ -171,5 +181,34 @@ describe("generateCheckoutLink", () => {
     );
     const result = await generateCheckoutLink(input);
     expect(result).toEqual({ ok: false, reason: "request-failed" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Regression: 23 Sep 2026. ClickPesa's generate-checkout-link reference
+// requires `customerPhone` "starting with country code and without the plus
+// sign, e.g., 255712345678". MalFleks stored `+255754123456`, which was sent
+// verbatim and rejected. These lock the normalisation at the boundary.
+// ---------------------------------------------------------------------------
+
+describe("normalizeCustomerPhone", () => {
+  it("strips a leading plus", () => {
+    expect(normalizeCustomerPhone("+255754123456")).toBe("255754123456");
+  });
+
+  it("strips spaces the customer typed", () => {
+    expect(normalizeCustomerPhone("+255 629 264 383")).toBe("255629264383");
+  });
+
+  it("expands a local leading zero to the country code", () => {
+    expect(normalizeCustomerPhone("0754123456")).toBe("255754123456");
+  });
+
+  it("leaves an already-correct number alone", () => {
+    expect(normalizeCustomerPhone("255754123456")).toBe("255754123456");
+  });
+
+  it("drops punctuation without mangling the digits", () => {
+    expect(normalizeCustomerPhone("(+255) 754-123-456")).toBe("255754123456");
   });
 });

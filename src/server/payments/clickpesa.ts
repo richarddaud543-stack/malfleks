@@ -43,6 +43,22 @@ function requireEnv(name: string): string {
   return value;
 }
 
+/**
+ * ClickPesa requires `customerPhone` "starting with country code and without
+ * the plus sign, e.g., 255712345678" -- its generate-checkout-link API
+ * reference. MalFleks stores the phone as the customer typed it: the order
+ * form hints a Tanzanian format but never rewrites it, so `+255...`, spaced
+ * digits and a leading local `0` all reach here. Any of them gets the whole
+ * request rejected, so normalise at the boundary rather than asking every
+ * caller to remember a rule that belongs to ClickPesa.
+ */
+export function normalizeCustomerPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, "");
+  if (digits.startsWith("255")) return digits;
+  if (digits.startsWith("0")) return `255${digits.slice(1)}`;
+  return digits;
+}
+
 // ---- Checksum (docs.clickpesa.com/home/checksum) --------------------------
 
 function canonicalize(value: unknown): unknown {
@@ -95,6 +111,18 @@ export function verifyChecksum(payload: Record<string, unknown>): boolean {
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
 /**
+ * Drops the cached token. Exists for tests: the cache is module-level and
+ * survives between `it` blocks, so without this the first test to fetch a
+ * token silently satisfies every later one -- which is exactly what happened
+ * here. Three tests in clickpesa.test.ts asserted call counts and failure
+ * reasons that only held with a cold cache, and had been red since they were
+ * written on 19 Sep 2026 because nobody ran the suite.
+ */
+export function resetAuthTokenCache(): void {
+  cachedToken = null;
+}
+
+/**
  * A fresh bearer token, reusing a cached one until 5 minutes before its
  * documented 1-hour expiry. Module-level cache: fine for a single
  * serverless instance's lifetime -- a cold start just fetches a new one,
@@ -141,7 +169,12 @@ export interface CheckoutLinkInput {
 
 export type CheckoutLinkOutcome =
   | { ok: true; checkoutLink: string }
-  | { ok: false; reason: "auth-failed" | "request-failed" | "duplicate-reference" };
+  | {
+      ok: false;
+      reason: "auth-failed" | "request-failed" | "duplicate-reference";
+      /** What ClickPesa actually said, for the caller to log. Never shown to a customer. */
+      detail?: string;
+    };
 
 export async function generateCheckoutLink(
   input: CheckoutLinkInput,
@@ -149,8 +182,12 @@ export async function generateCheckoutLink(
   let token: string;
   try {
     token = await getAuthToken();
-  } catch {
-    return { ok: false, reason: "auth-failed" };
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "auth-failed",
+      detail: error instanceof Error ? error.message : String(error),
+    };
   }
 
   const body: Record<string, unknown> = {
@@ -158,7 +195,7 @@ export async function generateCheckoutLink(
     orderReference: input.orderReference,
     orderCurrency: "TZS",
     customerName: input.customerName,
-    customerPhone: input.customerPhone,
+    customerPhone: normalizeCustomerPhone(input.customerPhone),
     callbackUrl: input.callbackUrl,
   };
   // Signed even though ClickPesa's schema lists `checksum` as optional here --
@@ -182,7 +219,21 @@ export async function generateCheckoutLink(
   }
 
   if (response.status === 409) return { ok: false, reason: "duplicate-reference" };
-  if (!response.ok) return { ok: false, reason: "request-failed" };
+  if (!response.ok) {
+    // Hand the status and body back rather than discarding them. Every
+    // rejection used to reach the admin as the same "try again in a moment",
+    // which is actively misleading when the cause is a malformed request that
+    // will fail identically every time -- a non-alphanumeric `orderReference`
+    // cost a full session to find for exactly that reason. The caller logs it;
+    // this module stays free of the database so its tests can mock fetch and
+    // touch no Postgres.
+    const body = await response.text().catch(() => "<unreadable body>");
+    return {
+      ok: false,
+      reason: "request-failed",
+      detail: `generate-checkout-url returned ${response.status}: ${body.slice(0, 500)}`,
+    };
+  }
 
   const data = (await response.json().catch(() => null)) as { checkoutLink?: string } | null;
   if (!data?.checkoutLink) return { ok: false, reason: "request-failed" };
