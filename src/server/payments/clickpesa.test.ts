@@ -152,8 +152,12 @@ describe("generateCheckoutLink", () => {
   it("returns auth-failed when the token request fails", async () => {
     const fetchMock = mockFetchSequence({ ok: false, status: 401 });
     const result = await generateCheckoutLink(input);
-    expect(result).toEqual({ ok: false, reason: "auth-failed" });
+    expect(result).toMatchObject({ ok: false, reason: "auth-failed" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+    // The detail is the whole point of the failure shape: a 401 here means
+    // the client id or api key is wrong, which "try again in a moment" never
+    // said.
+    expect((result as { detail?: string }).detail).toContain("401");
   });
 
   it("returns duplicate-reference on a 409", async () => {
@@ -171,7 +175,10 @@ describe("generateCheckoutLink", () => {
       { ok: false, status: 500 },
     );
     const result = await generateCheckoutLink(input);
-    expect(result).toEqual({ ok: false, reason: "request-failed" });
+    expect(result).toMatchObject({ ok: false, reason: "request-failed" });
+    // Carries the status ClickPesa actually returned, so the caller can log
+    // something a human can act on.
+    expect((result as { detail?: string }).detail).toContain("500");
   });
 
   it("returns request-failed when the response has no checkoutLink", async () => {
