@@ -16,10 +16,13 @@ import {
   orderBlockReason,
   resolveDeliveryRoute,
 } from "@/lib/order";
+import { prerenderParams } from "@/server/prerender";
 
 export async function generateStaticParams() {
-  const products = await getAllProducts();
-  return products.map((p) => ({ productId: p.id }));
+  return prerenderParams(async () => {
+    const products = await getAllProducts();
+    return products.map((p) => ({ productId: p.id }));
+  });
 }
 
 export async function generateMetadata({

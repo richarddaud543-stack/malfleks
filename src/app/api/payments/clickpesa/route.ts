@@ -1,5 +1,5 @@
 import { getPrisma } from "@/server/db/client";
-import { verifyChecksum } from "@/server/payments/clickpesa";
+import { checkChecksum } from "@/server/payments/clickpesa";
 import { logServerError } from "@/server/error-log";
 
 export const dynamic = "force-dynamic";
@@ -52,10 +52,28 @@ export async function POST(request: Request): Promise<Response> {
     return Response.json({ ok: false, reason: "invalid-json" }, { status: 400 });
   }
 
-  if (!verifyChecksum(body)) {
+  const verdict = checkChecksum(body);
+  if (!verdict.ok) {
+    // The whole body goes into the log, not just a one-line verdict.
+    //
+    // On 20 Sep 2026 two deliveries were refused here and all that survived
+    // was "Checksum verification failed for event PAYMENT RECEIVED". If
+    // either had been a real collection, that sentence would have been the
+    // only trace of it: no reference, no amount, nothing to reconcile the
+    // money against. A refused delivery is the case where evidence matters
+    // most, and it was the case that kept none.
+    //
+    // The body carries `orderReference`, `collectedAmount` and
+    // `paymentReference` -- everything needed to settle the payment by hand
+    // from the admin console while the cause is fixed. It is the customer's
+    // own order data, already in this database, and no card or account
+    // number ever appears in a ClickPesa callback.
     await logServerError(
       "clickpesa-webhook-checksum",
-      new Error(`Checksum verification failed for event ${String(body.event)}`),
+      new Error(
+        `Refused (${verdict.reason}) event=${String(body.event)} — unverified payload: ` +
+          safeBody(body),
+      ),
     );
     return Response.json({ ok: false, reason: "bad-checksum" }, { status: 400 });
   }
@@ -163,4 +181,18 @@ async function failPayment(
     where: { id: payment.id, status: "pending" },
     data: { status: "failed", failedAt: new Date(), failureNote: message },
   });
+}
+
+/**
+ * The delivery as JSON, truncated so one malformed post cannot fill the
+ * error table. 2,000 characters is far more than a ClickPesa callback has
+ * ever been and small enough to read in the admin panel.
+ */
+function safeBody(body: unknown): string {
+  try {
+    const text = JSON.stringify(body);
+    return text.length > 2000 ? `${text.slice(0, 2000)}…(truncated)` : text;
+  } catch {
+    return "<unserializable body>";
+  }
 }

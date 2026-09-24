@@ -9,6 +9,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  checkChecksum,
   createChecksum,
   generateCheckoutLink,
   normalizeCustomerPhone,
@@ -78,6 +79,61 @@ describe("createChecksum / verifyChecksum", () => {
     const payload: Record<string, unknown> = { ...base, checksumMethod: "HMAC-SHA256" };
     payload.checksum = createChecksum(base);
     expect(verifyChecksum(payload)).toBe(true);
+  });
+});
+
+describe("checkChecksum verdicts", () => {
+  // A webhook body's real shape, per ClickPesa's callback docs.
+  const webhook = () => ({
+    event: "PAYMENT RECEIVED",
+    data: {
+      orderReference: "ORADODN6CD",
+      paymentReference: "CP123456",
+      collectedAmount: 5574,
+      status: "SUCCESS",
+    },
+  });
+
+  it("accepts a body signed over the whole payload", () => {
+    const body: Record<string, unknown> = webhook();
+    body.checksum = createChecksum(webhook());
+    expect(checkChecksum(body)).toEqual({ ok: true, signedOver: "body" });
+  });
+
+  it("accepts a body signed over the data object alone", () => {
+    // ClickPesa documents only that webhooks use "the same method"; it never
+    // says over what. This is the other honest reading of that sentence, and
+    // getting it wrong is what silently drops a real payment.
+    const body: Record<string, unknown> = webhook();
+    body.checksum = createChecksum(webhook().data);
+    expect(checkChecksum(body)).toEqual({ ok: true, signedOver: "data" });
+  });
+
+  it("distinguishes an unconfigured secret from a forgery", () => {
+    const body: Record<string, unknown> = webhook();
+    body.checksum = createChecksum(webhook());
+    delete process.env.CLICKPESA_CHECKSUM_SECRET;
+    // The point of the whole verdict type: this must NOT read as "mismatch".
+    // A server that cannot check a signature has a configuration problem, and
+    // saying so is the difference between a five-minute fix and a lost order.
+    expect(checkChecksum(body)).toEqual({ ok: false, reason: "secret-not-configured" });
+  });
+
+  it("reports a genuine mismatch as a mismatch", () => {
+    const body: Record<string, unknown> = webhook();
+    body.checksum = createChecksum(webhook());
+    (body.data as Record<string, unknown>).collectedAmount = 1;
+    expect(checkChecksum(body)).toEqual({ ok: false, reason: "mismatch" });
+  });
+
+  it("reports a missing signature as such", () => {
+    expect(checkChecksum(webhook())).toEqual({ ok: false, reason: "no-checksum" });
+  });
+
+  it("does not accept a data-scoped signature for different data", () => {
+    const body: Record<string, unknown> = webhook();
+    body.checksum = createChecksum({ ...webhook().data, collectedAmount: 999999 });
+    expect(checkChecksum(body)).toEqual({ ok: false, reason: "mismatch" });
   });
 });
 

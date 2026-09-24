@@ -76,33 +76,89 @@ function canonicalize(value: unknown): unknown {
  * `payload` must NOT already contain `checksum`/`checksumMethod` -- those
  * are this function's output, never part of what gets signed. Callers that
  * received a payload carrying them (a webhook body) strip them first; see
- * `verifyChecksum`.
+ * `checkChecksum`.
  */
 export function createChecksum(payload: Record<string, unknown>): string {
-  const secret = requireEnv("CLICKPESA_CHECKSUM_SECRET");
-  const canonical = canonicalize(payload);
-  return createHmac("sha256", secret).update(JSON.stringify(canonical)).digest("hex");
+  return hmacOver(requireEnv("CLICKPESA_CHECKSUM_SECRET"), payload);
+}
+
+function hmacOver(secret: string, payload: Record<string, unknown>): string {
+  return createHmac("sha256", secret)
+    .update(JSON.stringify(canonicalize(payload)))
+    .digest("hex");
 }
 
 /**
- * Verifies a payload against a `checksum` field carried inside that same
- * payload -- the shape both the checkout-link request body and (per
- * ClickPesa's docs: "webhooks payload are also signed using the same
- * method") an incoming webhook body use. Strips `checksum`/`checksumMethod`
- * before recomputing, exactly as ClickPesa's own verification does.
+ * Why a verdict and not a boolean.
  *
- * Returns `false` -- never throws -- for a payload with no `checksum` field
- * at all, which is the correct verdict for an unsigned request hitting a
- * public webhook URL, not an error to propagate.
+ * `verifyChecksum` used to answer `false` to three different situations: a
+ * request carrying no signature at all, a signature that did not match, and
+ * a server with no `CLICKPESA_CHECKSUM_SECRET` configured. The webhook
+ * handler turned all three into the same 400 and the same one-line log, so a
+ * misconfiguration on this side was indistinguishable from a forgery on
+ * someone else's -- and only one of those is expensive: ClickPesa collects
+ * the money, the callback is refused, `OrderPayment` stays `pending`, and no
+ * `LedgerEntry` is ever written.
+ *
+ * That is exactly the shape of the two rejected deliveries recorded on
+ * 20 Sep 2026, and nothing in the log says which of the three they were.
+ * Hence a verdict that names the cause, which the handler then logs.
+ */
+export type ChecksumVerdict =
+  | { ok: true; signedOver: "body" | "data" }
+  | { ok: false; reason: "no-checksum" | "secret-not-configured" | "mismatch" };
+
+/**
+ * Verifies a payload against a `checksum` field carried inside that same
+ * payload. Strips `checksum`/`checksumMethod` before recomputing, exactly as
+ * ClickPesa's own verification does.
+ *
+ * ## Why two candidate scopes
+ *
+ * ClickPesa's docs say only that "webhooks payload are also signed using the
+ * same method as defined below" -- and never say what "the payload" is on
+ * the way in. Outbound, this module signs the whole request body, which is
+ * flat. Inbound, a webhook body is `{event, data: {...}, checksum}`, and
+ * both "the whole body minus checksum" and "the data object" are honest
+ * readings of that one sentence.
+ *
+ * So both are tried, against the same secret. That is not a weaker check: it
+ * is the same HMAC computed over the two scopes the documentation leaves
+ * open, and an attacker without the secret can forge neither. What it buys
+ * is that a guess about an undocumented detail cannot silently cost a
+ * payment.
+ */
+export function checkChecksum(payload: Record<string, unknown>): ChecksumVerdict {
+  const { checksum, checksumMethod: _checksumMethod, ...rest } = payload;
+  if (typeof checksum !== "string" || checksum.length === 0) {
+    return { ok: false, reason: "no-checksum" };
+  }
+
+  let secret: string;
+  try {
+    secret = requireEnv("CLICKPESA_CHECKSUM_SECRET");
+  } catch {
+    return { ok: false, reason: "secret-not-configured" };
+  }
+
+  if (hmacOver(secret, rest) === checksum) return { ok: true, signedOver: "body" };
+
+  const data = rest.data;
+  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
+    if (hmacOver(secret, data as Record<string, unknown>) === checksum) {
+      return { ok: true, signedOver: "data" };
+    }
+  }
+
+  return { ok: false, reason: "mismatch" };
+}
+
+/**
+ * The yes/no form. Kept for callers that have no use for the cause -- the
+ * webhook handler is not one of them and uses `checkChecksum` directly.
  */
 export function verifyChecksum(payload: Record<string, unknown>): boolean {
-  const { checksum, checksumMethod: _checksumMethod, ...rest } = payload;
-  if (typeof checksum !== "string" || checksum.length === 0) return false;
-  try {
-    return createChecksum(rest) === checksum;
-  } catch {
-    return false;
-  }
+  return checkChecksum(payload).ok;
 }
 
 // ---- Auth token -------------------------------------------------------

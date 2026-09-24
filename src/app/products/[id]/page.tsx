@@ -23,10 +23,13 @@ import {
   previewDelivery,
   resolveDeliveryRoute,
 } from "@/lib/order";
+import { prerenderParams } from "@/server/prerender";
 
 export async function generateStaticParams() {
-  const products = await getAllProducts();
-  return products.map((p) => ({ id: p.id }));
+  return prerenderParams(async () => {
+    const products = await getAllProducts();
+    return products.map((p) => ({ id: p.id }));
+  });
 }
 
 export async function generateMetadata({

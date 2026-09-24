@@ -5,14 +5,19 @@ import {
   getAllProducts,
 } from "@/server/repositories";
 import { resolveSiteUrl } from "@/lib/site-url";
+import { prerenderParams } from "@/server/prerender";
 
 const siteUrl = resolveSiteUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  // Prerendered at build like the four `generateStaticParams` routes, and
+  // guarded the same way: a deployment with no `DATABASE_URL` gets a sitemap
+  // of the static routes rather than a failed build. Those are the only URLs
+  // such a deployment could honestly claim to have anyway.
   const [brands, branches, products] = await Promise.all([
-    getAllBrands(),
-    getAllBranches(),
-    getAllProducts(),
+    prerenderParams(getAllBrands),
+    prerenderParams(getAllBranches),
+    prerenderParams(getAllProducts),
   ]);
   // Indexed once instead of a lookup per branch, as in generateStaticParams.
   const slugByBrandId = new Map(brands.map((b) => [b.id, b.slug]));
