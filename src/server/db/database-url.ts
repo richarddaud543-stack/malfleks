@@ -24,19 +24,6 @@
  * it should look like — because the moment someone sees this message is exactly
  * the moment they need those three facts.
  */
-/**
- * Whether a connection string is present, asked without throwing.
- *
- * This is deliberately a question about configuration, not about reachability:
- * it answers from the environment alone and never opens a connection. A build
- * uses it to decide whether prerendering is even possible; a genuine database
- * outage is a different thing entirely and must still fail loudly, which it
- * does, because this returns `true` and the query then throws.
- */
-export function isDatabaseConfigured(): boolean {
-  return Boolean(process.env.DATABASE_URL?.trim());
-}
-
 export function resolveDatabaseUrl(): string {
   const fromEnv = process.env.DATABASE_URL?.trim();
   if (fromEnv) return fromEnv;

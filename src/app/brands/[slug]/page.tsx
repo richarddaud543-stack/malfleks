@@ -9,7 +9,6 @@ import {
 } from "@/server/repositories";
 import BranchCard from "@/components/branch/BranchCard";
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { prerenderParams } from "@/server/prerender";
 
 /**
  * `brand.category` is stored lowercase for matching/filtering (see
@@ -23,10 +22,8 @@ const CATEGORY_LABELS: Record<BrandCategory, string> = {
 };
 
 export async function generateStaticParams() {
-  return prerenderParams(async () => {
-    const brands = await getAllBrands();
-    return brands.map((b) => ({ slug: b.slug }));
-  });
+  const brands = await getAllBrands();
+  return brands.map((b) => ({ slug: b.slug }));
 }
 
 export async function generateMetadata({

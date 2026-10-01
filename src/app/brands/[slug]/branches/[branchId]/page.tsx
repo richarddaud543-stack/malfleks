@@ -12,23 +12,20 @@ import {
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import ProductGrid from "@/components/product/ProductGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
-import { prerenderParams } from "@/server/prerender";
 
 export async function generateStaticParams() {
-  return prerenderParams(async () => {
-    // Brands are fetched once and indexed rather than queried per branch, which
-    // would be one round trip per prerendered page.
-    const [branches, brands] = await Promise.all([
-      getAllBranches(),
-      getAllBrands(),
-    ]);
-    const slugByBrandId = new Map(brands.map((b) => [b.id, b.slug]));
+  // Brands are fetched once and indexed rather than queried per branch, which
+  // would be one round trip per prerendered page.
+  const [branches, brands] = await Promise.all([
+    getAllBranches(),
+    getAllBrands(),
+  ]);
+  const slugByBrandId = new Map(brands.map((b) => [b.id, b.slug]));
 
-    return branches.map((b) => ({
-      slug: slugByBrandId.get(b.brandId) ?? b.brandId,
-      branchId: b.id,
-    }));
-  });
+  return branches.map((b) => ({
+    slug: slugByBrandId.get(b.brandId) ?? b.brandId,
+    branchId: b.id,
+  }));
 }
 
 export async function generateMetadata({
