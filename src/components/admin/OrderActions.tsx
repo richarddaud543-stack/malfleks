@@ -7,24 +7,16 @@ import {
   markOrderFulfilled,
   sendPaymentLink,
 } from "@/app/actions/orders";
-import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 import type { ListedOrder } from "@/server/orders/list-orders";
-import type { DeliveryPingView } from "@/server/orders/tracking";
-import { formatTZS } from "@/lib/format";
-import { formatPhone } from "@/lib/order";
 
-function timeAgo(iso: string): string {
-  const ms = Date.now() - new Date(iso).getTime();
-  const minutes = Math.round(ms / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
-}
+/** What the controls need to know about an order. */
+export type ActionableOrder = Pick<ListedOrder, "id" | "reference" | "status" | "payment">;
 
 /**
- * One order in the admin queue: the record `/admin/orders` used to render
- * inline, plus the status-appropriate transition controls.
+ * The status-appropriate controls for one order, shown on its own page
+ * (`/admin/orders/[id]`). Until 2 Oct 2026 these lived inside `OrderCard`,
+ * which also rendered the whole order as a card in the list; the list became
+ * a table and the order got a page of its own, so the controls stand alone.
  *
  * Mirrors `ApplicationReviewCard`'s shape: every state-changing action is
  * two-step (armed, then confirmed) and per-card, cancelling asks for a
@@ -39,25 +31,6 @@ function timeAgo(iso: string): string {
  */
 
 type Mode = "idle" | "confirming" | "fulfilling" | "cancelling" | "paying";
-
-const STATUS_STYLE: Record<string, string> = {
-  pending: "bg-accent/10 text-accent",
-  confirmed: "bg-accent-2/10 text-accent-2",
-  fulfilled: "bg-emerald-600/10 text-emerald-600",
-  cancelled: "bg-red-600/10 text-red-600",
-};
-
-const PAYMENT_STYLE: Record<string, string> = {
-  pending: "bg-accent/10 text-accent",
-  captured: "bg-emerald-600/10 text-emerald-600",
-  failed: "bg-red-600/10 text-red-600",
-};
-
-const PAYMENT_LABEL: Record<string, string> = {
-  pending: "payment link sent",
-  captured: "paid",
-  failed: "payment failed",
-};
 
 function paymentErrorMessage(reason: string | undefined): string {
   switch (reason) {
@@ -91,15 +64,7 @@ function errorMessage(reason: string | undefined): string {
   }
 }
 
-export default function OrderCard({
-  order,
-  lastPing = null,
-}: {
-  order: ListedOrder;
-  /** This order's newest `DeliveryPing`, if any — see the note on why the
-   *  page only ever queries this for `"confirmed"`/`"fulfilled"` orders. */
-  lastPing?: DeliveryPingView | null;
-}) {
+export default function OrderActions({ order }: { order: ActionableOrder }) {
   const [mode, setMode] = useState<Mode>("idle");
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -135,123 +100,7 @@ export default function OrderCard({
   const trimmedReason = reason.trim();
 
   return (
-    <li className="glass-card rounded-2xl p-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-xs text-muted">
-            <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                STATUS_STYLE[order.status] ?? "bg-border/40 text-muted"
-              }`}
-            >
-              {order.status}
-            </span>
-            {order.payment && (
-              <span
-                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                  PAYMENT_STYLE[order.payment.status] ?? "bg-border/40 text-muted"
-                }`}
-              >
-                {PAYMENT_LABEL[order.payment.status] ?? order.payment.status}
-              </span>
-            )}
-            <span className="font-mono">{order.reference}</span>
-          </p>
-          <h3 className="font-display mt-1 text-lg font-medium">
-            {order.productName} × {order.quantity}
-          </h3>
-        </div>
-        <time
-          dateTime={order.requestedAt}
-          className="text-xs text-muted tabular-nums"
-        >
-          {new Date(order.requestedAt).toLocaleString("en-GB", {
-            day: "numeric",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </time>
-      </div>
-
-      <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
-        <div>
-          <dt className="text-muted">Customer</dt>
-          <dd className="mt-0.5">{order.customerFullName}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Phone</dt>
-          <dd className="mt-0.5 font-mono text-xs">
-            {formatPhone(order.customerPhone)}
-          </dd>
-        </div>
-        <div className="sm:col-span-2">
-          <dt className="text-muted">Delivery address</dt>
-          <dd className="mt-0.5">{order.customerAddress}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Line total</dt>
-          <dd className="mt-0.5 tabular-nums">{formatTZS(order.lineTotalTZS)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Brand</dt>
-          <dd className="mt-0.5">{order.brandName}</dd>
-        </div>
-        <div>
-          <dt className="text-muted">Branch</dt>
-          <dd className="mt-0.5">
-            {order.branchName}
-            <span className="text-muted"> — {order.branchCity}</span>
-          </dd>
-        </div>
-        {order.branchPhone && (
-          <div>
-            <dt className="text-muted">Branch phone</dt>
-            <dd className="mt-0.5 font-mono text-xs">{order.branchPhone}</dd>
-          </div>
-        )}
-        <div className="sm:col-span-2">
-          <dt className="text-muted">Route</dt>
-          <dd className="mt-0.5">
-            {order.routeCarrier}
-            {order.routeKind === "agent" && order.routeAgentPhone && (
-              <span className="text-muted"> — {formatPhone(order.routeAgentPhone)}</span>
-            )}
-            {order.routeEtaEstimate && (
-              <span className="text-muted"> · {order.routeEtaEstimate}</span>
-            )}
-          </dd>
-        </div>
-        {order.decisionNote && (
-          <div className="sm:col-span-2">
-            <dt className="text-muted">
-              {order.status === "cancelled" ? "Why it was cancelled" : "Note"}
-            </dt>
-            <dd className="mt-0.5 whitespace-pre-line">{order.decisionNote}</dd>
-          </div>
-        )}
-      </dl>
-
-      {/* Only appears once the branch or courier has actually reported a
-          position — see the note on `postDeliveryPing`'s `"confirmed"`-only
-          gate. No control here moves anything; this is read-only, the same
-          way the rest of this card's data is until a transition button is
-          pressed. */}
-      {lastPing && (
-        <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
-          <p className="text-xs text-muted">
-            Last reported {timeAgo(lastPing.createdAt)}
-            {lastPing.note ? ` · ${lastPing.note}` : ""}
-          </p>
-          <div className="mt-2 max-w-[220px] overflow-hidden rounded-lg border border-border">
-            <OrderTrackingMap
-              position={{ lat: lastPing.latitude, lng: lastPing.longitude }}
-            />
-          </div>
-        </div>
-      )}
-
+    <div>
       {paymentLink && (
         <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
           <p className="text-xs text-muted">
@@ -271,7 +120,7 @@ export default function OrderCard({
       )}
 
       {canAct && (
-        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-border pt-4">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
           {mode === "idle" && order.status === "pending" && (
             <>
               <button
@@ -385,6 +234,8 @@ export default function OrderCard({
             <>
               <span className="mr-auto text-sm text-muted">
                 Mark {order.reference} as delivered / handed off?
+                {order.payment?.status === "captured" &&
+                  " The money held for it is then split into what the branch and courier are owed."}
               </span>
               <button
                 type="button"
@@ -451,6 +302,6 @@ export default function OrderCard({
           )}
         </div>
       )}
-    </li>
+    </div>
   );
 }

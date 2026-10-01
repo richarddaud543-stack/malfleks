@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { CheckAllPaymentsButton, CheckPaymentButton } from "@/components/admin/CheckPaymentButtons";
@@ -65,9 +66,18 @@ export default async function AdminMoneyPage() {
 
       <ul className="mt-6 grid grid-cols-2 gap-2 lg:grid-cols-4">
         <Tile label="Collected" value={formatTZS(totals.collectedTZS)} note={`${totals.capturedCount} ${totals.capturedCount === 1 ? "payment" : "payments"} captured`} />
-        <Tile label="Held in escrow" value={formatTZS(totals.heldTZS)} note="Collected, not yet paid out" emphasis />
+        <Tile
+          label="Held in escrow"
+          value={formatTZS(totals.heldTZS)}
+          note={totals.refundedTZS > 0 ? `After ${formatTZS(totals.refundedTZS)} refunded and payouts sent` : "Collected, less payouts sent"}
+          emphasis
+        />
         <Tile label="Waiting to be paid" value={formatTZS(totals.awaitingTZS)} note={`${totals.awaitingCount} open ${totals.awaitingCount === 1 ? "link" : "links"}`} />
-        <Tile label="Paid out to partners" value={formatTZS(totals.paidOutTZS)} note="Through payout batches" />
+        <Tile
+          label="Paid out to partners"
+          value={formatTZS(totals.paidOutTZS)}
+          note={totals.owedTZS + totals.inPayoutsTZS > 0 ? `${formatTZS(totals.owedTZS + totals.inPayoutsTZS)} owed, not sent yet` : "Nothing owed right now"}
+        />
       </ul>
 
       <div className="mt-3">
@@ -105,7 +115,9 @@ export default async function AdminMoneyPage() {
                 {money.payments.map((p) => (
                   <tr key={p.id} className="border-b border-border/60 align-top last:border-0">
                     <td className="px-4 py-3">
-                      <p className="font-medium tabular-nums">{p.orderReference}</p>
+                      <Link href={`/admin/orders/${p.orderId}`} className="font-medium tabular-nums text-accent hover:underline">
+                        {p.orderReference}
+                      </Link>
                       <p className="text-xs text-muted">
                         {p.customerName} · {p.brandName} · {p.productName}
                       </p>
@@ -162,9 +174,13 @@ export default async function AdminMoneyPage() {
                 {money.ledger.map((e) => (
                   <tr key={e.id} className="border-b border-border/60 last:border-0">
                     <td className="px-4 py-2.5 text-xs text-muted">{ageLabel(e.createdAt, now)} ago</td>
-                    <td className="px-4 py-2.5 tabular-nums">{e.orderReference}</td>
+                    <td className="px-4 py-2.5 tabular-nums">
+                      <Link href={`/admin/orders/${e.orderId}`} className="text-accent hover:underline">
+                        {e.orderReference}
+                      </Link>
+                    </td>
                     <td className="px-4 py-2.5">
-                      <span className="font-medium">{e.kind}</span>
+                      <span className="font-medium">{LEDGER_LABEL[e.kind] ?? e.kind}</span>
                       {e.note && <span className="ml-2 text-xs text-muted">{e.note}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right font-medium tabular-nums">{formatTZS(e.amountTZS)}</td>
@@ -180,26 +196,16 @@ export default async function AdminMoneyPage() {
         <h2 id="payouts-heading" className="text-sm font-semibold uppercase tracking-wide text-muted">
           Payouts to partners
         </h2>
-        {money.payouts.length === 0 ? (
-          <Empty>
-            No payouts yet. Paying partners through ClickPesa isn&apos;t wired up, so collected money stays held
-            until it is — nothing leaves automatically.
-          </Empty>
-        ) : (
-          <ul className="mt-3 flex flex-col gap-2">
-            {money.payouts.map((b) => (
-              <li key={b.id} className="flex items-center justify-between rounded-xl border border-border bg-white px-4 py-3 text-sm">
-                <span>
-                  {b.payeeType} · {ageLabel(b.createdAt, now)} ago
-                </span>
-                <span className="flex items-center gap-3">
-                  <StatusBadge status={b.status} />
-                  <span className="font-medium tabular-nums">{formatTZS(b.totalTZS)}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
+        <p className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-white px-4 py-3 text-sm">
+          <span>
+            {totals.owedTZS + totals.inPayoutsTZS > 0
+              ? `${formatTZS(totals.owedTZS + totals.inPayoutsTZS)} is owed to branches and couriers for delivered orders. MalFleks has earned ${formatTZS(totals.feesEarnedTZS)} in fees.`
+              : `Nobody is owed anything right now. MalFleks has earned ${formatTZS(totals.feesEarnedTZS)} in fees.`}
+          </span>
+          <Link href="/admin/payouts" className="font-medium text-accent hover:underline">
+            Payouts →
+          </Link>
+        </p>
       </section>
     </div>
   );
@@ -214,6 +220,15 @@ function Tile({ label, value, note, emphasis }: { label: string; value: string; 
     </li>
   );
 }
+
+const LEDGER_LABEL: Record<string, string> = {
+  collected: "Collected from customer",
+  branch_payout: "Owed to branch",
+  courier_payout: "Owed to courier",
+  malfleks_fee: "MalFleks fees",
+  refund: "Refunded to customer",
+  reversal: "Reversal",
+};
 
 const BADGE: Record<string, string> = {
   captured: "bg-[#0ca30c]/10 text-[#006300]",

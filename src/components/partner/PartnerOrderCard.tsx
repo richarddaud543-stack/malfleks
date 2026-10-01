@@ -7,7 +7,7 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
 /**
  * One customer order, as the branch that has to fulfil it needs to see it.
  *
- * Deliberately different from `OrderCard` on `/admin/orders`, which is built
+ * Deliberately different from the admin order page (`/admin/orders/[id]`), which is built
  * for someone triaging a queue. A shopkeeper opening this on a phone needs
  * three things in the first line of sight — **who to call, what they want, and
  * the reference** — so the phone number is a `tel:` link and the reference is

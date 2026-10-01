@@ -1,5 +1,6 @@
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
+import { accruePayouts } from "@/server/money/payouts";
 
 /**
  * Recording that money arrived, or that an attempt failed -- in one place.
@@ -104,6 +105,9 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
             : `ClickPesa ${paymentReference}`,
       },
     });
+    // Paid after it was already delivered: split it now, since the
+    // fulfilment transition found nothing to split. A no-op otherwise.
+    await accruePayouts(tx, payment.orderId);
     return "captured" as const;
   });
 }

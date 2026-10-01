@@ -1,5 +1,6 @@
 import { getPrisma } from "@/server/db/client";
 import { seriesByDay, type DayPoint } from "@/lib/charts";
+import { moneyTotals } from "@/server/money/payouts";
 
 /**
  * Everything the Money page shows: where every shilling is.
@@ -16,6 +17,7 @@ export const MONEY_SERIES_DAYS = 30;
 
 export interface PaymentRow {
   id: string;
+  orderId: string;
   orderReference: string;
   customerName: string;
   brandName: string;
@@ -33,20 +35,12 @@ export interface PaymentRow {
 
 export interface LedgerRow {
   id: string;
+  orderId: string;
   createdAt: Date;
   kind: string;
   amountTZS: number;
   note: string | null;
   orderReference: string;
-}
-
-export interface PayoutRow {
-  id: string;
-  createdAt: Date;
-  payeeType: string;
-  totalTZS: number;
-  status: string;
-  paidAt: Date | null;
 }
 
 export interface MoneyOverview {
@@ -57,11 +51,15 @@ export interface MoneyOverview {
     awaitingTZS: number;
     awaitingCount: number;
     capturedCount: number;
+    refundedTZS: number;
+    feesEarnedTZS: number;
+    /** Owed to partners on delivered orders, not yet in a payout. */
+    owedTZS: number;
+    inPayoutsTZS: number;
   };
   series: DayPoint[];
   payments: PaymentRow[];
   ledger: LedgerRow[];
-  payouts: PayoutRow[];
   lastReconciledAt: Date | null;
   /** Whether automatic checks can run at all: both halves of the credential present. */
   reconcilerReady: boolean;
@@ -77,17 +75,16 @@ const PAYMENT_SELECT = {
   failedAt: true,
   failureNote: true,
   lastCheckedAt: true,
-  order: { select: { reference: true, customerFullName: true, brandName: true, productName: true } },
+  order: { select: { id: true, reference: true, customerFullName: true, brandName: true, productName: true } },
 } as const;
 
 export async function getMoneyOverview(now = new Date()): Promise<MoneyOverview> {
   const db = getPrisma();
   const since = new Date(now.getTime() - MONEY_SERIES_DAYS * DAY);
 
-  const [collected, paidOut, awaiting, capturedCount, recentCollections, payments, ledger, payouts, lastCheck] =
+  const [totals, awaiting, capturedCount, recentCollections, payments, ledger, lastCheck] =
     await Promise.all([
-      db.ledgerEntry.aggregate({ where: { kind: "collected" }, _sum: { amountTZS: true } }),
-      db.payoutBatch.aggregate({ where: { status: "paid" }, _sum: { totalTZS: true } }),
+      moneyTotals(db),
       db.orderPayment.aggregate({ where: { status: "pending" }, _sum: { amountTZS: true }, _count: { _all: true } }),
       db.orderPayment.count({ where: { status: "captured" } }),
       db.ledgerEntry.findMany({
@@ -120,25 +117,21 @@ export async function getMoneyOverview(now = new Date()): Promise<MoneyOverview>
           kind: true,
           amountTZS: true,
           note: true,
-          order: { select: { reference: true } },
+          order: { select: { id: true, reference: true } },
         },
-      }),
-      db.payoutBatch.findMany({
-        orderBy: { createdAt: "desc" },
-        take: 20,
-        select: { id: true, createdAt: true, payeeType: true, totalTZS: true, status: true, paidAt: true },
       }),
       db.orderPayment.aggregate({ _max: { lastCheckedAt: true } }),
     ]);
 
-  const collectedTZS = collected._sum.amountTZS ?? 0;
-  const paidOutTZS = paidOut._sum.totalTZS ?? 0;
-
   return {
     totals: {
-      collectedTZS,
-      heldTZS: collectedTZS - paidOutTZS,
-      paidOutTZS,
+      collectedTZS: totals.collectedTZS,
+      heldTZS: totals.heldTZS,
+      paidOutTZS: totals.paidOutTZS,
+      refundedTZS: totals.refundedTZS,
+      feesEarnedTZS: totals.feesEarnedTZS,
+      owedTZS: totals.owedTZS,
+      inPayoutsTZS: totals.inPayoutsTZS,
       awaitingTZS: awaiting._sum.amountTZS ?? 0,
       awaitingCount: awaiting._count._all,
       capturedCount,
@@ -148,6 +141,7 @@ export async function getMoneyOverview(now = new Date()): Promise<MoneyOverview>
     payments: payments
       .map((p) => ({
       id: p.id,
+      orderId: p.order.id,
       orderReference: p.order.reference,
       customerName: p.order.customerFullName,
       brandName: p.order.brandName,
@@ -163,13 +157,13 @@ export async function getMoneyOverview(now = new Date()): Promise<MoneyOverview>
     })),
     ledger: ledger.map((e) => ({
       id: e.id,
+      orderId: e.order.id,
       createdAt: e.createdAt,
       kind: e.kind,
       amountTZS: e.amountTZS,
       note: e.note,
       orderReference: e.order.reference,
     })),
-    payouts,
     lastReconciledAt: lastCheck._max.lastCheckedAt ?? null,
     reconcilerReady: Boolean(process.env.CLICKPESA_CLIENT_ID?.trim() && process.env.CLICKPESA_API_KEY?.trim()),
   };

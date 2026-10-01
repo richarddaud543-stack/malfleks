@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import OrderCard from "./OrderCard";
+import OrderActions from "./OrderActions";
 import type { ListedOrder } from "@/server/orders/list-orders";
 
 /**
@@ -51,7 +51,7 @@ const ORDER: ListedOrder = {
 };
 
 function renderCard(order: ListedOrder = ORDER) {
-  return render(<OrderCard order={order} />);
+  return render(<OrderActions order={order} />);
 }
 
 beforeEach(() => {
@@ -65,7 +65,7 @@ beforeEach(() => {
   sendPaymentLink.mockResolvedValue({ ok: true, checkoutLink: "https://pay.example/x", reused: false });
 });
 
-describe("OrderCard — pending order", () => {
+describe("OrderActions — pending order", () => {
   it("shows Confirm and Cancel, and nothing else", () => {
     renderCard();
 
@@ -145,7 +145,7 @@ describe("OrderCard — pending order", () => {
   });
 });
 
-describe("OrderCard — confirmed order", () => {
+describe("OrderActions — confirmed order", () => {
   const CONFIRMED: ListedOrder = { ...ORDER, status: "confirmed" };
 
   it("shows Mark fulfilled and Cancel, not Confirm", () => {
@@ -176,26 +176,21 @@ describe("OrderCard — confirmed order", () => {
   });
 });
 
-describe("OrderCard — terminal orders show no actions", () => {
+describe("OrderActions — terminal orders show no actions", () => {
   it("fulfilled: no buttons at all", () => {
     renderCard({ ...ORDER, status: "fulfilled" });
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
-  it("cancelled: no buttons, and shows the stored reason", () => {
-    renderCard({
-      ...ORDER,
-      status: "cancelled",
-      decisionNote: "Customer unreachable",
-    });
+  it("cancelled: no buttons at all", () => {
+    renderCard({ ...ORDER, status: "cancelled", decisionNote: "Customer unreachable" });
 
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
-    expect(screen.getByText("Customer unreachable")).toBeInTheDocument();
   });
 });
 
-describe("OrderCard — a failed decision is never silent", () => {
+describe("OrderActions — a failed decision is never silent", () => {
   const cases: Array<{ reason: string | undefined; expect: RegExp }> = [
     { reason: "forbidden", expect: /no longer has admin access/i },
     { reason: "invalid-transition", expect: /someone already moved this order/i },

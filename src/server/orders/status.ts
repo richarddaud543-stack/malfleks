@@ -1,4 +1,5 @@
 import { getPrisma } from "@/server/db/client";
+import { accruePayouts } from "@/server/money/payouts";
 import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
 
 /**
@@ -163,6 +164,14 @@ async function writeTransition(
         note,
       },
     });
+
+    // Delivered and paid: split the held money into what the branch, the
+    // courier and MalFleks are each owed, in the same transaction, so an order
+    // can never be fulfilled-and-paid with its payouts unrecorded. An unpaid
+    // order (every pre-escrow one, or a payment still outstanding) simply
+    // records nothing here; `settle.ts` does it if the money lands later.
+    // Fulfilment is never refused over this -- the goods were delivered.
+    if (target === "fulfilled") await accruePayouts(tx, orderId);
 
     return { ok: true } as const;
   });

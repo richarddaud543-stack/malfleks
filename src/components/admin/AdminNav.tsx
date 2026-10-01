@@ -6,14 +6,19 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import type { NavCounts } from "@/server/admin/dashboard";
 
-type IconName = "overview" | "orders" | "applications" | "submissions" | "money";
+type IconName = "overview" | "orders" | "applications" | "submissions" | "money" | "payouts" | "partners" | "catalogue";
 
+// Grouped the way the work flows: orders and money first, then the people
+// MalFleks works with, then what they sell.
 const ITEMS: { href: string; label: string; icon: IconName; count?: keyof NavCounts }[] = [
   { href: "/admin", label: "Overview", icon: "overview" },
   { href: "/admin/orders", label: "Orders", icon: "orders", count: "orders" },
-  { href: "/admin/applications", label: "Applications", icon: "applications", count: "applications" },
-  { href: "/admin/submissions", label: "Submissions", icon: "submissions", count: "submissions" },
   { href: "/admin/money", label: "Money", icon: "money", count: "payments" },
+  { href: "/admin/payouts", label: "Payouts", icon: "payouts", count: "payouts" },
+  { href: "/admin/partners", label: "Partners", icon: "partners" },
+  { href: "/admin/applications", label: "Applications", icon: "applications", count: "applications" },
+  { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
+  { href: "/admin/submissions", label: "Submissions", icon: "submissions", count: "submissions" },
 ];
 
 const ICON_PATHS: Record<IconName, string> = {
@@ -22,6 +27,9 @@ const ICON_PATHS: Record<IconName, string> = {
   applications: "M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM4 17c0-3 2.7-5 6-5s6 2 6 5",
   submissions: "M4 3h8l4 4v10H4zM12 3v4h4M7 11h6M7 14h4",
   money: "M3 6h14v9H3zM10 13a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM3 9h1M16 9h1",
+  payouts: "M4 10h10M10 6l4 4-4 4M17 4v12",
+  partners: "M7 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM13.5 9a2 2 0 1 0 0-4M2.5 16c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M13 12c2.3 0 4.5 1.3 4.5 4",
+  catalogue: "M3 4h6v6H3zM11 4h6v6h-6zM3 12h6v5H3zM11 12h6v5h-6z",
 };
 
 function Icon({ name }: { name: IconName }) {

@@ -1,6 +1,7 @@
 import { getPrisma } from "@/server/db/client";
 import { listActivatablePartners } from "@/server/partners/activation";
 import { seriesByDay, type DayPoint } from "@/lib/charts";
+import { moneyTotals, moneyWork } from "@/server/money/payouts";
 
 /**
  * Everything the admin Overview shows, read in one place.
@@ -34,6 +35,8 @@ const OVERDUE_AFTER_HOURS: Record<string, number> = {
   applications: 72,
   golive: 72,
   submissions: 72,
+  payouts: 7 * 24, // partners are paid weekly at the latest
+  refunds: 24, // a customer whose order was cancelled is waiting on their money
 };
 
 function toneFor(key: string, count: number, oldest: Date | null, now: Date): Tone {
@@ -50,17 +53,26 @@ export interface NavCounts {
   applications: number;
   submissions: number;
   payments: number;
+  /** Payees owed + payouts not yet sent + refunds not yet recorded. */
+  payouts: number;
 }
 
 export async function getNavCounts(): Promise<NavCounts> {
   const db = getPrisma();
-  const [orders, applications, submissions, payments] = await Promise.all([
+  const [orders, applications, submissions, payments, work] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.partnerApplication.count({ where: { status: "pending" } }),
     db.productSubmission.count({ where: { status: "pending" } }),
     db.orderPayment.count({ where: { status: "pending" } }),
+    moneyWork(db),
   ]);
-  return { orders, applications, submissions, payments };
+  return {
+    orders,
+    applications,
+    submissions,
+    payments,
+    payouts: work.payeesOwed + work.pendingBatches + work.refundsDue.length,
+  };
 }
 
 export interface Health {
@@ -104,8 +116,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     recentOrders,
     statusGroups,
     brandGroups,
-    collected,
-    paidOut,
+    totals,
     recentCollections,
     partnersLive,
     products,
@@ -113,6 +124,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     lastCheck,
     errors24h,
     errors7d,
+    work,
   ] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.order.findFirst({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
@@ -127,8 +139,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     db.order.findMany({ where: { createdAt: { gte: since } }, select: { createdAt: true } }),
     db.order.groupBy({ by: ["status"], _count: { _all: true } }),
     db.order.groupBy({ by: ["brandName"], _count: { _all: true } }),
-    db.ledgerEntry.aggregate({ where: { kind: "collected" }, _sum: { amountTZS: true } }),
-    db.payoutBatch.aggregate({ where: { status: "paid" }, _sum: { totalTZS: true } }),
+    moneyTotals(db),
     db.ledgerEntry.findMany({ where: { kind: "collected", createdAt: { gte: since } }, select: { createdAt: true, amountTZS: true } }),
     db.partner.count({ where: { status: "active", OR: [{ branchId: { not: null } }, { agentId: { not: null } }] } }),
     db.product.count(),
@@ -136,6 +147,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     db.orderPayment.aggregate({ _max: { lastCheckedAt: true } }),
     db.serverErrorLog.count({ where: { createdAt: { gte: new Date(now.getTime() - DAY) } } }),
     db.serverErrorLog.count({ where: { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } } }),
+    moneyWork(db),
   ]);
 
   const oldestGoLive = activatable.reduce<Date | null>(
@@ -149,6 +161,8 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     { key: "applications", label: "Partner applications", hint: "Approve or reject", count: pendingApplications, oldest: oldestApplication?.createdAt ?? null, href: "/admin/applications" },
     { key: "golive", label: "Approved, not yet live", hint: "Put them on the map or in the routing", count: activatable.length, oldest: oldestGoLive, href: "/admin/applications" },
     { key: "submissions", label: "Product submissions", hint: "Publish or send back", count: pendingSubmissions, oldest: oldestSubmission?.createdAt ?? null, href: "/admin/submissions" },
+    { key: "payouts", label: "Partners to pay", hint: "Send from ClickPesa, then record it", count: work.payeesOwed + work.pendingBatches, oldest: work.oldestPayout, href: "/admin/payouts" },
+    { key: "refunds", label: "Refunds to send", hint: "Cancelled orders still holding money", count: work.refundsDue.length, oldest: work.refundsDue.reduce<Date | null>((min, r) => (r.cancelledAt && (!min || r.cancelledAt < min) ? r.cancelledAt : min), null), href: work.refundsDue.length === 1 ? `/admin/orders/${work.refundsDue[0].orderId}` : "/admin/orders?status=cancelled&payment=captured" },
   ];
   const queues: Queue[] = queueSpecs.map((q) => ({ ...q, tone: toneFor(q.key, q.count, q.oldest, now) }));
 
@@ -157,7 +171,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     if (g.status in statusCounts) statusCounts[g.status as keyof typeof statusCounts] = g._count._all;
   }
 
-  const collectedTZS = collected._sum.amountTZS ?? 0;
+  const collectedTZS = totals.collectedTZS;
   const moneySeries = seriesByDay(recentCollections, (e) => e.createdAt, (e) => e.amountTZS, now, SERIES_DAYS);
 
   return {
@@ -170,9 +184,9 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     },
     money: {
       collectedTZS,
-      // Held = collected and not yet paid out. Money only leaves through a
-      // PayoutBatch marked paid, so that is the one thing subtracted.
-      heldTZS: collectedTZS - (paidOut._sum.totalTZS ?? 0),
+      // Held = collected, less refunds sent, less payouts marked sent. See
+      // `moneyTotals` -- one definition shared with the Money page.
+      heldTZS: totals.heldTZS,
       last30TZS: moneySeries.reduce((sum, p) => sum + p.value, 0),
       series: moneySeries,
     },

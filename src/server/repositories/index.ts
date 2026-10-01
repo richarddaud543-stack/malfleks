@@ -47,9 +47,15 @@ export async function getBranchById(id: string): Promise<Branch | undefined> {
   return row ? mapBranch(row) : undefined;
 }
 
+// Every customer-facing product read goes through this file, and each one
+// leaves out a product an admin has taken off the shop (`Product.hiddenAt`).
+// The order builder reads through `getProductById` too, so a hidden product
+// cannot be ordered by someone holding an old link.
+const ON_SALE = { hiddenAt: null } as const;
+
 export async function getProductsByBranchId(branchId: string): Promise<Product[]> {
   const rows = await getPrisma().product.findMany({
-    where: { branchId },
+    where: { branchId, ...ON_SALE },
     orderBy: { sortOrder: "asc" },
     include: { specs: { orderBy: { position: "asc" } } },
   });
@@ -57,8 +63,8 @@ export async function getProductsByBranchId(branchId: string): Promise<Product[]
 }
 
 export async function getProductById(id: string): Promise<Product | undefined> {
-  const row = await getPrisma().product.findUnique({
-    where: { id },
+  const row = await getPrisma().product.findFirst({
+    where: { id, ...ON_SALE },
     include: { specs: { orderBy: { position: "asc" } } },
   });
   return row ? mapProduct(row) : undefined;
@@ -93,6 +99,7 @@ export async function getAllBranches(): Promise<Branch[]> {
 
 export async function getAllProducts(): Promise<Product[]> {
   const rows = await getPrisma().product.findMany({
+    where: ON_SALE,
     orderBy: { sortOrder: "asc" },
     include: { specs: { orderBy: { position: "asc" } } },
   });

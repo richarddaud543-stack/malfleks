@@ -122,7 +122,8 @@ export async function confirmOrder(orderId: string): Promise<OrderTransitionResu
     const outcome = await applyConfirm(orderId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders", "layout");
+    revalidatePath("/admin");
     return { ok: true };
   } catch (error) {
     await logServerError("confirm-order", error, session.uid);
@@ -143,7 +144,8 @@ export async function cancelOrder(
     const outcome = await applyCancel(orderId, session.uid, reason);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders", "layout");
+    revalidatePath("/admin");
     return { ok: true };
   } catch (error) {
     await logServerError("cancel-order", error, session.uid);
@@ -163,7 +165,8 @@ export async function markOrderFulfilled(
     const outcome = await applyFulfil(orderId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidatePath("/admin/orders");
+    revalidatePath("/admin/orders", "layout");
+    revalidatePath("/admin");
     return { ok: true };
   } catch (error) {
     await logServerError("mark-order-fulfilled", error, session.uid);

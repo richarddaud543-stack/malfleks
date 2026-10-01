@@ -135,3 +135,15 @@ export function formatValue(kind: ValueFormat, value: number): string {
 export function formatAxisValue(kind: ValueFormat, value: number): string {
   return kind === "tzs" ? compactNumber(value) : value.toLocaleString("en-US");
 }
+
+/** "1 Oct 2026, 14:32" in Dar es Salaam time -- for timelines and records, where the exact moment matters. */
+export function formatWhen(moment: Date): string {
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: BUSINESS_TIME_ZONE,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(moment);
+}

@@ -127,6 +127,14 @@ model Product {
 
   sortOrder Int
 
+  // Taken off the shop by an admin from /admin/catalogue. Null = on sale.
+  // A timestamp rather than a boolean so "since when" is never folklore, and
+  // nullable so every existing row stays visible without a backfill. Every
+  // customer-facing read in src/server/repositories filters on it; the order
+  // builder reads through the same functions, so a hidden product cannot be
+  // ordered either. Orders already placed keep their snapshot and are untouched.
+  hiddenAt DateTime?
+
   specs  ProductSpec[]
   orders Order[]
 
@@ -533,6 +541,12 @@ model PayoutBatch {
 
   createdAt DateTime @default(now())
 
+  // Admin uids: who drew the batch up, and who recorded it as sent. Payouts
+  // are sent by hand from the ClickPesa dashboard (see
+  // src/server/money/payouts.ts), so the person is the audit trail.
+  createdBy String?
+  paidBy    String?
+
   entries LedgerEntry[]
 
   @@index([payeeType, payeeId])
@@ -631,6 +645,12 @@ model Partner {
   applicationId String   @unique
   approvedAt    DateTime @default(now())
   approvedBy    String
+
+  /// The last suspend/reactivate from /admin/partners: when, who, and why.
+  /// Null on a partner nobody has touched since approval.
+  statusChangedAt DateTime?
+  statusChangedBy String?
+  statusNote      String?
 
   users PartnerUser[]
 
