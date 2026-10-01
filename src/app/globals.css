@@ -652,3 +652,58 @@ body:has([data-scene="night"]) footer {
   background: var(--scene-ground, #0b1a15);
   color: #f2f7f4;
 }
+
+/* ---------------------------------------------------------------------------
+   Admin charts.
+
+   The four order-state colours were validated with the dataviz six-checks
+   script on 1 Oct 2026 against the #ffffff card surface, in this stacking
+   order -- cancelled, pending, confirmed, fulfilled -- and every check passes:
+   worst adjacent colour-blind separation dE 17.7 (target >= 8), worst
+   normal-vision dE 29.8 (floor 15).
+
+   The order is the safety mechanism, not decoration. Lifecycle order puts
+   "fulfilled" (green) next to "cancelled" (red), and green-beside-red failed
+   for deuteranopes in every shade tried (dE 3.1-7.9). "Cancelled" is an exit,
+   not a step, so it sits first instead -- and the failing pair is never
+   adjacent.
+
+   Pending (#9eb60f, the brand lime) is under 3:1 on white. The rule's
+   required relief is in place everywhere it appears: a visible text label
+   beside every swatch, and a table view on every chart.
+
+   Light only: the site has no dark theme, so neither does this.
+--------------------------------------------------------------------------- */
+.viz {
+  --viz-surface: #ffffff;
+  --viz-ink: var(--foreground);
+  --viz-ink-2: var(--muted);
+  --viz-axis: #5e6b66; /* 5.57:1 on white */
+  --viz-grid: #e5eae8; /* hairline, recessive */
+  --viz-baseline: var(--border);
+  --viz-series: var(--accent); /* forest, 10.49:1 -- single-series charts */
+  --viz-series-wash: rgb(4 73 49 / 0.1);
+  --viz-deemph: #9aa5a1; /* sparkline body */
+  --viz-cancelled: #c2413b;
+  --viz-pending: #9eb60f;
+  --viz-confirmed: #6a4bc4;
+  --viz-fulfilled: #138a4c;
+}
+
+/* ---------------------------------------------------------------------------
+   The admin console's own frame.
+
+   The root layout wraps every route -- /admin included -- in the shop's
+   navbar, footer and grain overlay. The admin layout renders
+   `[data-admin-shell]` only for a signed-in admin, and these rules hide the
+   shop chrome only when that element is present.
+
+   That conditional matters more than it looks. A visitor who is not an admin
+   gets an ordinary 404 from /admin, and it must look exactly like every other
+   404 on the site -- navbar and all. Hiding the chrome by URL alone would make
+   /admin's 404 the one page without a navbar, which is precisely the tell
+   `requireAdmin` exists to avoid.
+--------------------------------------------------------------------------- */
+body:has([data-admin-shell]) [data-site-chrome] {
+  display: none !important;
+}

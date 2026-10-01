@@ -13,6 +13,7 @@ import {
   createChecksum,
   generateCheckoutLink,
   normalizeCustomerPhone,
+  queryPaymentStatus,
   resetAuthTokenCache,
   verifyChecksum,
 } from "./clickpesa";
@@ -292,5 +293,75 @@ describe("normalizeCustomerPhone", () => {
 
   it("drops punctuation without mangling the digits", () => {
     expect(normalizeCustomerPhone("(+255) 754-123-456")).toBe("255754123456");
+  });
+});
+
+describe("queryPaymentStatus", () => {
+  // Same shape as the token call the mock factory above produces for generateCheckoutLink.
+  const tokenResponse = { ok: true, status: 200, json: async () => ({ success: true, token: "Bearer eyJtest" }), text: async () => "" };
+  const respond = (status: number, body: unknown) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: async () => body,
+    text: async () => JSON.stringify(body),
+  });
+
+  it("asks ClickPesa about the reference with the bare bearer token", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(tokenResponse)
+      .mockResolvedValueOnce(respond(200, []));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await queryPaymentStatus("ORADODN6CD");
+
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe("https://api.clickpesa.com/third-parties/payments/ORADODN6CD");
+    expect(init).toMatchObject({ method: "GET", headers: { Authorization: "Bearer eyJtest" } });
+  });
+
+  it("reads 404 as 'no attempt yet', not as an error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(404, { message: "Not found" })));
+    await expect(queryPaymentStatus("ORADODN6CD")).resolves.toEqual({ ok: true, found: false });
+  });
+
+  it("normalises each record and keeps unknown fields as null", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(
+        respond(200, [
+          { status: "success", paymentReference: "CP1", collectedAmount: "5574", orderReference: "ORADODN6CD" },
+          { status: "FAILED" },
+        ]),
+      ),
+    );
+    const result = await queryPaymentStatus("ORADODN6CD");
+    expect(result).toEqual({
+      ok: true,
+      found: true,
+      records: [
+        { status: "SUCCESS", paymentReference: "CP1", orderReference: "ORADODN6CD", collectedAmount: 5574, message: null, updatedAt: null },
+        { status: "FAILED", paymentReference: null, orderReference: null, collectedAmount: null, message: null, updatedAt: null },
+      ],
+    });
+  });
+
+  it("tolerates a single object where an array was documented", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(200, { status: "SUCCESS", collectedAmount: 5574 })));
+    const result = await queryPaymentStatus("ORADODN6CD");
+    expect(result).toMatchObject({ ok: true, found: true, records: [{ status: "SUCCESS", collectedAmount: 5574 }] });
+  });
+
+  it("reports a 401 as auth-failed with the detail", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(401, { message: "Invalid or Expired Token" })));
+    const result = await queryPaymentStatus("ORADODN6CD");
+    expect(result).toMatchObject({ ok: false, reason: "auth-failed" });
+    expect((result as { detail?: string }).detail).toContain("401");
+  });
+
+  it("reports a token failure as auth-failed without calling the payments endpoint", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(respond(400, {}));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(queryPaymentStatus("ORADODN6CD")).resolves.toMatchObject({ ok: false, reason: "auth-failed" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

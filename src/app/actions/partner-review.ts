@@ -46,6 +46,7 @@ export async function approvePartnerApplication(
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
     revalidatePath("/admin");
+    revalidatePath("/admin/applications");
     return { ok: true };
   } catch (error) {
     await logServerError("approve-partner-application", error, session.uid);
@@ -66,6 +67,7 @@ export async function rejectPartnerApplication(
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
     revalidatePath("/admin");
+    revalidatePath("/admin/applications");
     return { ok: true };
   } catch (error) {
     await logServerError("reject-partner-application", error, session.uid);

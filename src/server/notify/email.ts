@@ -217,7 +217,7 @@ export function partnerApplicationMessage(input: {
       "on the map either — that is still a separate step after you have",
       "confirmed their address.",
       "",
-      `Review it: ${input.siteUrl}/admin`,
+      `Review it: ${input.siteUrl}/admin/applications`,
       "",
       "The applicant's phone number and notes are on that page rather than in",
       "this email.",

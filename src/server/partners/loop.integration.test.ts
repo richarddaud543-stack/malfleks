@@ -475,17 +475,22 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     // ---------------------------------------------------------------------
     // 16. Nothing about the delivered order moved any of it.
     //
-    //     No deposit was taken, no payout was made, and the courier's balance
-    //     is not a number anywhere in this database. The order is a *request*
-    //     that was fulfilled off-platform, exactly as `docs/backend.md` says.
+    //     No payment was collected, nothing was written to the ledger, and no
+    //     payout was batched. Delivering an order is not a money event; only a
+    //     payment link that a customer actually pays is.
+    //
+    //     This used to assert that no payment/ledger/payout *tables existed* --
+    //     true when MalFleks took no money at all, and a reasonable proxy for
+    //     the intent then. Escrow added exactly those tables on 19 Sep 2026,
+    //     the proxy went false, and nobody saw it because this suite needs a
+    //     Postgres nobody had. The intent still holds and is still worth
+    //     guarding, so it is now checked directly: by rows, for this order.
     // ---------------------------------------------------------------------
-    const tables = await db.$queryRawUnsafe<{ table_name: string }[]>(
-      `select table_name from information_schema.tables where table_schema = current_schema()`,
-    );
-    expect(
-      tables
-        .map((row) => row.table_name)
-        .filter((name) => /payment|payout|ledger|invoice|balance|settle/i.test(name)),
-    ).toEqual([]);
+    const [payments, ledger, payouts] = await Promise.all([
+      db.orderPayment.count({ where: { orderId } }),
+      db.ledgerEntry.count({ where: { orderId } }),
+      db.payoutBatch.count(),
+    ]);
+    expect({ payments, ledger, payouts }).toEqual({ payments: 0, ledger: 0, payouts: 0 });
   }, 120_000);
 });

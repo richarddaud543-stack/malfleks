@@ -224,7 +224,7 @@ describe("what the messages say", () => {
 
     expect(subject).toContain("Kariakoo Electronics");
     expect(body).toContain("Dar es Salaam");
-    expect(body).toContain("https://malfleks.example/admin");
+    expect(body).toContain("https://malfleks.example/admin/applications");
     // Approval is not publication, and the email should not imply it is.
     expect(body).toMatch(/approv/i);
   });

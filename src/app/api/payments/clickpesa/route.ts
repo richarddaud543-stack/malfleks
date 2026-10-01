@@ -1,5 +1,5 @@
-import { getPrisma } from "@/server/db/client";
 import { checkChecksum } from "@/server/payments/clickpesa";
+import { capturePayment, failPayment } from "@/server/payments/settle";
 import { logServerError } from "@/server/error-log";
 
 export const dynamic = "force-dynamic";
@@ -21,10 +21,11 @@ export const dynamic = "force-dynamic";
  *
  *  1. Verify the checksum -- a callback URL is public; anything that posts
  *     to it can claim a payment succeeded unless the signature is checked.
- *  2. Be idempotent -- a guarded `updateMany` (status must still be
- *     "pending"), same discipline as `writeTransition` in
- *     `src/server/orders/status.ts`. A retried webhook for an
- *     already-captured payment is a clean no-op, not a double-count.
+ *  2. Be idempotent -- a guarded `updateMany` that refuses a payment
+ *     already `captured` (see `capturePayment` in
+ *     `src/server/payments/settle.ts`, which both this route and
+ *     reconciliation call). A retried webhook, or the webhook arriving after
+ *     reconciliation already recorded the payment, is a clean no-op.
  *  3. Never trust `collectedAmount` as the truth -- compare it against the
  *     `OrderPayment.amountTZS` snapshot and refuse to capture on a
  *     mismatch, rather than recording whatever the request claims.
@@ -90,9 +91,16 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     if (event === "PAYMENT RECEIVED" && data.status === "SUCCESS") {
-      await capturePayment(orderReference, data);
+      // Same function reconciliation uses -- see src/server/payments/settle.ts.
+      await capturePayment({
+        providerRef: orderReference,
+        paymentReference:
+          typeof data.paymentReference === "string" ? data.paymentReference : null,
+        collectedAmount: Number(data.collectedAmount),
+        source: "webhook",
+      });
     } else if (event === "PAYMENT FAILED") {
-      await failPayment(orderReference, data);
+      await failPayment(orderReference, typeof data.message === "string" ? data.message : null);
     }
     // Every other event (PROCESSING, PAYOUT INITIATED/REFUNDED/REVERSED) is
     // acknowledged and ignored -- MalFleks doesn't disburse payouts through
@@ -107,80 +115,6 @@ export async function POST(request: Request): Promise<Response> {
   }
 
   return Response.json({ ok: true });
-}
-
-async function capturePayment(
-  providerRef: string,
-  data: Record<string, unknown>,
-): Promise<void> {
-  const paymentReference =
-    typeof data.paymentReference === "string" ? data.paymentReference : providerRef;
-  const collectedAmount = Number(data.collectedAmount);
-
-  const db = getPrisma();
-  const payment = await db.orderPayment.findUnique({
-    where: { providerRef },
-    select: { id: true, orderId: true, amountTZS: true, status: true },
-  });
-  // No such attempt, or already captured/failed by an earlier delivery of
-  // this same webhook -- either way, nothing to do.
-  if (!payment || payment.status !== "pending") return;
-
-  if (!Number.isFinite(collectedAmount) || collectedAmount !== payment.amountTZS) {
-    await logServerError(
-      "clickpesa-webhook-amount-mismatch",
-      new Error(
-        `Payment ${providerRef}: collectedAmount=${String(data.collectedAmount)} ` +
-          `does not match OrderPayment snapshot ${payment.amountTZS}`,
-      ),
-    );
-    return; // Refuse to capture on a mismatch -- malfleks-payment-integration.md rule 3.
-  }
-
-  await db.$transaction(async (tx) => {
-    // `providerRef` is overwritten to ClickPesa's own paymentReference on
-    // capture -- the lookup above already ran against the pre-capture value
-    // (what we sent as `orderReference`), so this rename is safe and does
-    // not affect this delivery.
-    const { count } = await tx.orderPayment.updateMany({
-      where: { id: payment.id, status: "pending" },
-      data: { status: "captured", capturedAt: new Date(), providerRef: paymentReference },
-    });
-    if (count === 0) return; // Lost the race to another delivery of this webhook -- no-op.
-
-    await tx.ledgerEntry.create({
-      data: {
-        orderId: payment.orderId,
-        paymentId: payment.id,
-        kind: "collected",
-        amountTZS: collectedAmount,
-        note: `ClickPesa ${paymentReference}`,
-      },
-    });
-  });
-}
-
-async function failPayment(
-  providerRef: string,
-  data: Record<string, unknown>,
-): Promise<void> {
-  const db = getPrisma();
-  const payment = await db.orderPayment.findUnique({
-    where: { providerRef },
-    select: { id: true },
-  });
-  if (!payment) return;
-
-  const message = typeof data.message === "string" ? data.message : null;
-
-  // Guarded the same way: only a still-pending payment can be marked failed,
-  // so a FAILED arriving after a RECEIVED already captured it (out-of-order
-  // delivery, which HTTP callbacks do not guarantee against) cannot undo a
-  // real capture.
-  await db.orderPayment.updateMany({
-    where: { id: payment.id, status: "pending" },
-    data: { status: "failed", failedAt: new Date(), failureNote: message },
-  });
 }
 
 /**

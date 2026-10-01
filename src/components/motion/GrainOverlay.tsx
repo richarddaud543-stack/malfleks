@@ -1,6 +1,7 @@
 export default function GrainOverlay() {
   return (
     <svg
+      data-site-chrome=""
       aria-hidden="true"
       className="pointer-events-none fixed inset-0 z-[999] h-full w-full opacity-[0.035] mix-blend-overlay"
     >

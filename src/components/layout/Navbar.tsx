@@ -16,7 +16,7 @@ export default function Navbar() {
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-3 z-50 px-3 sm:top-4 sm:px-6">
+    <header data-site-chrome="" className="sticky top-3 z-50 px-3 sm:top-4 sm:px-6">
       {/* Opaque, not translucent: the pill floats over content as the page
           scrolls, and at 90% the headings underneath showed through it and read
           as a rendering fault rather than a design. */}

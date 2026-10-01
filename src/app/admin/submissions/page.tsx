@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import SubmissionReviewCard from "@/components/admin/SubmissionReviewCard";
 import { requireAdmin } from "@/server/auth/dal";
@@ -40,18 +39,11 @@ export default async function AdminSubmissionsPage() {
   const brandById = new Map(brands.map((b) => [b.id, b]));
 
   return (
-    <div className="mx-auto max-w-3xl px-5 py-16">
-      <p className="font-accent-serif text-xl italic text-accent">Admin</p>
-      <div className="mt-1 flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="font-display text-4xl font-medium tracking-tight">
+    <div className="mx-auto max-w-3xl">
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="font-display text-2xl font-medium tracking-tight sm:text-3xl">
           Product submissions
         </h1>
-        <Link
-          href="/admin"
-          className="text-sm text-muted underline decoration-border underline-offset-4 hover:text-accent"
-        >
-          Applications
-        </Link>
       </div>
       <p className="mt-3 max-w-xl text-muted">
         Products branch partners want listed. Nothing here is visible to a

@@ -90,7 +90,13 @@ export async function createTestDatabase(label: string): Promise<TestDatabase> {
   }
 
   const server = testServerUrl();
-  const schema = `test_${label}_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  // The label is folded to an identifier here, once, rather than trusted from
+  // each caller: `error-log` and `rate-limit` passed hyphens, produced
+  // `test_rate-limit_...`, and were refused by the client's identifier check
+  // -- two whole suites red from the day they were written (17 Sep 2026), and
+  // unseen, because nobody had a Postgres to run them against.
+  const safeLabel = label.replace(/[^A-Za-z0-9_]/g, "_");
+  const schema = `test_${safeLabel}_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const url = withSchema(server, schema);
 
   process.env.DATABASE_URL = url;

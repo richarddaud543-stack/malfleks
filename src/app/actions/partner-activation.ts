@@ -52,6 +52,7 @@ const requireAdminSession = adminSession;
  */
 async function revalidateCatalogue() {
   revalidatePath("/admin");
+  revalidatePath("/admin/applications");
   revalidatePath("/");
   revalidatePath("/brands");
   revalidatePath("/search");

@@ -129,10 +129,14 @@ export type ChecksumVerdict =
  * payment.
  */
 export function checkChecksum(payload: Record<string, unknown>): ChecksumVerdict {
-  const { checksum, checksumMethod: _checksumMethod, ...rest } = payload;
+  const checksum = payload.checksum;
   if (typeof checksum !== "string" || checksum.length === 0) {
     return { ok: false, reason: "no-checksum" };
   }
+  // Everything except the signature and its method name is what was signed.
+  const rest = { ...payload };
+  delete rest.checksum;
+  delete rest.checksumMethod;
 
   let secret: string;
   try {
@@ -302,4 +306,118 @@ export async function generateCheckoutLink(
   if (!data?.checkoutLink) return { ok: false, reason: "request-failed" };
 
   return { ok: true, checkoutLink: data.checkoutLink };
+}
+
+// ---- Payment status ----------------------------------------------------
+// docs.clickpesa.com/api-reference/collection/querying-for-payments/querying-for-payments
+
+/**
+ * One payment attempt as ClickPesa reports it. Every field is nullable
+ * because this is a third party's JSON: a missing field must degrade to
+ * "unknown", never to a thrown TypeError inside a money path.
+ */
+export interface ClickPesaPaymentRecord {
+  /** Upper-cased. Documented values: SUCCESS, SETTLED, PROCESSING, PENDING, FAILED. */
+  status: string;
+  paymentReference: string | null;
+  orderReference: string | null;
+  collectedAmount: number | null;
+  message: string | null;
+  updatedAt: string | null;
+}
+
+export type PaymentStatusOutcome =
+  | { ok: true; found: true; records: ClickPesaPaymentRecord[] }
+  /** 404 -- ClickPesa has no attempt on this reference yet: link sent, not paid. */
+  | { ok: true; found: false }
+  | { ok: false; reason: "auth-failed" | "request-failed"; detail?: string };
+
+/**
+ * Ask ClickPesa what happened to a payment, instead of waiting to be told.
+ *
+ * ## Why this exists
+ *
+ * Until now the only way a payment could be recorded was the webhook, and the
+ * webhook is only as good as `CLICKPESA_CHECKSUM_SECRET`. On 20 Sep 2026 two
+ * deliveries were refused on checksum, and the secret on the project the
+ * webhook actually reaches has never been verified against anything. One
+ * unverifiable secret stood between a customer's money and the ledger.
+ *
+ * This call needs no checksum. It authenticates *outbound* with our own API
+ * key -- the same credential that already generates checkout links -- so a
+ * payment can be confirmed even when every webhook is refused. It is a second,
+ * independent road to the same capture, not a weaker one: the answer comes
+ * from ClickPesa over TLS on a request we initiated, which is a stronger
+ * provenance than an inbound POST anyone could send.
+ *
+ * Returns an array because ClickPesa does: one order reference can carry more
+ * than one attempt (a customer who fails once and retries on the same link).
+ */
+/** How long one status check may take before it counts as failed. */
+const STATUS_TIMEOUT_MS = 8_000;
+
+export async function queryPaymentStatus(
+  orderReference: string,
+): Promise<PaymentStatusOutcome> {
+  let token: string;
+  try {
+    token = await getAuthToken();
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "auth-failed",
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(
+      `${CLICKPESA_API_BASE}/payments/${encodeURIComponent(orderReference)}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${token}` },
+        // The Money page asks while it renders. A ClickPesa that hangs must
+        // cost the admin a few seconds, not the whole page.
+        signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+      },
+    );
+  } catch (error) {
+    return {
+      ok: false,
+      reason: "request-failed",
+      detail: error instanceof Error ? error.message : String(error),
+    };
+  }
+
+  if (response.status === 404) return { ok: true, found: false };
+  if (!response.ok) {
+    const body = await response.text().catch(() => "<unreadable body>");
+    return {
+      ok: false,
+      reason: response.status === 401 ? "auth-failed" : "request-failed",
+      detail: `payments/${orderReference} returned ${response.status}: ${body.slice(0, 300)}`,
+    };
+  }
+
+  const data: unknown = await response.json().catch(() => null);
+  // Documented as an array; tolerate a single object rather than misreading it
+  // as "no attempts", which would leave a paid order looking unpaid.
+  const raw = Array.isArray(data) ? data : data && typeof data === "object" ? [data] : [];
+
+  return { ok: true, found: true, records: raw.map(toPaymentRecord) };
+}
+
+function toPaymentRecord(value: unknown): ClickPesaPaymentRecord {
+  const r = (value ?? {}) as Record<string, unknown>;
+  const str = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
+  const amount = Number(r.collectedAmount);
+  return {
+    status: typeof r.status === "string" ? r.status.trim().toUpperCase() : "UNKNOWN",
+    paymentReference: str(r.paymentReference),
+    orderReference: str(r.orderReference),
+    collectedAmount: Number.isFinite(amount) ? amount : null,
+    message: str(r.message),
+    updatedAt: str(r.updatedAt),
+  };
 }

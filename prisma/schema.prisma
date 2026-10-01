@@ -462,6 +462,15 @@ model OrderPayment {
   failedAt    DateTime?
   failureNote String?
 
+  // Reconciliation: asking ClickPesa what happened instead of waiting for the
+  // webhook. See src/server/payments/reconcile.ts. `lastCheckedAt` throttles
+  // automatic checks against the account's 100-calls-a-day cap;
+  // `providerStatus` is what ClickPesa last said (SUCCESS, PROCESSING,
+  // FAILED, NO_ATTEMPTS...), shown to the admin and never used as the
+  // payment's own status -- that stays pending | captured | failed.
+  lastCheckedAt  DateTime?
+  providerStatus String?
+
   ledgerEntries LedgerEntry[]
 
   @@index([orderId])

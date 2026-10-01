@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function Footer() {
   return (
-    <footer className="mx-auto mt-24 max-w-6xl px-3 pb-6 sm:px-6">
+    <footer data-site-chrome="" className="mx-auto mt-24 max-w-6xl px-3 pb-6 sm:px-6">
       <div className="panel px-6 py-12 sm:px-10 sm:py-14">
         <div className="grid gap-10 sm:grid-cols-3">
           <div>
