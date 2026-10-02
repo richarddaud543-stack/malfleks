@@ -296,7 +296,28 @@ export function orderRequestMessage(input: {
   productName?: string;
   /** The admin console's own origin -- see `partnerApplicationMessage`. */
   adminUrl: string;
+  /**
+   * The customer was sent straight to the pay page (the normal case since
+   * 3 Oct 2026). Nobody has to confirm anything; the order confirms itself
+   * when it is paid, and a separate email says so.
+   */
+  awaitingPayment?: boolean;
 }): { subject: string; body: string } {
+  if (input.awaitingPayment) {
+    return {
+      subject: `MalFleks: new order ${input.reference} — waiting for payment`,
+      body: [
+        input.productName ? `${input.productName} — reference ${input.reference}` : `Reference ${input.reference}`,
+        "",
+        "The customer has been taken to the pay page. There is nothing to do",
+        "yet: when they pay, the order confirms itself, the branch is told to",
+        "deliver, and you get a payment email. If they never pay, it shows in",
+        "the daily list of stuck orders.",
+        "",
+        `Open it: ${input.adminUrl}/admin/orders`,
+      ].join("\n"),
+    };
+  }
   return {
     subject: `MalFleks: new order request ${input.reference}`,
     body: [
@@ -561,10 +582,10 @@ export function orderPaidPartnerMessage(input: {
       : `MalFleks: order ${input.reference} is paid — deliver now`;
   const next =
     input.role === "deliver"
-      ? ["Please deliver it now. Collect nothing at the door -- MalFleks holds the", "payment and pays your share once you mark the order delivered."]
+      ? ["Please deliver it now. Collect nothing at the door -- MalFleks holds the", "payment and pays your share once you mark the order delivered.", "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."]
       : input.role === "collect"
         ? [`Please collect it from ${input.branchName} and deliver it now. Collect nothing at`, "the door -- MalFleks holds the payment and pays your share once you mark", "the order delivered."]
-        : [`Please have it ready for ${input.carrier}, who is delivering it. MalFleks holds`, "the payment and pays your share once the courier marks the order", "delivered."];
+        : [`Please have it ready for ${input.carrier}, who is delivering it. MalFleks holds`, "the payment and pays your share once the courier marks the order", "delivered.", "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."];
   return {
     subject,
     body: [
@@ -811,6 +832,26 @@ export function stuckOrdersDigestMessage(input: {
       ...section("Paid more than three days ago and not marked delivered", input.undelivered),
       "",
       `Open them: ${input.adminUrl}/admin/orders`,
+    ].join("\n"),
+  };
+}
+
+/** To MalFleks's own inbox: a paid order was cancelled, so a refund is owed. */
+export function refundDueAdminMessage(input: {
+  reference: string;
+  productName: string;
+  reason: string | null;
+  adminUrl: string;
+}): { subject: string; body: string } {
+  return {
+    subject: `MalFleks: refund due on ${input.reference}`,
+    body: [
+      `Order ${input.reference} (${input.productName}) was cancelled after the customer had paid.`,
+      ...(input.reason ? [`Reason given: ${input.reason}`] : []),
+      "",
+      "The customer has been told they will be refunded. Send the refund from",
+      "ClickPesa, then record it so the books and the customer's email match:",
+      `${input.adminUrl}/admin/payouts`,
     ].join("\n"),
   };
 }

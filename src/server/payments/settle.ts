@@ -24,6 +24,9 @@ import { sendPaymentReceipts } from "./receipts";
  *     both arriving for the same payment, captures exactly once.
  */
 
+/** Who "decided" an order that was confirmed by its own payment. Not a uid; shown as "payment" in the admin timeline. */
+export const PAYMENT_ACTOR = "system:payment";
+
 export type CaptureOutcome =
   | "captured"
   /** Already captured -- by an earlier delivery, or by the other road. A clean no-op. */
@@ -109,6 +112,22 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
     });
     // Paid after it was already delivered: split it now, since the
     // fulfilment transition found nothing to split. A no-op otherwise.
+    // Paying is what confirms an order (the owner's call, 3 Oct 2026: a
+    // customer orders, pays, and is done — nobody at MalFleks or the branch
+    // has to press "confirm" in between). The guarded write only matches an
+    // order still `pending`: one an admin or branch already confirmed is left
+    // as it is, and one cancelled in the meantime stays cancelled, with this
+    // payment showing in the admin's "Refunds to send".
+    const { count: confirmed } = await tx.order.updateMany({
+      where: { id: payment.orderId, status: "pending" },
+      data: { status: "confirmed", decidedBy: PAYMENT_ACTOR, decidedAt: new Date(), decisionNote: null },
+    });
+    if (confirmed === 1) {
+      await tx.orderEvent.create({
+        data: { orderId: payment.orderId, fromStatus: "pending", toStatus: "confirmed", actorUid: PAYMENT_ACTOR, note: "Paid through MalFleks" },
+      });
+    }
+
     await accruePayouts(tx, payment.orderId);
     return "captured" as const;
   });

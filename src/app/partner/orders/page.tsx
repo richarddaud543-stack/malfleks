@@ -69,7 +69,7 @@ export default async function PartnerOrdersPage() {
       <p className="mt-3 max-w-prose text-muted">
         {isCourier
           ? "Deliveries a customer routed to you. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, arrange the fee with the branch and the customer directly."
-          : "A customer asking to buy from your branch. Confirm a new order if you have it at the listed price, or say you can't — the customer is told either way, and asked to pay once you confirm. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery."}
+          : "Orders for your branch. Customers pay MalFleks when they order, so act on an order once it says “Paid through MalFleks”: deliver it, collect nothing at the door, and MalFleks pays your share after delivery. If you can't supply a paid order, say so here and the customer is refunded. Keep your stock switches up to date so that rarely happens."}
       </p>
 
       {!isCourier && partner.status !== "active" && (

@@ -40,10 +40,14 @@ import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
  *   directly is the same fact with one fewer phone call in it. The customer's
  *   page already said "Waiting for the branch", and now it is true.
  *
- * What a partner still may **not** do is cancel a `confirmed` order: by then
- * the customer has been asked to pay and may have, so backing out is a refund
- * decision, and that stays admin's. `declineOrder` below is therefore guarded
- * on `pending` alone, in the WHERE, not on the wider set `cancelOrder` allows.
+ * - Later the same day: the customer now pays as soon as they order, and the
+ *   payment itself confirms the order (`capturePayment`). So the first time a
+ *   branch sees most orders they are already `confirmed` and paid -- and the
+ *   branch must still be able to say "we can't supply this". `declineOrder`
+ *   therefore covers `pending` and `confirmed`. What it does is cancel; the
+ *   refund that follows for a paid order is still sent and recorded by an
+ *   admin (it shows in "Refunds to send", and MalFleks's inbox is told), so
+ *   moving money stays admin's even though the answer is the branch's.
  */
 
 /** The states a transition may move an order *to*. `pending` is never a target. */
@@ -259,7 +263,7 @@ export function declineOrder(
   actorUid: string,
   reason: string
 ): Promise<TransitionOutcome> {
-  return writeTransition(orderId, "cancelled", actorUid, reason.trim(), ["pending"]);
+  return writeTransition(orderId, "cancelled", actorUid, reason.trim(), ["pending", "confirmed"]);
 }
 
 /** Delivered / handed off, request complete. Only valid from `confirmed`. Terminal. */

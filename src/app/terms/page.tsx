@@ -37,7 +37,7 @@ export default function TermsPage() {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 2 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 3 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -60,8 +60,8 @@ export default function TermsPage() {
             not belong here.
           </p>
           <p className="mt-2">
-            An order request is not a confirmed order. Nothing is reserved and
-            nothing is owed until the branch has confirmed it.
+            An order is placed with the branch once you have paid for it on
+            MalFleks. Until then nothing is reserved and nothing is owed.
           </p>
         </section>
 
@@ -71,12 +71,14 @@ export default function TermsPage() {
             Paying
           </h2>
           <p className="mt-2">
-            You are never charged when you send an order request. Once the
-            branch confirms that it has the item at the listed price, a checkout
-            page opens for that order on MalFleks and we email you the link.
-            You pay the full amount shown there — the goods and, where a
-            courier is used, the delivery fee — by mobile money through
-            ClickPesa, our payment provider.
+            When you place an order while signed in, a checkout page opens for
+            it on MalFleks straight away. You pay the full amount shown there
+            — the goods and, where a courier is used, the delivery fee — by
+            mobile money through ClickPesa, our payment provider. Your order is
+            placed with the branch once you have paid; an order you do not pay
+            for is not sent to the branch and nothing is owed on it. Where an
+            order cannot be priced when you place it, the branch confirms it
+            first and the checkout opens after that.
           </p>
           <p className="mt-2">
             <strong>You pay MalFleks, and MalFleks holds your payment</strong>{" "}
@@ -88,8 +90,8 @@ export default function TermsPage() {
           </p>
           <p className="mt-2">
             If the branch or MalFleks cancels an order you have paid for — for
-            example because it turns out not to be available — you are refunded
-            the full amount. If you
+            example because the branch turns out not to have the item — you are
+            refunded the full amount. If you
             want to cancel an order you have paid for, contact us as soon as you
             can, before it is dispatched, and we will tell you what can be
             refunded.

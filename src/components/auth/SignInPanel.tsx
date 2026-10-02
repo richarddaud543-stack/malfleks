@@ -127,9 +127,8 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
       </p>
 
       <p className="mt-4 text-sm text-muted">
-        We use your Google account to keep your orders, so you can pay for one
-        once the branch confirms it and track its delivery. MalFleks asks for
-        nothing else.
+        We use your Google account to keep your orders, so you can pay for
+        them here and track their delivery. MalFleks asks for nothing else.
       </p>
 
       <p className="mt-6 border-t border-border pt-4 text-sm text-muted">

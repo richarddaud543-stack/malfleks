@@ -188,7 +188,11 @@ export async function requestPaymentForOrder(
     },
   });
   if (!order) return { ok: false, reason: "not-found" };
-  if (order.status !== "confirmed") return { ok: false, reason: "wrong-status" };
+  // Pending or confirmed. Since 3 Oct 2026 the customer pays as soon as they
+  // order (payment is what confirms it — see `capturePayment`), so "wait for
+  // someone to confirm first" is no longer a condition for a link to exist.
+  // A cancelled or delivered order still gets none.
+  if (order.status !== "pending" && order.status !== "confirmed") return { ok: false, reason: "wrong-status" };
 
   const attempts: { status: string; checkoutLink: string | null }[] =
     await db.orderPayment.findMany({

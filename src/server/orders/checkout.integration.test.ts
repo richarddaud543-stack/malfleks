@@ -25,7 +25,7 @@ vi.mock("@/server/notify/email", async (original) => ({
 import { getPrisma } from "@/server/db/client";
 import { seedDatabase } from "@/server/db/seed";
 import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
-import { capturePayment } from "@/server/payments/settle";
+import { capturePayment, PAYMENT_ACTOR } from "@/server/payments/settle";
 import { checkoutForCustomer, checkoutStatesForCustomer, checkPaymentForCustomer, openCheckout } from "./checkout";
 import { createOrder } from "./create-order";
 import { cancelOrder, confirmOrder } from "./status";
@@ -107,11 +107,64 @@ describe("openCheckout", () => {
     expect(sendCustomerEmail).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses an order the branch has not confirmed", async () => {
+  // Changed 3 Oct 2026: the customer pays as they order, so a pending order
+  // gets a link too. The order form asks for it with `notify: false`, because
+  // the customer is taken straight to the page that shows it.
+  it("opens a checkout for an order nobody has confirmed, without emailing when the form asked for it", async () => {
     const o = await order();
+    await expect(openCheckout(o.id, { notify: false })).resolves.toEqual({ ok: true, reused: false, emailed: false });
+    expect(generateCheckoutLink).toHaveBeenCalledTimes(1);
+    expect(sendCustomerEmail).not.toHaveBeenCalled();
+  });
+
+  it("refuses a cancelled order", async () => {
+    const o = await order();
+    await cancelOrder(o.id, "admin-1", "Out of stock");
     await expect(openCheckout(o.id)).resolves.toEqual({ ok: false, reason: "wrong-status" });
     expect(generateCheckoutLink).not.toHaveBeenCalled();
-    expect(sendCustomerEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("paying confirms the order", () => {
+  it("moves a pending order to confirmed in the same step that records the payment, and says who did it", async () => {
+    const o = await order();
+    await openCheckout(o.id, { notify: false });
+    const payment = await getPrisma().orderPayment.findFirstOrThrow({ where: { orderId: o.id } });
+
+    await capturePayment({ providerRef: payment.providerRef, paymentReference: "CPAUTO1", collectedAmount: 68_000_000, source: "webhook" });
+
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: o.id }, select: { status: true, decidedBy: true, events: true } });
+    expect(row.status).toBe("confirmed");
+    expect(row.decidedBy).toBe(PAYMENT_ACTOR);
+    expect(row.events).toHaveLength(1);
+    expect(row.events[0]).toMatchObject({ fromStatus: "pending", toStatus: "confirmed", actorUid: PAYMENT_ACTOR });
+
+    // A second notification of the same payment changes nothing.
+    await capturePayment({ providerRef: "CPAUTO1", paymentReference: "CPAUTO1", collectedAmount: 68_000_000, source: "webhook" });
+    expect(await getPrisma().orderEvent.count({ where: { orderId: o.id } })).toBe(1);
+  });
+
+  it("leaves an order someone already confirmed exactly as it was", async () => {
+    const o = await order();
+    await confirmOrder(o.id, "admin-1");
+    await openCheckout(o.id);
+    const payment = await getPrisma().orderPayment.findFirstOrThrow({ where: { orderId: o.id } });
+    await capturePayment({ providerRef: payment.providerRef, paymentReference: "CPAUTO2", collectedAmount: 68_000_000, source: "webhook" });
+
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: o.id }, select: { status: true, decidedBy: true } });
+    expect(row).toEqual({ status: "confirmed", decidedBy: "admin-1" });
+    expect(await getPrisma().orderEvent.count({ where: { orderId: o.id } })).toBe(1);
+  });
+
+  it("does not revive an order cancelled before the money arrived -- it stays cancelled, with a refund owed", async () => {
+    const o = await order();
+    await openCheckout(o.id, { notify: false });
+    const payment = await getPrisma().orderPayment.findFirstOrThrow({ where: { orderId: o.id } });
+    await cancelOrder(o.id, "admin-1", "Out of stock");
+
+    await capturePayment({ providerRef: payment.providerRef, paymentReference: "CPAUTO3", collectedAmount: 68_000_000, source: "webhook" });
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: o.id }, select: { status: true } });
+    expect(row.status).toBe("cancelled");
   });
 });
 
@@ -122,27 +175,31 @@ describe("checkoutForCustomer", () => {
     await expect(checkoutForCustomer(ASHA, "NO-SUCH-REF")).resolves.toBeNull();
   });
 
-  it("walks waiting → ready → paid", async () => {
+  it("is ready to pay the moment the order is placed, and paid once the money arrives", async () => {
     const o = await order();
+    // A plain read (the account page, the poll) never creates a link...
     expect(await checkoutForCustomer(ASHA, o.reference)).toMatchObject({ state: "waiting", checkoutLink: null });
-
-    await confirmOrder(o.id, "admin-1");
-    // Confirmed, and nobody opened the checkout yet: a plain read does not create a link...
-    expect(await checkoutForCustomer(ASHA, o.reference)).toMatchObject({ state: "unavailable" });
     expect(generateCheckoutLink).not.toHaveBeenCalled();
 
-    // ...but the page itself does.
+    // ...the pay page does, without anyone confirming anything first.
     const ready = await checkoutForCustomer(ASHA, o.reference, { createIfMissing: true });
-    expect(ready).toMatchObject({ state: "ready", totalTZS: 68_000_000 });
+    expect(ready).toMatchObject({ state: "ready", orderStatus: "pending", totalTZS: 68_000_000 });
     expect(ready?.checkoutLink).toMatch(/^https:\/\/checkout\.clickpesa\.com\//);
+    expect(sendCustomerEmail).not.toHaveBeenCalled();
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "ready" });
 
     const payment = await getPrisma().orderPayment.findFirstOrThrow({ where: { orderId: o.id } });
     await capturePayment({ providerRef: payment.providerRef, paymentReference: "CPPAID1", collectedAmount: 68_000_000, source: "webhook" });
 
     const paid = await checkoutForCustomer(ASHA, o.reference);
-    expect(paid).toMatchObject({ state: "paid", checkoutLink: null, paymentReference: "CPPAID1" });
-    // Paid and on its way: the saved copy on /account must stay put.
-    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "paid", keepSavedCopy: true });
+    expect(paid).toMatchObject({ state: "paid", orderStatus: "confirmed", checkoutLink: null, paymentReference: "CPPAID1" });
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "paid" });
+  });
+
+  it("waits for the branch only when the order cannot be priced yet", async () => {
+    generateCheckoutLink.mockResolvedValue({ ok: false, reason: "request-failed" });
+    const o = await order();
+    expect(await checkoutForCustomer(ASHA, o.reference, { createIfMissing: true })).toMatchObject({ state: "waiting" });
   });
 
   it("stops asking ClickPesa for a link after three failures in a row", async () => {

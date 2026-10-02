@@ -96,6 +96,21 @@ describe("findStuckOrders", () => {
     expect(stuck.undelivered).toEqual([]);
   });
 
+  it("lists an order sent to the pay page and never paid as unpaid, not as waiting on the branch", async () => {
+    const o = await order();
+    await openCheckout(o.id, { notify: false });
+
+    const day = await findStuckOrders(hoursFromNow(25));
+    expect(day).toEqual({ undecided: [], unpaid: [], undelivered: [] });
+
+    const later = await findStuckOrders(hoursFromNow(49));
+    expect(later.unpaid.map((l) => l.reference)).toEqual([o.reference]);
+    expect(later.undecided).toEqual([]);
+
+    // And the branch is never reminded about it: there is nothing for it to answer.
+    await expect(remindBranchesOfWaitingOrders(hoursFromNow(49))).resolves.toBe(0);
+  });
+
   it("counts unpaid from the confirmation, not from when the order was placed", async () => {
     const o = await order();
     await confirmOrder(o.id, "admin-1");

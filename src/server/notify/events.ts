@@ -14,6 +14,7 @@ import {
   payoutSentMessage,
   productPublishedMessage,
   productSentBackMessage,
+  refundDueAdminMessage,
   refundRecordedMessage,
   sendCustomerEmail,
   sendNotification,
@@ -255,9 +256,12 @@ export function notifyProductDecision(submissionId: string): Promise<void> {
  *
  * Both are attempted even if one fails -- they go to different people.
  */
-export async function notifyOfNewOrder(reference: string, { tellBranch }: { tellBranch: boolean }): Promise<void> {
+export async function notifyOfNewOrder(
+  reference: string,
+  { tellBranch, awaitingPayment = false }: { tellBranch: boolean; awaitingPayment?: boolean },
+): Promise<void> {
   await afterCommit("notify-of-order", async () => {
-    const { subject, body } = orderRequestMessage({ reference, adminUrl: resolveAdminUrl() });
+    const { subject, body } = orderRequestMessage({ reference, adminUrl: resolveAdminUrl(), awaitingPayment });
     await sendNotification(subject, body);
   });
 
@@ -386,6 +390,14 @@ export function notifyOrderCancelled(orderId: string): Promise<void> {
       siteUrl: resolveSiteUrl(),
     });
     await logIfUndelivered("notify-order-cancelled", `the customer that ${order.reference} was cancelled`, await sendCustomerEmail(order.customerEmail, subject, body));
+
+    // A cancelled order that was paid for is money MalFleks now owes back.
+    // Since a branch can decline a paid order itself, nobody at MalFleks
+    // necessarily saw it happen -- so the inbox is told, every time.
+    if (order.payments.length > 0) {
+      const notice = refundDueAdminMessage({ reference: order.reference, productName: order.productName, reason: order.decisionNote, adminUrl: resolveAdminUrl() });
+      await logIfUndelivered("notify-order-cancelled", `MalFleks that ${order.reference} needs a refund`, await sendNotification(notice.subject, notice.body));
+    }
   });
 }
 

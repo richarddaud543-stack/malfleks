@@ -121,4 +121,33 @@ describe("PartnerOrderCard", () => {
     expect(screen.getByText("Cancelled")).toBeVisible();
     expect(screen.queryByText("New — waiting on you")).not.toBeInTheDocument();
   });
+
+  // Since 3 Oct 2026 customers pay as they order, so these are the two states
+  // a branch actually sees.
+  it("shows an unpaid order as waiting on the customer, with nothing to press", () => {
+    render(
+      <PartnerOrderCard
+        order={{ ...base, payment: { status: "pending", checkoutLink: "https://checkout.clickpesa.com/X" } } as ListedOrder}
+        canDecide
+      />,
+    );
+
+    expect(screen.getByText("Not paid yet")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /confirm MALFLEKS-4F2A/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /can't fulfil/i })).not.toBeInTheDocument();
+  });
+
+  it("on a paid order offers “Can't fulfil” and no confirm — the payment already confirmed it", () => {
+    render(
+      <PartnerOrderCard
+        order={{ ...base, status: "confirmed", payment: { status: "captured", checkoutLink: null } } as ListedOrder}
+        canDecide
+      />,
+    );
+
+    expect(screen.getByText("Paid — deliver now")).toBeVisible();
+    expect(screen.getByText(/Paid through MalFleks/)).toBeVisible();
+    expect(screen.getByRole("button", { name: /can't fulfil MALFLEKS-4F2A/i })).toBeVisible();
+    expect(screen.queryByRole("button", { name: /^confirm MALFLEKS-4F2A/i })).not.toBeInTheDocument();
+  });
 });

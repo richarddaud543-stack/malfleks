@@ -44,9 +44,16 @@ function errorMessage(reason: string | undefined): string {
 export default function BranchDecisionButtons({
   orderId,
   reference,
+  paid = false,
 }: {
   orderId: string;
   reference: string;
+  /**
+   * The customer has already paid (the usual case since 3 Oct 2026: paying is
+   * what confirms an order). There is then nothing to confirm -- only
+   * "Can't fulfil" is offered, and it says a refund follows.
+   */
+  paid?: boolean;
 }) {
   const [mode, setMode] = useState<"idle" | "declining">("idle");
   const [reason, setReason] = useState("");
@@ -62,7 +69,9 @@ export default function BranchDecisionButtons({
       <p role="status" className="mt-4 text-sm font-medium text-accent">
         {done === "confirmed"
           ? "Confirmed. The customer has been asked to pay — wait for “Paid through MalFleks” before you hand anything over."
-          : "Declined. The customer has been told."}
+          : paid
+            ? "Declined. The customer has been told, and MalFleks will refund them."
+            : "Declined. The customer has been told."}
       </p>
     );
   }
@@ -97,7 +106,7 @@ export default function BranchDecisionButtons({
     <div className="mt-4 border-t border-border pt-4">
       {mode === "idle" ? (
         <div className="flex flex-wrap items-center gap-3">
-          <button
+          {!paid && <button
             type="button"
             disabled={pending}
             onClick={confirm}
@@ -105,7 +114,7 @@ export default function BranchDecisionButtons({
             className="min-h-11 rounded-full border border-accent bg-accent px-5 py-2 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Confirming…" : "Confirm — we have it at this price"}
-          </button>
+          </button>}
           <button
             type="button"
             disabled={pending}
@@ -126,7 +135,10 @@ export default function BranchDecisionButtons({
           </label>
           <p className="mt-1 text-xs text-muted">
             The customer is emailed this as you write it — for example “Out of
-            stock until next week”. They have not paid anything.
+            stock until next week”.{" "}
+            {paid
+              ? "They have paid, so MalFleks refunds them in full. Only do this if you really cannot supply it."
+              : "They have not paid anything."}
           </p>
           <input
             id={`decline-${orderId}`}

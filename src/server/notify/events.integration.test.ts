@@ -218,16 +218,34 @@ describe("partner applications", () => {
 });
 
 describe("a new order", () => {
-  it("tells MalFleks and the branch it was sent to, with no customer details in either", async () => {
+  it("tells MalFleks only: the customer is on the pay page, and the branch has nothing to do until it is paid", async () => {
     session.mockResolvedValue(CUSTOMER);
 
     const result = await submitOrder({ ...ORDER_INPUT, requestedAt: new Date().toISOString() });
     if (!result.ok) throw new Error(result.reason);
+    expect(result.payNow).toBe(true);
 
     expect(sendNotification).toHaveBeenCalledTimes(1);
     expect(sendNotification.mock.calls[0][0]).toContain(result.reference);
+    expect(sendNotification.mock.calls[0][0]).toMatch(/waiting for payment/);
     expect(sendNotification.mock.calls[0][1]).toContain("/admin/orders");
+    for (const personal of ["Asha", "754123456", "Mikocheni"]) {
+      expect(sendNotification.mock.calls[0][1]).not.toContain(personal);
+    }
+    // Not the branch (nothing to answer), and not the customer (they are looking at the pay page).
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+    expect(sendCustomerEmail).not.toHaveBeenCalled();
+  });
 
+  it("asks the branch first when no checkout could be opened, with no customer details in the email", async () => {
+    session.mockResolvedValue(CUSTOMER);
+    generateCheckoutLink.mockResolvedValue({ ok: false, reason: "request-failed" });
+
+    const result = await submitOrder({ ...ORDER_INPUT, requestedAt: new Date().toISOString() });
+    if (!result.ok) throw new Error(result.reason);
+    expect(result.payNow).toBe(false);
+
+    expect(sendNotification).toHaveBeenCalledTimes(1);
     expect(sendPartnerEmail).toHaveBeenCalledTimes(1);
     const [to, subject, body] = sendPartnerEmail.mock.calls[0];
     expect(to).toBe(DAR_EMAIL);
@@ -239,7 +257,6 @@ describe("a new order", () => {
       expect(body).not.toContain(personal);
       expect(sendNotification.mock.calls[0][1]).not.toContain(personal);
     }
-    // The customer is told nothing yet: there is nothing to pay until the branch answers.
     expect(sendCustomerEmail).not.toHaveBeenCalled();
   });
 

@@ -24,7 +24,9 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
  *   the product is not the courier's to say.
  * - `MarkFulfilledButton` on a `confirmed` order, for whoever is delivering.
  *
- * Cancelling a confirmed order stays MalFleks admin's.
+ * - On a paid, `confirmed` order the branch also gets "Can't fulfil": the
+ *   order is cancelled and MalFleks refunds the customer.
+ * - An order the customer has not paid for yet gets no controls at all.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -73,6 +75,16 @@ export default function PartnerOrderCard({
   // against "branch", which is not a route kind, so a branch delivering its
   // own order was told "Delivery by Toyota own fleet" instead.
   const branchDelivers = order.routeKind === "brand";
+  const paid = order.payment?.status === "captured";
+  // Since 3 Oct 2026 a customer pays as soon as they order. An order that has
+  // a checkout open and no payment yet is waiting on the *customer*: there is
+  // nothing for the branch to answer, and nothing to hand over.
+  const awaitingPayment = order.status === "pending" && Boolean(order.payment) && !paid;
+  const label = awaitingPayment
+    ? "Not paid yet"
+    : order.status === "confirmed" && paid
+      ? "Paid — deliver now"
+      : (labels[order.status] ?? order.status);
 
   return (
     <li className="glass-card rounded-2xl px-5 py-5 sm:px-6">
@@ -93,7 +105,7 @@ export default function PartnerOrderCard({
             STATUS_CLASS[order.status] ?? "bg-foreground/10"
           }`}
         >
-          {labels[order.status] ?? order.status}
+          {label}
         </span>
       </div>
 
@@ -109,9 +121,9 @@ export default function PartnerOrderCard({
         ) : (
           order.payment && (
             <p className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
-              The customer has been asked to pay through MalFleks and
-              hasn&apos;t yet. Wait for “Paid through MalFleks” before you
-              hand anything over.
+              The customer hasn&apos;t paid yet. There is nothing to do until
+              this says “Paid through MalFleks” — don&apos;t hand anything
+              over before then.
             </p>
           )
         ))}
@@ -145,8 +157,13 @@ export default function PartnerOrderCard({
       </p>
 
       {/* The branch's answer. Only a pending order has a question to answer. */}
-      {order.status === "pending" && canDecide && (
+      {order.status === "pending" && canDecide && !awaitingPayment && (
         <BranchDecisionButtons orderId={order.id} reference={order.reference} />
+      )}
+      {/* Already paid: nothing to confirm, but the branch must be able to say
+          it cannot supply the item, which sends the customer a full refund. */}
+      {order.status === "confirmed" && paid && canDecide && (
+        <BranchDecisionButtons orderId={order.id} reference={order.reference} paid />
       )}
 
       {order.status === "cancelled" && order.decisionNote && (

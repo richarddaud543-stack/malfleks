@@ -14,8 +14,8 @@ import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 const POLL_MS = 20_000;
 
 const STATUS_COPY: Record<string, string> = {
-  pending: "Waiting on the branch to confirm this order.",
-  confirmed: "Confirmed — tracking below updates as the delivery reports in.",
+  pending: "This order has not been paid for yet. Tracking starts once it is.",
+  confirmed: "Order placed — tracking below updates as the delivery reports in.",
   cancelled: "This order was cancelled. Tracking has stopped.",
   fulfilled: "Delivered. This is the last position that was reported.",
 };

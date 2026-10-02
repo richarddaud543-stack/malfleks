@@ -82,6 +82,7 @@ function fill() {
 
 describe("OrderRequestForm and the customer's session", () => {
   beforeEach(() => {
+  submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-TEST", payNow: false });
     push.mockClear();
     saveOrderRequest.mockReset();
     submitOrder.mockReset();
@@ -142,7 +143,7 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
 
     await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
     const payload = submitOrder.mock.calls[0][0];
@@ -164,7 +165,7 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
 
     await waitFor(() => expect(submitOrder).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(saveOrderRequest).toHaveBeenCalledTimes(1));
@@ -185,7 +186,7 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
 
     await waitFor(() => expect(push).toHaveBeenCalled());
     const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
@@ -200,7 +201,7 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
 
     // The customer's request survives an outage at our end: they still reach
     // the confirmation screen with a reference they can quote.
@@ -226,5 +227,34 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
     const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
     expect(stored?.reference).toBeTruthy();
+  });
+
+  // The owner's call, 3 Oct 2026: order, pay, done. No confirmation screen in
+  // between, and no waiting for anyone.
+  it("takes a signed-in customer straight to the pay page when the checkout opened", async () => {
+    mockSession(true);
+    submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-PAY1", payNow: true });
+    saveOrderRequest.mockResolvedValue({ saved: true });
+    render(<OrderRequestForm {...brandDelivered} />);
+    await screen.findByRole("button", { name: "Continue to payment" });
+
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/pay/TOY-DAR-PAY1"));
+    expect(push).not.toHaveBeenCalledWith("/order/confirmation");
+  });
+
+  it("falls back to the confirmation screen when no checkout could be opened", async () => {
+    mockSession(true);
+    submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-WAIT", payNow: false });
+    saveOrderRequest.mockResolvedValue({ saved: true });
+    render(<OrderRequestForm {...brandDelivered} />);
+    await screen.findByRole("button", { name: "Continue to payment" });
+
+    fill();
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
   });
 });

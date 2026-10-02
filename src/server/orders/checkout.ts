@@ -22,9 +22,17 @@ import { requestPaymentForOrder, type RequestPaymentFailure } from "./create-ord
  *  3. Paying happens on ClickPesa's hosted page; the webhook or reconciliation
  *     records it, exactly as before. Nothing here marks anything paid.
  *
- * What did **not** change: payment still comes *after* the branch confirms
- * stock and price. An order is never charged at submission, so nobody pays
- * for something that turns out to be unavailable.
+ * **Changed again on 3 Oct 2026** (the owner's call, after using it): the
+ * customer should not wait for anyone. Submitting the order now opens the
+ * checkout at once (`submitOrder` calls `openCheckout`) and the form sends
+ * the customer straight to `/pay/[reference]`. Paying is what confirms the
+ * order -- see `capturePayment`. The branch is told when the money is in, and
+ * if it turns out it cannot supply the item it declines and the customer is
+ * refunded in full.
+ *
+ * The one case that still waits is an order that cannot be priced when it is
+ * placed (a courier route in a city with no delivery fee set): no link can be
+ * made, so the branch is asked first, exactly as before.
  *
  * Only a signed-in customer has an order row at all (see `submitOrder`), and
  * every read here is `WHERE reference AND customerId` -- someone else's
@@ -36,11 +44,15 @@ export type OpenCheckoutOutcome =
   | { ok: false; reason: RequestPaymentFailure };
 
 /** Called after an order is confirmed. Never throws; a failure is logged and the page self-heals later. */
-export async function openCheckout(orderId: string): Promise<OpenCheckoutOutcome> {
+export async function openCheckout(orderId: string, { notify = true } = {}): Promise<OpenCheckoutOutcome> {
   const outcome = await requestPaymentForOrder(orderId);
   if (!outcome.ok) return outcome;
   // A reused link means the customer was already told about it once.
   if (outcome.reused) return { ok: true, reused: true, emailed: false };
+  // `notify: false` is the order form: the customer is taken straight to the
+  // pay page, so an email telling them where to pay would arrive while they
+  // are already looking at it.
+  if (!notify) return { ok: true, reused: false, emailed: false };
 
   const order = await getPrisma().order.findUnique({
     where: { id: orderId },
@@ -154,11 +166,12 @@ export async function checkoutForCustomer(
   const captured = order.payments.find((p) => p.status === "captured") ?? null;
   const open = () => order?.payments.find((p) => p.status !== "captured" && p.checkoutLink) ?? null;
 
-  if (createIfMissing && !captured && order.status === "confirmed" && !open()) {
+  if (createIfMissing && !captured && (order.status === "pending" || order.status === "confirmed") && !open()) {
     const limit = await checkRateLimit(`order:${order.id}`, LINK_ATTEMPTS);
     if (limit.allowed) {
       try {
-        const made = await openCheckout(order.id);
+        // No email from here: the customer is on the page that shows the link.
+        const made = await openCheckout(order.id, { notify: false });
         if (!made.ok && made.reason !== "unquotable") {
           await logServerError("checkout-open", new Error(`${order.reference}: ${made.reason}`), customerId);
         }
@@ -174,10 +187,14 @@ export async function checkoutForCustomer(
     ? "paid"
     : order.status === "cancelled"
       ? "cancelled"
-      : order.status === "pending"
-        ? "waiting"
-        : link
-          ? "ready"
+      : link
+        ? "ready"
+        : // No link could be made. For an order nobody has confirmed that is
+          // the old path -- a route with no delivery fee set, which the branch
+          // has to price first -- so it waits; for a confirmed one it is a
+          // fault worth saying out loud.
+          order.status === "pending"
+          ? "waiting"
           : "unavailable";
 
   return {
@@ -267,7 +284,7 @@ export interface AccountOrderStatus {
   keepSavedCopy: boolean;
 }
 
-function accountStatus(order: { status: string; decisionNote: string | null; payments: { status: string }[] }): AccountOrderStatus {
+function accountStatus(order: { status: string; decisionNote: string | null; payments: { status: string; checkoutLink: string | null }[] }): AccountOrderStatus {
   const paid = order.payments.some((p) => p.status === "captured");
   const state: AccountOrderState =
     order.status === "cancelled"
@@ -276,7 +293,10 @@ function accountStatus(order: { status: string; decisionNote: string | null; pay
         ? "delivered"
         : paid
           ? "paid"
-          : order.status === "confirmed"
+          : // Payable: confirmed, or still pending with a checkout already
+            // open (since 3 Oct 2026 that is the normal case -- the order is
+            // waiting on the customer, not on the branch).
+            order.status === "confirmed" || order.payments.some((p) => p.checkoutLink)
             ? "ready"
             : "waiting";
   return {
@@ -299,7 +319,7 @@ function accountStatus(order: { status: string; decisionNote: string | null; pay
 export async function checkoutStatesForCustomer(customerId: string): Promise<Map<string, AccountOrderStatus>> {
   const orders = await getPrisma().order.findMany({
     where: { customerId },
-    select: { reference: true, status: true, decisionNote: true, payments: { select: { status: true } } },
+    select: { reference: true, status: true, decisionNote: true, payments: { select: { status: true, checkoutLink: true } } },
   });
   return new Map(orders.map((o) => [o.reference, accountStatus(o)]));
 }
@@ -315,7 +335,7 @@ export async function checkoutStatesForCustomer(customerId: string): Promise<Map
 export async function savedCopyMustStay(customerId: string, reference: string): Promise<boolean> {
   const order = await getPrisma().order.findFirst({
     where: { customerId, reference },
-    select: { status: true, decisionNote: true, payments: { select: { status: true } } },
+    select: { status: true, decisionNote: true, payments: { select: { status: true, checkoutLink: true } } },
   });
   return order ? accountStatus(order).keepSavedCopy : false;
 }

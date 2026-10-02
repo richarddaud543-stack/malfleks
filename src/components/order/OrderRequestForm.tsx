@@ -127,9 +127,16 @@ export default function OrderRequestForm({
     // Nothing is dispatched to a branch anyway, so a stored row bought an
     // admin view of orders nobody acts on, in exchange for holding a
     // stranger's home address with no retention policy.
+    // Where the customer lands next. A signed-in order whose checkout opened
+    // goes straight to its pay page (the owner's call, 3 Oct 2026: order,
+    // pay, done -- no waiting for anyone to confirm). Everything else keeps
+    // the confirmation screen: a signed-out request, an order that could not
+    // be priced yet, or a moment when the server could not be reached.
+    let payReference: string | null = null;
+
     if (session?.signedIn) {
       try {
-        await submitOrder({
+        const submitted = await submitOrder({
           // Ids and the customer's own words only. Price, product name,
           // carrier and total are re-derived on the server from the catalogue,
           // so nothing here can misstate what was ordered.
@@ -142,6 +149,7 @@ export default function OrderRequestForm({
           reference: request.reference,
           requestedAt: request.requestedAt,
         });
+        if (submitted.ok && submitted.payNow) payReference = submitted.reference;
       } catch {
         // A failed persist costs the customer nothing they had a moment ago:
         // the browser copy is already written and the confirmation screen does
@@ -174,7 +182,7 @@ export default function OrderRequestForm({
       }
     }
 
-    router.push("/order/confirmation");
+    router.push(payReference ? `/pay/${encodeURIComponent(payReference)}` : "/order/confirmation");
   }
 
   const selectedAgent =
@@ -374,19 +382,22 @@ export default function OrderRequestForm({
           className="btn-pill btn-lime w-full px-8 py-3.5 text-sm disabled:opacity-60"
         >
           {submitting
-            ? "Sending request…"
-            : route.kind === "brand"
+            ? session?.signedIn
+              ? "Opening payment…"
+              : "Sending request…"
+            : session?.signedIn
+              ? "Continue to payment"
+              : route.kind === "brand"
               ? "Confirm brand delivery"
               : "Confirm agent delivery"}
         </button>
 
-        {/* Load-bearing honesty: this is a request, not a checkout — nothing
-            here is transmitted or charged. Keep this literal, not just a
-            vibe the styling implies. */}
+        {/* Load-bearing honesty: say exactly what pressing the button does,
+            and it is different for the two cases. */}
         <p className="text-xs text-muted">
-          This sends a request, not a paid order. No payment is taken at this
-          step — the branch confirms availability and price first. If you are
-          signed in, you then pay here on MalFleks by mobile money.
+          {session?.signedIn
+            ? "Next you pay by mobile money. MalFleks holds your payment until the order is delivered; if the branch can't supply it, you are refunded in full."
+            : "You are not signed in, so this only saves a request in this browser — nothing is sent or charged. Sign in first to order and pay on MalFleks."}
         </p>
       </div>
     </form>

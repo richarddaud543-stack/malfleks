@@ -60,7 +60,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Orders"
-        description="Customers pay MalFleks once the branch has confirmed stock and price; MalFleks holds the money until the order is delivered. Open an order to call the customer, take payment, or move it on."
+        description="Customers pay MalFleks when they order, and paying confirms the order; MalFleks holds the money until it is delivered. Open an order to call the customer, take payment, or move it on."
       />
 
       <form action="/admin/orders" method="get" className="mt-5 rounded-xl border border-border bg-white p-3">

@@ -82,9 +82,9 @@ export default async function AccountPage() {
         Your orders
       </h1>
       <p className="mt-3 max-w-xl text-muted">
-        Orders you placed while signed in. Once the branch confirms one, you pay
-        for it here by mobile money and MalFleks holds the payment until it is
-        delivered. The reference is what you quote if you call the branch.
+        Orders you placed while signed in. You pay for each one here by mobile
+        money, and MalFleks holds the payment until it is delivered. The
+        reference is what you quote if you call the branch.
       </p>
 
       {partner && (

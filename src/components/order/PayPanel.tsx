@@ -62,17 +62,20 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
           <>
             <StateHeading tone="wait">Waiting for the branch</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              {view.branchName} is checking stock and price. Nothing is due yet — this page opens for payment as soon as they confirm,
-              and we&apos;ll email you too. You can leave it open; it updates on its own.
+              This order needs {view.branchName} to confirm the price and delivery before it can be paid for. Nothing is due yet —
+              this page opens for payment as soon as they do, and we&apos;ll email you too. You can leave it open; it updates on
+              its own.
             </p>
           </>
         )}
 
         {view.state === "ready" && view.checkoutLink && view.totalTZS !== null && (
           <>
-            <StateHeading tone="go">Confirmed — ready to pay</StateHeading>
+            <StateHeading tone="go">{view.orderStatus === "confirmed" ? "Confirmed — ready to pay" : "Pay to place your order"}</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              {view.branchName} has it in stock at this price. Pay by mobile money to complete your order.
+              {view.orderStatus === "confirmed"
+                ? `${view.branchName} has it in stock at this price. Pay by mobile money to complete your order.`
+                : `Pay by mobile money and your order goes to ${view.branchName} straight away. If they can't supply it, you are refunded in full.`}
             </p>
 
             <a
@@ -126,7 +129,7 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
             <StateHeading tone="done">Paid — thank you</StateHeading>
             <p className="mt-2 text-sm text-muted">
               {view.totalTZS !== null ? `We've received ${formatTZS(view.totalTZS)}. ` : "We've received your payment. "}
-              MalFleks holds it until your order is delivered.
+              {view.branchName} has been told to deliver your order, and MalFleks holds your payment until it arrives.
             </p>
             {view.paymentReference && (
               <p className="mt-3 text-sm">

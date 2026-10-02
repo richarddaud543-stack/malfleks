@@ -41,7 +41,8 @@ import {
  */
 
 export type SubmitOrderResult =
-  | { ok: true; reference: string }
+  /** `payNow`: a checkout is open for this order, so the form goes straight to `/pay/[reference]`. */
+  | { ok: true; reference: string; payNow: boolean }
   | { ok: false; reason: CreateOrderFailure | "unavailable" | "rate-limited" };
 
 // This is the one write action in this file with no session requirement at
@@ -70,9 +71,32 @@ export async function submitOrder(
     // email API being reachable. The branch is told only about a signed-in
     // customer's order -- that is the only kind the form sends here, and the
     // only kind that can be confirmed, paid for and tracked.
-    await notifyOfOrder(outcome.value.reference, Boolean(session?.uid));
+    //
+    // A signed-in customer's order gets its checkout opened here and now, so
+    // the next thing they see is the pay page -- not a wait for somebody to
+    // confirm. Kept apart from the order itself: if ClickPesa is down or the
+    // route cannot be priced, the order still stands and falls back to the
+    // old path, where the branch is asked first.
+    let payNow = false;
+    if (session?.uid) {
+      try {
+        const { openCheckout } = await import("@/server/orders/checkout");
+        const opened = await openCheckout(outcome.value.id, { notify: false });
+        payNow = opened.ok;
+        if (!opened.ok && opened.reason !== "unquotable") {
+          await logServerError("checkout-open", new Error(`${outcome.value.reference}: ${opened.reason}`), session.uid);
+        }
+      } catch (error) {
+        await logServerError("checkout-open", error, session.uid);
+      }
+    }
 
-    return { ok: true, reference: outcome.value.reference };
+    // The branch is emailed now only when it has something to do now -- an
+    // order waiting on its answer. One with a checkout open is waiting on the
+    // customer; the branch hears about it when it is paid.
+    await notifyOfOrder(outcome.value.reference, Boolean(session?.uid) && !payNow, payNow);
+
+    return { ok: true, reference: outcome.value.reference, payNow };
   } catch (error) {
     // The browser's own copy is already written by the time this runs (see
     // OrderRequestForm), so a failure here costs the customer nothing they
@@ -248,10 +272,10 @@ export async function sendPaymentLink(
  * in an inbox copies personal data somewhere with a much longer memory and
  * much weaker access control, for no operational gain.
  */
-async function notifyOfOrder(reference: string, tellBranch: boolean): Promise<void> {
+async function notifyOfOrder(reference: string, tellBranch: boolean, awaitingPayment = false): Promise<void> {
   try {
     const { notifyOfNewOrder } = await import("@/server/notify/events");
-    await notifyOfNewOrder(reference, { tellBranch });
+    await notifyOfNewOrder(reference, { tellBranch, awaitingPayment });
   } catch (error) {
     // The order is saved. Nothing here is worth failing it for — but a
     // Brevo outage is exactly what the launch checklist's "unproven" flag on

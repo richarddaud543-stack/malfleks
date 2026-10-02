@@ -118,13 +118,13 @@ export default function SavedRequestCard({
         >
           {state === "ready" && (
             <>
-              <span className="font-medium">The branch has confirmed this order.</span> Pay to complete it.
+              <span className="font-medium">Not paid yet.</span> Pay to place this order with the branch.
             </>
           )}
           {state === "waiting" && (
             <>
-              <span className="font-medium">Waiting for the branch to confirm.</span> Nothing is due yet — you&apos;ll pay here once
-              they do.
+              <span className="font-medium">Waiting for the branch to confirm the price and delivery.</span> Nothing is due yet —
+              you&apos;ll pay here once they do.
             </>
           )}
           {state === "paid" && (

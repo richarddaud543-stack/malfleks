@@ -48,7 +48,7 @@ export default async function PayPage({ params }: { params: Promise<{ reference:
 
       <p className="mt-8 max-w-prose text-xs text-muted">
         You pay MalFleks, not the branch. We hold your payment until the order is delivered, then pay the branch and the courier. If the
-        order can&apos;t be delivered, you are refunded. See the{" "}
+        branch can&apos;t supply the order or it can&apos;t be delivered, you are refunded in full. See the{" "}
         <Link href="/terms" className="underline underline-offset-2 hover:text-foreground">
           terms
         </Link>

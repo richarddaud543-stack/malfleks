@@ -73,8 +73,9 @@ function hoursSince(then: Date, now: Date): number {
  * each list can be tested against a real database without waiting three days.
  *
  * - **undecided** counts from when the order was placed.
- * - **unpaid** counts from when it was confirmed (`decidedAt`), not placed: a
- *   customer has only been able to pay since then.
+ * - **unpaid** is an order with a checkout nobody has paid: counted from when
+ *   it was placed if the checkout opened then (the normal case since 3 Oct
+ *   2026), or from when it was confirmed (`decidedAt`) on the old path.
  * - **undelivered** counts from when the payment was captured. A confirmed
  *   order with a captured payment is, by definition, paid and not yet marked
  *   delivered -- `fulfilled` is the only status that says it arrived.
@@ -86,16 +87,22 @@ export async function findStuckOrders(now: Date = new Date()): Promise<StuckOrde
 
   const [undecided, unpaid, undelivered] = await Promise.all([
     db.order.findMany({
-      where: { status: "pending", createdAt: { lt: before(STUCK_AFTER_HOURS.undecided) } },
+      // No checkout at all: the old path, where the branch has to answer
+      // first. A pending order *with* a checkout is waiting on the customer
+      // and is listed under "unpaid" instead.
+      where: { status: "pending", payments: { none: {} }, createdAt: { lt: before(STUCK_AFTER_HOURS.undecided) } },
       orderBy: { createdAt: "asc" },
       take: MAX_LINES,
       select: { ...line, createdAt: true },
     }),
     db.order.findMany({
       where: {
-        status: "confirmed",
-        decidedAt: { lt: before(STUCK_AFTER_HOURS.unpaid) },
         payments: { none: { status: "captured" } },
+        OR: [
+          { status: "confirmed", decidedAt: { lt: before(STUCK_AFTER_HOURS.unpaid) } },
+          // Ordered, sent to the pay page, and never paid.
+          { status: "pending", payments: { some: {} }, createdAt: { lt: before(STUCK_AFTER_HOURS.unpaid) } },
+        ],
       },
       orderBy: { decidedAt: "asc" },
       take: MAX_LINES,
@@ -173,6 +180,8 @@ export async function remindBranchesOfWaitingOrders(now: Date = new Date()): Pro
     where: {
       status: "pending",
       branchRemindedAt: null,
+      // Only an order that is actually waiting on the branch's answer.
+      payments: { none: {} },
       branchId: { not: null },
       // Only a signed-in customer's order was announced to the branch in the
       // first place, and only that kind can go on to be paid.

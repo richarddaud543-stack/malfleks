@@ -127,7 +127,7 @@ export default function OrderConfirmation() {
             >
               Track it
             </Link>{" "}
-            once the branch confirms it.
+            once it is paid.
           </p>
         ) : (
           <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
@@ -157,12 +157,17 @@ export default function OrderConfirmation() {
             <Step n={1}>
               {order.savedToAccount ? (
                 <>
-                  Nothing has been paid and nothing has been reserved. This
-                  request has reached MalFleks, and {order.branch.name} has
-                  been asked to confirm it. It stays &ldquo;pending&rdquo;
-                  until the branch confirms stock and price — we email you
-                  when it does — so treat it as a heads-up rather than a done
-                  deal.
+                  Nothing has been paid yet. Your order is saved with
+                  MalFleks.{" "}
+                  <Link
+                    href={`/pay/${encodeURIComponent(order.reference)}`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    Open your checkout page
+                  </Link>{" "}
+                  to pay for it. If it says the branch has to confirm first,
+                  {" "}{order.branch.name} has been asked and we email you as
+                  soon as it can be paid.
                 </>
               ) : (
                 <>
@@ -222,16 +227,15 @@ export default function OrderConfirmation() {
             <Step n={3}>
               {order.savedToAccount ? (
                 <>
-                  Once the branch confirms, you pay on MalFleks by mobile
-                  money. We email you the link, and{" "}
+                  You pay on MalFleks by mobile money on{" "}
                   <Link
                     href={`/pay/${encodeURIComponent(order.reference)}`}
                     className="underline underline-offset-2 hover:text-foreground"
                   >
                     your checkout page
-                  </Link>{" "}
-                  opens for payment by itself. MalFleks holds your payment
-                  until the order is delivered.
+                  </Link>
+                  . MalFleks holds your payment until the order is delivered,
+                  and refunds you in full if the branch can&apos;t supply it.
                 </>
               ) : (
                 <>

@@ -31,7 +31,9 @@ import { createTestDatabase, type TestDatabase } from "@/server/db/test-database
 import { createTestPartner } from "@/server/partners/test-fixtures";
 import { confirmOrderAsBranch, declineOrderAsBranch } from "./branch-decisions";
 import { createOrder } from "./create-order";
-import { cancelOrder, confirmOrder, orderHistory } from "./status";
+import { capturePayment } from "@/server/payments/settle";
+import { openCheckout } from "./checkout";
+import { confirmOrder, markOrderFulfilled, orderHistory } from "./status";
 
 let db: TestDatabase;
 
@@ -227,16 +229,33 @@ describe("the branch declining an order", () => {
     expect(sendCustomerEmail).not.toHaveBeenCalled();
   });
 
-  it("cannot back out of an order it has already confirmed -- that is a refund decision, and admin's", async () => {
+  // Since 3 Oct 2026 the customer pays as they order and the payment confirms
+  // it, so the first time a branch sees most orders they are already paid.
+  // It must still be able to say "we can't supply this".
+  it("can decline an order the customer has already paid for: cancelled, customer told a refund follows, MalFleks told a refund is due", async () => {
+    const o = await order();
+    await openCheckout(o.id, { notify: false });
+    const payment = await getPrisma().orderPayment.findFirstOrThrow({ where: { orderId: o.id } });
+    await capturePayment({ providerRef: payment.providerRef, paymentReference: "CPDECL1", collectedAmount: payment.amountTZS, source: "webhook" });
+    expect(await row(o.id)).toMatchObject({ status: "confirmed" });
+    for (const mock of [sendCustomerEmail, sendNotification, sendPartnerEmail]) mock.mockClear();
+
+    await expect(declineOrderAsBranch(OWNER, o.id, "Sold the last one this morning")).resolves.toEqual({ ok: true });
+    expect(await row(o.id)).toMatchObject({ status: "cancelled", decidedBy: OWNER, decisionNote: "Sold the last one this morning" });
+
+    expect(sendCustomerEmail).toHaveBeenCalledTimes(1);
+    expect(sendCustomerEmail.mock.calls[0][2]).toMatch(/refund/i);
+    expect(sendNotification).toHaveBeenCalledTimes(1);
+    expect(sendNotification.mock.calls[0][0]).toMatch(/refund due/i);
+    expect(sendNotification.mock.calls[0][1]).toContain("/admin/payouts");
+  });
+
+  it("cannot decline an order that has been delivered", async () => {
     const o = await order();
     await confirmOrderAsBranch(OWNER, o.id);
-    sendCustomerEmail.mockClear();
+    await markOrderFulfilled(o.id, "admin-1");
 
     await expect(declineOrderAsBranch(OWNER, o.id, "Changed our mind")).resolves.toEqual({ ok: false, reason: "invalid-transition" });
-    expect(await row(o.id)).toMatchObject({ status: "confirmed" });
-    expect(sendCustomerEmail).not.toHaveBeenCalled();
-
-    // The admin keeps that power.
-    await expect(cancelOrder(o.id, "admin-1", "Customer withdrew")).resolves.toEqual({ ok: true });
+    expect(await row(o.id)).toMatchObject({ status: "fulfilled" });
   });
 });
