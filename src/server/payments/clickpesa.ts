@@ -118,9 +118,9 @@ export type ChecksumVerdict =
  * ClickPesa's docs say only that "webhooks payload are also signed using the
  * same method as defined below" -- and never say what "the payload" is on
  * the way in. Outbound, this module signs the whole request body, which is
- * flat. Inbound, a webhook body is `{event, data: {...}, checksum}`, and
- * both "the whole body minus checksum" and "the data object" are honest
- * readings of that one sentence.
+ * flat. Inbound, the body is `{event, data: {...}}` with the checksum inside
+ * `data` (observed 2 Oct 2026), so "the data object" is the likeliest scope
+ * and "the whole body" the other honest reading of that one sentence.
  *
  * So both are tried, against the same secret. That is not a weaker check: it
  * is the same HMAC computed over the two scopes the documentation leaves
@@ -129,14 +129,15 @@ export type ChecksumVerdict =
  * payment.
  */
 export function checkChecksum(payload: Record<string, unknown>): ChecksumVerdict {
-  const checksum = payload.checksum;
-  if (typeof checksum !== "string" || checksum.length === 0) {
-    return { ok: false, reason: "no-checksum" };
-  }
-  // Everything except the signature and its method name is what was signed.
-  const rest = { ...payload };
-  delete rest.checksum;
-  delete rest.checksumMethod;
+  const data = isPlainObject(payload.data) ? payload.data : null;
+
+  // Where ClickPesa actually puts it. The first real PAYMENT RECEIVED, on
+  // 2 Oct 2026, arrived as `{event, data: {..., checksum, checksumMethod}}` --
+  // the signature *inside* `data`, not beside it. This function used to look
+  // only at the top level, answered "no-checksum", and the webhook refused a
+  // genuine, signed notification of money collected. Both places are read now.
+  const checksum = nonEmptyString(payload.checksum) ?? nonEmptyString(data?.checksum);
+  if (!checksum) return { ok: false, reason: "no-checksum" };
 
   let secret: string;
   try {
@@ -145,16 +146,31 @@ export function checkChecksum(payload: Record<string, unknown>): ChecksumVerdict
     return { ok: false, reason: "secret-not-configured" };
   }
 
-  if (hmacOver(secret, rest) === checksum) return { ok: true, signedOver: "body" };
+  // Everything except the signature and its method name is what was signed,
+  // at whichever level they were found.
+  const signedData = data ? withoutChecksumFields(data) : null;
+  const signedBody = withoutChecksumFields(payload);
+  if (signedData) signedBody.data = signedData;
 
-  const data = rest.data;
-  if (data !== null && typeof data === "object" && !Array.isArray(data)) {
-    if (hmacOver(secret, data as Record<string, unknown>) === checksum) {
-      return { ok: true, signedOver: "data" };
-    }
-  }
+  if (signedData && hmacOver(secret, signedData) === checksum) return { ok: true, signedOver: "data" };
+  if (hmacOver(secret, signedBody) === checksum) return { ok: true, signedOver: "body" };
 
   return { ok: false, reason: "mismatch" };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function nonEmptyString(value: unknown): string | null {
+  return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function withoutChecksumFields(value: Record<string, unknown>): Record<string, unknown> {
+  const rest = { ...value };
+  delete rest.checksum;
+  delete rest.checksumMethod;
+  return rest;
 }
 
 /**
@@ -393,6 +409,14 @@ export async function queryPaymentStatus(
   if (response.status === 404) return { ok: true, found: false };
   if (!response.ok) {
     const body = await response.text().catch(() => "<unreadable body>");
+    // ClickPesa answers a reference nobody has tried to pay yet with a 400,
+    // not a 404: `{"message":"Invalid or missing payment:  ORADOD9Y7G"}`
+    // (seen live 1-2 Oct 2026). That is "no attempts", not a failed check --
+    // treating it as a failure logged an error on every run for every link a
+    // customer simply had not opened yet.
+    if (response.status === 400 && /invalid or missing payment/i.test(body)) {
+      return { ok: true, found: false };
+    }
     return {
       ok: false,
       reason: response.status === 401 ? "auth-failed" : "request-failed",

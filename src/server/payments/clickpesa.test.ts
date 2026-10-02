@@ -131,6 +131,44 @@ describe("checkChecksum verdicts", () => {
     expect(checkChecksum(webhook())).toEqual({ ok: false, reason: "no-checksum" });
   });
 
+  // The shape of the first real PAYMENT RECEIVED (2 Oct 2026), values
+  // changed: the signature sits INSIDE `data`, with `checksumMethod` beside
+  // it. Looking only at the top level refused it as "no-checksum".
+  const realShape = () => ({
+    id: "LCPCHL7TEST",
+    status: "SUCCESS",
+    paymentReference: "6274480000000000",
+    paymentPhoneNumber: "255700000000",
+    orderReference: "ORADODN6CD",
+    collectedAmount: "5574.00",
+    collectedCurrency: "TZS",
+    message: "SUCCESS",
+    channel: "HALOPESA",
+    customer: { customerName: "Asha Mwenda", customerPhoneNumber: "255700000000" },
+    clientId: "test-client-id",
+  });
+
+  it("accepts a signature carried inside data, as ClickPesa really sends it", () => {
+    const body = {
+      event: "PAYMENT RECEIVED",
+      data: { ...realShape(), checksum: createChecksum(realShape()), checksumMethod: "canonical" },
+    };
+    expect(checkChecksum(body)).toEqual({ ok: true, signedOver: "data" });
+  });
+
+  it("still refuses a nested signature when the data was changed", () => {
+    const body = {
+      event: "PAYMENT RECEIVED",
+      data: { ...realShape(), collectedAmount: "999999.00", checksum: createChecksum(realShape()), checksumMethod: "canonical" },
+    };
+    expect(checkChecksum(body)).toEqual({ ok: false, reason: "mismatch" });
+  });
+
+  it("refuses the unsigned duplicate ClickPesa also posts", () => {
+    // The same payment arrives a second time flat and with no checksum at all.
+    expect(checkChecksum(realShape())).toEqual({ ok: false, reason: "no-checksum" });
+  });
+
   it("does not accept a data-scoped signature for different data", () => {
     const body: Record<string, unknown> = webhook();
     body.checksum = createChecksum({ ...webhook().data, collectedAmount: 999999 });
@@ -322,6 +360,20 @@ describe("queryPaymentStatus", () => {
   it("reads 404 as 'no attempt yet', not as an error", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(404, { message: "Not found" })));
     await expect(queryPaymentStatus("ORADODN6CD")).resolves.toEqual({ ok: true, found: false });
+  });
+
+  it("reads ClickPesa's 400 'Invalid or missing payment' as 'no attempt yet' too", async () => {
+    // What it actually returns for a link nobody has opened (seen live 1 Oct 2026).
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(400, { message: "Invalid or missing payment:  ORADOD9Y7G" })),
+    );
+    await expect(queryPaymentStatus("ORADOD9Y7G")).resolves.toEqual({ ok: true, found: false });
+  });
+
+  it("still reports any other 400 as a failed check", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(respond(400, { message: "Bad request" })));
+    await expect(queryPaymentStatus("ORADODN6CD")).resolves.toMatchObject({ ok: false, reason: "request-failed" });
   });
 
   it("normalises each record and keeps unknown fields as null", async () => {
