@@ -5,13 +5,14 @@ import {
   listOrderRequestsForCustomer,
   type SavedOrderRequest,
 } from "@/server/orders/saved-requests";
+import { checkoutStatesForCustomer } from "@/server/orders/checkout";
 import { partnerForUser } from "@/server/partners/portal";
 import SavedRequestCard from "@/components/account/SavedRequestCard";
 
 export const metadata: Metadata = {
-  title: "Your order requests",
+  title: "Your orders",
   description:
-    "Order requests saved to your MalFleks account, with the reference to quote to the branch.",
+    "Orders you placed while signed in to MalFleks: pay for a confirmed order, track a delivery, or find a reference.",
   // One person's private page. It is not in the sitemap either, matching
   // /order/confirmation — a noindex URL advertised in a sitemap is a
   // contradiction, not thoroughness.
@@ -56,6 +57,12 @@ export default async function AccountPage() {
 
   let requests: SavedOrderRequest[];
   let unavailable = false;
+  // Which of these can be paid for, are paid, or are still with the branch.
+  // A convenience on top of the list: if it cannot be read, the cards simply
+  // show without a Pay button and the checkout page still works by reference.
+  const payStates = await checkoutStatesForCustomer(session.uid).catch(
+    () => new Map<string, "waiting" | "ready" | "paid">(),
+  );
   try {
     requests = await listOrderRequestsForCustomer(session.uid);
   } catch {
@@ -71,12 +78,12 @@ export default async function AccountPage() {
         {session.name ? `Hello, ${session.name.split(" ")[0]}` : "Your account"}
       </p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
-        Your order requests
+        Your orders
       </h1>
       <p className="mt-3 max-w-xl text-muted">
-        Requests you made while signed in. MalFleks still takes no payment and holds
-        no stock — a reference is what you quote to the branch to talk about the
-        same request.
+        Orders you placed while signed in. Once the branch confirms one, you pay
+        for it here by mobile money and MalFleks holds the payment until it is
+        delivered. The reference is what you quote if you call the branch.
       </p>
 
       {partner && (
@@ -126,7 +133,11 @@ export default async function AccountPage() {
       ) : (
         <ul className="mt-10 flex flex-col gap-5">
           {requests.map((request) => (
-            <SavedRequestCard key={request.id} request={request} />
+            <SavedRequestCard
+              key={request.id}
+              request={request}
+              payState={payStates.get(request.reference) ?? null}
+            />
           ))}
         </ul>
       )}

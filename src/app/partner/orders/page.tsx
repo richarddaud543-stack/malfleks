@@ -64,8 +64,8 @@ export default async function PartnerOrdersPage() {
       </h1>
       <p className="mt-3 max-w-prose text-muted">
         {isCourier
-          ? "Deliveries a customer routed to you. MalFleks takes no payment and holds no stock — you arrange the pickup and the fee with the branch and the customer directly. Call them, and quote the reference."
-          : "A customer asking to buy from your branch. MalFleks takes no payment and holds no stock — you agree the price, the payment and the handover with them directly. Call them, and quote the reference."}
+          ? "Deliveries a customer routed to you. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, arrange the fee with the branch and the customer directly."
+          : "A customer asking to buy from your branch. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, agree the payment with them directly."}
       </p>
 
       {orders === null ? (

@@ -54,7 +54,8 @@ export default function Footer() {
             wrong thing about whether this is real.
           */}
           Brand logos are trademarks of their respective owners, used here for
-          identification only. MalFleks takes no payment and holds no stock.
+          identification only. MalFleks holds no stock; payment for a confirmed
+          order is held by MalFleks until it is delivered.
         </div>
       </div>
     </footer>

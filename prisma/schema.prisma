@@ -288,6 +288,13 @@ model Order {
   customerPhone    String
   customerAddress  String
 
+  // The address the customer signed in with, taken from the verified session
+  // at order time -- never from the form. It exists for exactly two emails:
+  // "your order is confirmed, pay here" and "payment received". Nullable:
+  // orders placed before 2 Oct 2026 have none, and those customers find the
+  // checkout on their account page instead.
+  customerEmail String?
+
   quantity     Int
   lineTotalTZS Int
 

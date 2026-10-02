@@ -24,8 +24,12 @@ export const metadata: Metadata = {
  *   * The storage location is Supabase's eu-west-1 region — that is where this
  *     project's database actually lives, and it is outside Tanzania, which a
  *     Tanzanian visitor is entitled to know.
- *   * "No payment details" is true because there is no payment integration at
- *     all. If one is ever added, this file changes in the same commit.
+ *   * The payment paragraph changed on 2 Oct 2026, in the same commit that
+ *     opened the customer checkout: payments go through ClickPesa's hosted
+ *     page, so MalFleks never receives a PIN or card number, but it does store
+ *     the amount, time and ClickPesa's reference (`OrderPayment`,
+ *     `LedgerEntry`), and ClickPesa's notification includes the number paid
+ *     from, which lands in the error log only if the notification is refused.
  *
  * There is no analytics or advertising section because there is no analytics
  * and no advertising. Do not add a paragraph here in anticipation of one.
@@ -38,7 +42,7 @@ export default function PrivacyPage() {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 1 September 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 2 October 2026.</p>
       </ScrollReveal>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -68,11 +72,19 @@ export default function PrivacyPage() {
             <li>anything you write in the notes field</li>
           </ul>
           <p className="mt-3">
+            When you place an order while signed in, we also keep the email
+            address of the Google account you used, so we can send you the link
+            to pay and a receipt.
+          </p>
+          <p className="mt-3">
             <strong className="text-foreground">
-              We never collect payment details.
+              We never see your mobile money PIN or any card number.
             </strong>{" "}
-            MalFleks takes no payment, so there is no card number, no mobile money
-            account and no bank detail anywhere in this system.
+            When you pay for a confirmed order, you do it on a page run by
+            ClickPesa, our payment provider. ClickPesa tells us that the payment
+            succeeded, how much it was, when, its own reference for it, and the
+            mobile money number it came from. We store the amount, the time and
+            the reference against your order.
           </p>
         </section>
 
@@ -85,6 +97,11 @@ export default function PrivacyPage() {
             and address on that request — that is the point of sending it; they
             cannot deliver to somebody they cannot reach. They do not see your
             other requests, and no other branch sees any of it.
+          </p>
+          <p className="mt-2">
+            When a checkout is opened for your order, ClickPesa receives your
+            name, your phone number and the amount, so that it can take the
+            payment.
           </p>
           <p className="mt-2">
             MalFleks&apos;s administrators can see order requests and partner

@@ -88,10 +88,12 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               <h2 className="text-sm font-semibold">Next step</h2>
               <p className="mt-1 text-sm text-muted">
                 {order.status === "pending"
-                  ? "Ring the branch: is it in stock at this price? Then confirm, or cancel with the reason."
+                  ? "Ring the branch: is it in stock at this price? Then confirm — that opens the customer's checkout and emails them the link — or cancel with the reason."
                   : captured
                     ? "Paid. Once it is delivered, mark it fulfilled — the branch or courier can also do that themselves."
-                    : "Confirmed. Send the customer a payment link, and mark it fulfilled once delivered."}
+                    : latestPayment
+                      ? `Confirmed, and the customer's checkout is open${order.customerEmail ? " (they were emailed the link)" : " (no email on file — they'll find it on their account page)"}. Waiting for them to pay.`
+                      : "Confirmed, but no payment link exists yet. It is made when the customer opens their checkout, or use “Send payment link”."}
               </p>
               <OrderActions
                 order={{
@@ -121,7 +123,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                   { label: "Delivery address", value: order.customerAddress, wide: true },
                   {
                     label: "Account",
-                    value: order.customerId ? "Signed in when ordering" : "Not signed in",
+                    value: order.customerId ? (order.customerEmail ?? "Signed in when ordering") : "Not signed in",
                   },
                   { label: "Sent at (their phone's clock)", value: formatWhen(order.requestedAt) },
                 ]}
@@ -249,7 +251,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
             {order.payments.length === 0 ? (
               <p className="mt-2 text-sm text-muted">
                 No payment asked for yet.
-                {order.status === "confirmed" && " Use “Send payment link” to create one."}
+                {order.status === "confirmed" && " One is made when the customer opens their checkout."}
               </p>
             ) : (
               <>

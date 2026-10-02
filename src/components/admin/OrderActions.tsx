@@ -104,8 +104,9 @@ export default function OrderActions({ order }: { order: ActionableOrder }) {
       {paymentLink && (
         <div className="mt-4 rounded-xl border border-border bg-surface-2 p-3">
           <p className="text-xs text-muted">
-            Payment link — copy and send this to the customer yourself
-            (SMS/WhatsApp). Nothing here sends it for you.
+            Payment link. The customer already has it on their checkout page
+            and by email — copy it only if you want to send it another way
+            (SMS/WhatsApp).
           </p>
           <p className="mt-1.5 break-all font-mono text-xs text-foreground select-all">
             {paymentLink}
@@ -140,7 +141,7 @@ export default function OrderActions({ order }: { order: ActionableOrder }) {
                 Cancel
               </button>
               <span className="ml-auto text-xs text-muted">
-                Confirms availability and price with the branch. No payment moves.
+                Confirming opens the customer&apos;s checkout and emails them the link.
               </span>
             </>
           )}
@@ -181,8 +182,8 @@ export default function OrderActions({ order }: { order: ActionableOrder }) {
           {mode === "paying" && (
             <>
               <span className="mr-auto text-sm text-muted">
-                Create a ClickPesa payment link for {order.reference}? You send it
-                to the customer yourself — nothing here does that automatically.
+                Show the ClickPesa payment link for {order.reference}? One is
+                made if the automatic one didn&apos;t go through.
               </span>
               <button
                 type="button"
@@ -207,8 +208,8 @@ export default function OrderActions({ order }: { order: ActionableOrder }) {
           {mode === "confirming" && (
             <>
               <span className="mr-auto text-sm text-muted">
-                Confirm {order.reference} is available at the quoted price and
-                delivery is proceeding?
+                Confirm {order.reference} is available at the quoted price? The
+                customer is then asked to pay.
               </span>
               <button
                 type="button"

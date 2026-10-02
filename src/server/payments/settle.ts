@@ -1,6 +1,7 @@
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { accruePayouts } from "@/server/money/payouts";
+import { sendPaymentReceipts } from "./receipts";
 
 /**
  * Recording that money arrived, or that an attempt failed -- in one place.
@@ -83,7 +84,7 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
     return "amount-mismatch";
   }
 
-  return db.$transaction(async (tx) => {
+  const outcome = await db.$transaction(async (tx) => {
     // The lookup above ran against the pre-capture reference; renaming
     // `providerRef` to ClickPesa's own reference here does not affect it.
     const { count } = await tx.orderPayment.updateMany({
@@ -110,6 +111,11 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
     await accruePayouts(tx, payment.orderId);
     return "captured" as const;
   });
+
+  // After the commit, and only for the call that actually captured: a receipt
+  // to the customer and a note to MalFleks. Never throws.
+  if (outcome === "captured") await sendPaymentReceipts(payment.id);
+  return outcome;
 }
 
 /**

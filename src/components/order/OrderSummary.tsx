@@ -72,7 +72,7 @@ export default function OrderSummary({
       <p className="mt-4 text-xs text-muted">
         Delivery is arranged directly with{" "}
         {brandDelivered ? "the branch" : "the agent"} and is not included in
-        this total. Nothing is charged here.
+        this total. Nothing is charged at this step.
       </p>
     </div>
   );

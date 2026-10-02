@@ -148,7 +148,9 @@ export async function listOrders(
     take: limit,
     include: {
       payments: {
-        orderBy: { initiatedAt: "desc" },
+        // A captured attempt first, then the newest: "is it paid" must not be
+        // hidden by a later attempt that failed or was never used.
+        orderBy: [{ capturedAt: { sort: "desc", nulls: "last" } }, { initiatedAt: "desc" }],
         take: 1,
         select: { status: true, checkoutLink: true },
       },

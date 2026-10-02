@@ -7,7 +7,7 @@ import { isAuthConfigured } from "@/server/auth/config";
 export const metadata: Metadata = {
   title: "Sign in",
   description:
-    "Sign in to MalFleks to keep your order requests. Ordering never requires an account, and MalFleks takes no payment.",
+    "Sign in to MalFleks to keep your orders, pay for one once the branch confirms it, and track its delivery.",
 };
 
 export default function SignInPage() {

@@ -141,10 +141,42 @@ export async function sendNotification(
   body: string,
   env: Record<string, string | undefined> = process.env,
 ): Promise<NotifyResult> {
+  return sendEmail(notifyAddress(env), subject, body, env);
+}
+
+/** Loose on purpose: this only keeps obvious junk out of a provider call, it does not validate an address. */
+const EMAIL_SHAPE = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
+
+/**
+ * Send one plain-text message to a customer. Never throws.
+ *
+ * Separate from `sendNotification` only in who receives it: that one goes to
+ * MalFleks's own inbox, this one to the address a customer signed in with.
+ * The address comes from `Order.customerEmail`, which was taken from the
+ * verified session -- so this never mails an address somebody typed into a
+ * form, which is what would make it usable to send MalFleks-branded mail to a
+ * stranger.
+ */
+export async function sendCustomerEmail(
+  to: string | null | undefined,
+  subject: string,
+  body: string,
+  env: Record<string, string | undefined> = process.env,
+): Promise<NotifyResult | { sent: false; reason: "no-address" }> {
+  const address = to?.trim();
+  if (!address || !EMAIL_SHAPE.test(address)) return { sent: false, reason: "no-address" };
+  return sendEmail(address, subject, body, env);
+}
+
+async function sendEmail(
+  to: string,
+  subject: string,
+  body: string,
+  env: Record<string, string | undefined>,
+): Promise<NotifyResult> {
   const provider = notifyProvider(env);
   if (!provider) return { sent: false, reason: "not-configured" };
 
-  const to = notifyAddress(env);
   const from = parseSender(notifySender(env));
 
   // Typed explicitly: an inferred union of two object literals gives each
@@ -244,13 +276,94 @@ export function orderRequestMessage(input: {
         ? `${input.productName} — reference ${input.reference}`
         : `Reference ${input.reference}`,
       "",
-      "A customer is waiting to hear from the branch. MalFleks takes no payment,",
-      "so this is a message to be passed on, not a sale to be processed.",
+      "A customer is waiting. Ring the branch to check stock and price, then",
+      "confirm it -- confirming opens the checkout for the customer and emails",
+      "them the link. Nothing is charged until they pay.",
       "",
       `Open it: ${input.siteUrl}/admin/orders`,
       "",
       "The customer's name, phone number and address are on that page rather",
       "than in this email.",
+    ].join("\n"),
+  };
+}
+
+function money(amountTZS: number): string {
+  return `TSh ${amountTZS.toLocaleString("en-US")}`;
+}
+
+/** To the customer: the branch has confirmed, the checkout is open. */
+export function paymentReadyMessage(input: {
+  firstName: string | null;
+  reference: string;
+  productName: string;
+  quantity: number;
+  branchName: string;
+  totalTZS: number;
+  siteUrl: string;
+}): { subject: string; body: string } {
+  return {
+    subject: `Your MalFleks order ${input.reference} is confirmed — pay to complete it`,
+    body: [
+      input.firstName ? `Hello ${input.firstName},` : "Hello,",
+      "",
+      `${input.branchName} has confirmed your order:`,
+      `${input.quantity} × ${input.productName} — ${money(input.totalTZS)} in total.`,
+      "",
+      "Pay by mobile money here:",
+      `${input.siteUrl}/pay/${encodeURIComponent(input.reference)}`,
+      "",
+      "MalFleks holds your payment until the order is delivered. If it can't be",
+      "delivered, you are refunded.",
+      "",
+      `Your reference is ${input.reference}. If you did not place this order, ignore`,
+      "this email — nothing is charged unless you pay.",
+    ].join("\n"),
+  };
+}
+
+/** To the customer: the money arrived. */
+export function paymentReceivedMessage(input: {
+  firstName: string | null;
+  reference: string;
+  productName: string;
+  amountTZS: number;
+  paymentReference: string;
+  siteUrl: string;
+}): { subject: string; body: string } {
+  return {
+    subject: `Payment received for your MalFleks order ${input.reference}`,
+    body: [
+      input.firstName ? `Hello ${input.firstName},` : "Hello,",
+      "",
+      `We have received ${money(input.amountTZS)} for ${input.productName}.`,
+      `Order reference: ${input.reference}`,
+      `Payment reference: ${input.paymentReference}`,
+      "",
+      "MalFleks holds this payment until your order is delivered.",
+      "",
+      "Follow your delivery here:",
+      `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
+      "",
+      "Keep this email as your receipt.",
+    ].join("\n"),
+  };
+}
+
+/** To MalFleks's own inbox: money in. */
+export function paymentReceivedAdminMessage(input: {
+  reference: string;
+  amountTZS: number;
+  adminUrl: string | null;
+}): { subject: string; body: string } {
+  return {
+    subject: `MalFleks: ${money(input.amountTZS)} received for ${input.reference}`,
+    body: [
+      `${money(input.amountTZS)} has been collected for order ${input.reference} and is held in escrow.`,
+      "",
+      "Next: get it delivered, then mark it fulfilled so the branch and courier",
+      "shares are worked out.",
+      ...(input.adminUrl ? ["", `Open Money: ${input.adminUrl}/admin/money`] : []),
     ].join("\n"),
   };
 }

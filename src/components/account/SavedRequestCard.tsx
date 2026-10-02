@@ -18,8 +18,15 @@ import DeleteSavedRequest from "./DeleteSavedRequest";
  */
 export default function SavedRequestCard({
   request,
+  payState = null,
 }: {
   request: SavedOrderRequest;
+  /**
+   * Where this order stands on payment, when MalFleks still has the order:
+   * "waiting" on the branch, "ready" to pay, or "paid". `null` for a request
+   * whose order was cancelled or that predates checkout.
+   */
+  payState?: "waiting" | "ready" | "paid" | null;
 }) {
   const branchHref = `/brands/${request.brand.slug ?? request.brand.id}/branches/${request.branch.id}`;
   const requestedAt = new Date(request.requestedAt);
@@ -94,7 +101,36 @@ export default function SavedRequestCard({
         </div>
       </dl>
 
+      {payState && (
+        <p className="mt-5 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm">
+          {payState === "ready" && (
+            <>
+              <span className="font-medium">The branch has confirmed this order.</span> Pay to complete it.
+            </>
+          )}
+          {payState === "waiting" && (
+            <>
+              <span className="font-medium">Waiting for the branch to confirm.</span> Nothing is due yet — you&apos;ll pay here once
+              they do.
+            </>
+          )}
+          {payState === "paid" && (
+            <>
+              <span className="font-medium">Paid.</span> MalFleks holds your payment until it is delivered.
+            </>
+          )}
+        </p>
+      )}
+
       <div className="mt-5 flex flex-wrap items-center gap-4">
+        {payState === "ready" && (
+          <Link
+            href={`/pay/${encodeURIComponent(request.reference)}`}
+            className="btn-pill btn-lime px-5 py-1.5 text-xs font-medium"
+          >
+            Pay now
+          </Link>
+        )}
         <Link
           href={`/track/${encodeURIComponent(request.reference)}`}
           className="btn-pill btn-ink px-4 py-1.5 text-xs"

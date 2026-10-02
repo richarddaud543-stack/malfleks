@@ -58,10 +58,13 @@ export default function ContactPage() {
           </h2>
           <p className="mt-2">
             Include the reference from your confirmation — it is the fastest way
-            to find the exact request. Remember that MalFleks passes your request to
-            the branch and takes no payment: if you have already agreed a price
-            or a delivery time with them, they are the ones who can change it.
-            If they have gone quiet, tell us and we will chase them.
+            to find the exact request. MalFleks passes your request to the
+            branch, so if you have already agreed a delivery time with them,
+            they are the ones who can change it. If they have gone quiet, tell
+            us and we will chase them. If you paid through MalFleks and
+            something is wrong — a refund you are waiting for, or a charge you
+            do not recognise — write to us: we hold that payment, and sorting
+            it out is our job, not the branch&apos;s.
           </p>
         </section>
 

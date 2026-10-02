@@ -67,6 +67,25 @@ export default function PartnerOrderCard({
         </span>
       </div>
 
+      {/* Says who has the money, because the wrong guess costs the customer:
+          a branch that collects at the door on an order already paid through
+          MalFleks has charged them twice. */}
+      {order.status !== "cancelled" &&
+        (order.payment?.status === "captured" ? (
+          <p className="mt-4 rounded-xl border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm">
+            <span className="font-medium">Paid through MalFleks.</span> Collect
+            nothing at the door — MalFleks pays your share after delivery.
+          </p>
+        ) : (
+          order.payment && (
+            <p className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
+              The customer has been asked to pay through MalFleks and
+              hasn&apos;t yet. Wait for “Paid through MalFleks” before you
+              hand anything over.
+            </p>
+          )
+        ))}
+
       <div className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
         <p className="text-xs text-muted">Reference to quote</p>
         <p className="font-display text-xl font-medium tracking-tight tabular-nums">

@@ -384,8 +384,9 @@ export default function OrderRequestForm({
             here is transmitted or charged. Keep this literal, not just a
             vibe the styling implies. */}
         <p className="text-xs text-muted">
-          This sends a request, not a paid order. No payment is taken here —
-          the branch confirms availability and price with you first.
+          This sends a request, not a paid order. No payment is taken at this
+          step — the branch confirms availability and price first. If you are
+          signed in, you then pay here on MalFleks by mobile money.
         </p>
       </div>
     </form>

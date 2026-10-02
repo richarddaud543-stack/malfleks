@@ -7,22 +7,27 @@ import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 export const metadata: Metadata = {
   title: "Terms of use",
   description:
-    "What MalFleks does and does not do: we list branches and pass order requests to them. We take no payment, hold no stock and are not a party to the sale.",
+    "What MalFleks does: we list branches, pass your order to them, and hold your payment for a confirmed order until it is delivered. We hold no stock.",
 };
 
 /**
  * Terms of use.
  *
- * Written to describe **what this site actually does**, which is narrower than
- * most marketplace terms and should stay that way: MalFleks takes no payment,
- * holds no stock, and never becomes a party to the sale. An order request is
- * a message passed to a branch. Terms that implied otherwise would be the
- * document's own first lie, and would also be the thing a customer quotes back
- * when a deal goes wrong.
+ * Written to describe **what this site actually does**. Since 2 Oct 2026 that
+ * includes money: a signed-in customer pays MalFleks for a confirmed order and
+ * MalFleks holds it until delivery (the owner's decision; see
+ * `src/server/orders/checkout.ts`). The "Paying" section says so plainly,
+ * because terms that still claimed "we take no payment" would be the
+ * document's own first lie.
  *
- * Not legal advice and not drafted by a lawyer — it says plainly what happens.
- * If MalFleks starts holding money, this document has to be rewritten by someone
- * qualified before that ships.
+ * **Not legal advice and not drafted by a lawyer.** The earlier version of this
+ * comment said that if MalFleks started holding money this document had to be
+ * rewritten by someone qualified first. That has not happened: what is here is
+ * an accurate plain-language description, written so the page is not false,
+ * and it still needs that review. In particular the refund paragraph states
+ * only what is certain (an order we or the branch cancel is refunded in full);
+ * what a customer gets if *they* cancel is an open decision, and the page says
+ * to contact us rather than inventing a rule.
  */
 export default function TermsPage() {
   return (
@@ -32,7 +37,7 @@ export default function TermsPage() {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 1 September 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 2 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -47,23 +52,51 @@ export default function TermsPage() {
             order request, MalFleks passes your name, phone number and delivery
             address to that branch, and gives you a reference number to quote.
           </p>
+          <p className="mt-2">
+            MalFleks is <strong>not the seller</strong> and holds no stock. The
+            goods are sold by the branch, at the price the branch published. If
+            a branch does not have what it listed, or the price has changed, we
+            want to hear about it, because a branch that keeps doing it does
+            not belong here.
+          </p>
+          <p className="mt-2">
+            An order request is not a confirmed order. Nothing is reserved and
+            nothing is owed until the branch has confirmed it.
+          </p>
         </section>
 
         <section>
           <h2 className="font-display text-lg font-medium text-foreground">
-            What MalFleks is not
+            Paying
           </h2>
           <p className="mt-2">
-            MalFleks is <strong>not a shop</strong>. We take no payment, hold no
-            stock, and are not a party to any sale. Price, availability,
-            delivery and any refund are agreed between you and the branch. If a
-            branch does not have what it listed, or the price has changed, that
-            is a conversation between you and them — though we do want to hear
-            about it, because a branch that keeps doing it does not belong here.
+            You are never charged when you send an order request. Once the
+            branch confirms that it has the item at the listed price, a checkout
+            page opens for that order on MalFleks and we email you the link.
+            You pay the full amount shown there — the goods and, where a
+            courier is used, the delivery fee — by mobile money through
+            ClickPesa, our payment provider.
           </p>
           <p className="mt-2">
-            An order request is not a confirmed order. Nothing is reserved until
-            the branch tells you so.
+            <strong>You pay MalFleks, and MalFleks holds your payment</strong>{" "}
+            until the order is delivered. We then pay the branch and the courier
+            their shares and keep a service fee, which is already included in
+            the amount you were shown: you are not charged anything on top of it.
+            If you paid through MalFleks, do not pay the branch or the courier
+            again at the door.
+          </p>
+          <p className="mt-2">
+            If the branch or MalFleks cancels an order you have paid for — for
+            example because it turns out not to be available — you are refunded
+            the full amount. If you
+            want to cancel an order you have paid for, contact us as soon as you
+            can, before it is dispatched, and we will tell you what can be
+            refunded.
+          </p>
+          <p className="mt-2">
+            A request sent without signing in is not recorded by MalFleks and
+            cannot be paid for here; any payment for it is between you and the
+            branch.
           </p>
         </section>
 
@@ -72,10 +105,9 @@ export default function TermsPage() {
             Your account
           </h2>
           <p className="mt-2">
-            You sign in with Google. You need an account to send an order
-            request, so that the request is attached to someone a branch can
-            reach and so you can look your own requests up later. Browsing needs
-            no account.
+            You sign in with Google. An account is what lets MalFleks keep your
+            order, open its checkout for you, email you a receipt and show you
+            where the delivery is. Browsing needs no account.
           </p>
           <p className="mt-2">
             Use a phone number and address you can actually be reached at. A

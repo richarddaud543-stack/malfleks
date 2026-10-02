@@ -62,7 +62,7 @@ export async function submitOrder(
     const limit = await checkRateLimit(identity, ORDER_RATE_LIMIT);
     if (!limit.allowed) return { ok: false, reason: "rate-limited" };
 
-    const outcome = await createOrder(input, session?.uid ?? null);
+    const outcome = await createOrder(input, session?.uid ?? null, session?.email ?? null);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
     // See `notifyOfOrder`: announced, never awaited for correctness. The
@@ -121,6 +121,21 @@ export async function confirmOrder(orderId: string): Promise<OrderTransitionResu
     const { confirmOrder: applyConfirm } = await import("@/server/orders/status");
     const outcome = await applyConfirm(orderId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    // Confirming opens the checkout: the payment link is created now and the
+    // customer is emailed where to pay (owner's call, 2 Oct 2026 -- no more
+    // copying a link to them by hand). Kept out of the confirmation itself: a
+    // ClickPesa outage must not un-confirm an order, and `/pay/[reference]`
+    // creates the link on demand if this did not.
+    try {
+      const { openCheckout } = await import("@/server/orders/checkout");
+      const opened = await openCheckout(orderId);
+      if (!opened.ok && opened.reason !== "unquotable") {
+        await logServerError("checkout-open", new Error(`${orderId}: ${opened.reason}`), session.uid);
+      }
+    } catch (error) {
+      await logServerError("checkout-open", error, session.uid);
+    }
 
     revalidatePath("/admin/orders", "layout");
     revalidatePath("/admin");

@@ -64,7 +64,9 @@ export type CreateOrderOutcome =
  */
 export async function createOrder(
   input: SaveOrderRequestInput,
-  customerId: string | null
+  customerId: string | null,
+  /** From the verified session, never the form. Used only to email the checkout link and the receipt. */
+  customerEmail: string | null = null,
 ): Promise<CreateOrderOutcome> {
   // Read the catalogue from the database, not from `src/data`. Every product
   // a partner published lives only in Postgres, so the static array would
@@ -75,7 +77,7 @@ export async function createOrder(
   if (!built.ok) return { ok: false, reason: built.reason };
 
   try {
-    return { ok: true, value: await insertOrder(built.value, customerId) };
+    return { ok: true, value: await insertOrder(built.value, customerId, customerEmail) };
   } catch (error) {
     if (!isUniqueConstraintViolation(error)) {
       return { ok: false, reason: "persist-failed" };
@@ -92,7 +94,7 @@ export async function createOrder(
     if (!retried.ok) return { ok: false, reason: retried.reason };
 
     try {
-      return { ok: true, value: await insertOrder(retried.value, customerId) };
+      return { ok: true, value: await insertOrder(retried.value, customerId, customerEmail) };
     } catch {
       // Two collisions in a row against a 614,656-code space is not worth a
       // second retry — something else is wrong, and the customer still has
@@ -104,7 +106,8 @@ export async function createOrder(
 
 async function insertOrder(
   order: OrderRequest,
-  customerId: string | null
+  customerId: string | null,
+  customerEmail: string | null,
 ): Promise<CreatedOrder> {
   // Computed once, here, and never recomputed later — see the schema comment
   // on `Order`'s quote columns. `null` when the owner hasn't set this city's
@@ -137,6 +140,7 @@ async function insertOrder(
       customerFullName: order.customer.fullName,
       customerPhone: order.customer.phone,
       customerAddress: order.customer.address,
+      customerEmail: customerId ? customerEmail : null,
       quantity: order.quantity,
       lineTotalTZS: order.lineTotalTZS,
       quoteGoodsRungTZS: quote?.goodsRungTZS ?? null,

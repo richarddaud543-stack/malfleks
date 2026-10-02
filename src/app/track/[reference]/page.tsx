@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import LiveTrackingPanel from "@/components/track/LiveTrackingPanel";
 import { requireSession } from "@/server/auth/dal";
+import { checkoutStatesForCustomer } from "@/server/orders/checkout";
 import { trackedOrderForCustomer } from "@/server/orders/tracking";
 
 export const metadata: Metadata = {
@@ -54,10 +55,12 @@ export default async function TrackOrderPage({
   // attacker something a wrong reference should not.
   if (!order) notFound();
 
+  const payState = (await checkoutStatesForCustomer(session.uid).catch(() => null))?.get(order.reference) ?? null;
+
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
       <Link href="/account" className="text-sm text-muted hover:text-foreground">
-        ← Your order requests
+        ← Your orders
       </Link>
       <h1 className="mt-4 font-display text-4xl font-medium tracking-tight">
         Tracking {order.reference}
@@ -66,6 +69,17 @@ export default async function TrackOrderPage({
         {order.quantity > 1 && `${order.quantity} × `}
         {order.productName} · {order.branchName}, {order.branchCity}
       </p>
+
+      {payState === "ready" && (
+        <div className="glass-card mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl px-6 py-5">
+          <p className="text-sm">
+            <span className="font-medium">Confirmed by the branch.</span> Pay to complete your order.
+          </p>
+          <Link href={`/pay/${encodeURIComponent(order.reference)}`} className="btn-pill btn-lime px-5 py-2 text-sm font-medium">
+            Pay now
+          </Link>
+        </div>
+      )}
 
       <LiveTrackingPanel reference={order.reference} initialOrder={order} />
     </div>

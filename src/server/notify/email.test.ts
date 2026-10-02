@@ -8,6 +8,9 @@ import {
   notifySender,
   orderRequestMessage,
   parseSender,
+  paymentReadyMessage,
+  paymentReceivedMessage,
+  sendCustomerEmail,
   partnerApplicationMessage,
   sendNotification,
 } from "./email";
@@ -259,5 +262,49 @@ describe("what the messages say", () => {
         siteUrl: "https://malfleks.example",
       }).body,
     ).toContain("Corolla Hybrid");
+  });
+});
+
+describe("customer emails", () => {
+  it("never mails something that is not an address", async () => {
+    const env = { BREVO_API_KEY: "k", NOTIFY_FROM: "MalFleks <hello@example.test>" };
+    for (const bad of [null, undefined, "", "not-an-address", "a@b", "two@example.test, three@example.test", "x@example.test\nBcc: y@example.test"]) {
+      await expect(sendCustomerEmail(bad, "s", "b", env)).resolves.toEqual({ sent: false, reason: "no-address" });
+    }
+  });
+
+  it("says not-configured rather than pretending when there is no provider", async () => {
+    await expect(sendCustomerEmail("asha@example.test", "s", "b", {})).resolves.toEqual({ sent: false, reason: "not-configured" });
+  });
+
+  it("the checkout email links to the MalFleks pay page and states the total", () => {
+    const { subject, body } = paymentReadyMessage({
+      firstName: "Asha",
+      reference: "ORA-DOD-N6CD",
+      productName: "head sets",
+      quantity: 2,
+      branchName: "oraimo — Dodoma",
+      totalTZS: 5574,
+      siteUrl: "https://malfleks.vercel.app",
+    });
+    expect(subject).toContain("ORA-DOD-N6CD");
+    expect(body).toContain("https://malfleks.vercel.app/pay/ORA-DOD-N6CD");
+    expect(body).toContain("TSh 5,574");
+    expect(body).toContain("2 × head sets");
+  });
+
+  it("the receipt carries both references and the amount", () => {
+    const { subject, body } = paymentReceivedMessage({
+      firstName: null,
+      reference: "ORA-DOD-N6CD",
+      productName: "head sets",
+      amountTZS: 5574,
+      paymentReference: "6274489582750774",
+      siteUrl: "https://malfleks.vercel.app",
+    });
+    expect(subject).toContain("Payment received");
+    expect(body).toContain("TSh 5,574");
+    expect(body).toContain("6274489582750774");
+    expect(body).toContain("https://malfleks.vercel.app/track/ORA-DOD-N6CD");
   });
 });

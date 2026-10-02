@@ -200,9 +200,27 @@ export default function OrderConfirmation() {
               )}
             </Step>
             <Step n={3}>
-              Payment and delivery charges are agreed directly with{" "}
-              {brandDelivered ? "the branch" : "the branch and the agent"}. MalFleks
-              does not take payment.
+              {order.savedToAccount ? (
+                <>
+                  Once the branch confirms, you pay on MalFleks by mobile
+                  money. We email you the link, and{" "}
+                  <Link
+                    href={`/pay/${encodeURIComponent(order.reference)}`}
+                    className="underline underline-offset-2 hover:text-foreground"
+                  >
+                    your checkout page
+                  </Link>{" "}
+                  opens for payment by itself. MalFleks holds your payment
+                  until the order is delivered.
+                </>
+              ) : (
+                <>
+                  Payment and delivery charges are agreed directly with{" "}
+                  {brandDelivered ? "the branch" : "the branch and the agent"}.
+                  Because you weren&apos;t signed in, MalFleks has no record
+                  of this request and takes no payment for it.
+                </>
+              )}
             </Step>
           </ol>
 
