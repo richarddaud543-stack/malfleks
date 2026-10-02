@@ -101,6 +101,9 @@ export function mapProduct(row: ProductRowWithSpecs): Product {
     priceTZS: row.priceTZS,
     image: row.image,
     photoUrl: orUndefined(row.photoUrl),
+    // Spread, like `coords` on a branch: a product with no photo list has no
+    // key at all and still deep-equals its static counterpart.
+    ...(row.photoUrls.length > 0 ? { photoUrls: [...row.photoUrls] } : {}),
     description: row.description,
     // A product with no spec rows is indistinguishable from one whose specs
     // were never recorded, so both map to `undefined` — the same thing the

@@ -121,6 +121,24 @@ describe("SubmissionTable", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
+  it("shows the partner's own main photo when they sent one, and the icon when they did not", () => {
+    const photoUrl =
+      "https://p.supabase.co/storage/v1/object/public/product-photos/uid-1/front.webp";
+    const { container, rerender } = render(
+      <SubmissionTable submissions={[{ ...base, photoUrl }]} />,
+    );
+
+    const img = container.querySelector("img");
+    expect(img).not.toBeNull();
+    expect(decodeURIComponent(img?.getAttribute("src") ?? "")).toContain("front.webp");
+    // The photo replaces the icon rather than sitting beside it.
+    expect(container.querySelector("svg")).toBeNull();
+
+    rerender(<SubmissionTable submissions={[{ ...base, photoUrl: null }]} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.querySelector("svg")).not.toBeNull();
+  });
+
   it("marks a listing the partner flagged as out of stock", () => {
     render(<SubmissionTable submissions={[{ ...base, inStock: false }]} />);
 

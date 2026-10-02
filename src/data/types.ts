@@ -55,6 +55,12 @@ export interface Product {
   image: string;
   /** A real uploaded photo. Absent on most rows — the icon is the fallback. */
   photoUrl?: string;
+  /**
+   * Every photo, main one first (so `photoUrls[0] === photoUrl`). Absent when
+   * the row has no list — including rows from before the gallery that have
+   * only `photoUrl`. Read through `productPhotoList` rather than directly.
+   */
+  photoUrls?: string[];
   description: string;
   specs?: Record<string, string>;
   inStock: boolean;

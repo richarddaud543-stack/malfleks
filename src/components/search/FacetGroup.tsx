@@ -35,7 +35,7 @@ export default function FacetGroup({
               onClick={() => onToggle(option.value)}
               disabled={isEmpty}
               aria-pressed={isSelected}
-              className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
+              className={`inline-flex min-h-10 items-center rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
                 isSelected
                   ? "border-accent bg-accent/15 text-accent"
                   : isEmpty

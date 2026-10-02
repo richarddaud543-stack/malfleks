@@ -15,9 +15,19 @@ export default function NotFound() {
         The brand, branch or product you&apos;re looking for doesn&apos;t
         exist — it may have moved, or the link might be out of date.
       </p>
-      <Link href="/brands" className="btn-pill btn-lime mt-8 px-7 py-3">
-        Browse all brands
-      </Link>
+      {/* Three ways on, not one: a visitor who mistyped a product link wants
+          search, not the brand list. */}
+      <div className="mt-8 flex flex-wrap justify-center gap-3">
+        <Link href="/search" className="btn-pill btn-lime px-7 py-3">
+          Search products
+        </Link>
+        <Link href="/brands" className="btn-pill btn-ink px-7 py-3">
+          Browse all brands
+        </Link>
+        <Link href="/" className="btn-pill btn-outline px-7 py-3">
+          Home
+        </Link>
+      </div>
     </div>
   );
 }

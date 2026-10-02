@@ -96,6 +96,8 @@ export interface PartnerSubmission {
   priceTZS: number;
   /** A `ProductIconKey` — an icon identifier, never a URL. */
   image: string;
+  /** The main photo, when the partner uploaded one. Shown instead of the icon. */
+  photoUrl?: string | null;
   inStock: boolean;
   /** "pending" | "published" | "rejected". */
   status: string;
@@ -126,6 +128,7 @@ export async function listSubmissionsForPartner(
       category: true,
       priceTZS: true,
       image: true,
+      photoUrl: true,
       inStock: true,
       status: true,
       createdAt: true,

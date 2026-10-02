@@ -121,7 +121,7 @@ export default function CityLocator({
                   type="button"
                   onClick={() => setFilters((f) => ({ ...f, q: "" }))}
                   aria-label="Clear search"
-                  className="shrink-0 text-muted transition-colors hover:text-foreground"
+                  className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground"
                 >
                   <ClearIcon />
                 </button>
@@ -138,7 +138,7 @@ export default function CityLocator({
             <button
               type="button"
               onClick={() => setFilters((f) => ({ ...f, city: null }))}
-              className="rounded-full border border-border px-3 py-1 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
+              className="min-h-10 rounded-full border border-border px-3.5 py-1 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
             >
               All cities
             </button>
@@ -177,7 +177,7 @@ export default function CityLocator({
                         }
                       : undefined
                   }
-                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+                  className={`flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm transition-colors ${
                     isSelected
                       ? "text-foreground"
                       : isEmpty
@@ -207,7 +207,7 @@ export default function CityLocator({
               animate={{ opacity: 1, y: 0 }}
               exit={reduceMotion ? undefined : { opacity: 0, y: -4 }}
               transition={{ duration: 0.2 }}
-              className="mt-5 rounded-full border border-border px-4 py-1.5 text-xs text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
+              className="mt-5 min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
             >
               Clear filters
             </motion.button>

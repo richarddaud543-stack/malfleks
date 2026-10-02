@@ -25,17 +25,25 @@ import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
  * cancelled`. Nothing moves out of `fulfilled` or `cancelled` — both are
  * terminal, and neither appears as a source in `ALLOWED_TRANSITIONS` below.
  *
- * Who moves it: mostly MalFleks admin only, via `/admin/orders`, through the
- * actions in `src/app/actions/orders.ts` — **with one deliberate exception**.
- * The owner's call on 6 Sep 2026: the branch or courier actually fulfilling an
- * order may mark it `fulfilled` themselves, from `/partner/orders`, through
- * `markOrderFulfilledByPartner` below and `src/app/actions/partner-orders.ts`.
- * Nothing else moved — `confirmed` still means MalFleks admin rang the branch
- * and verified stock and price, and only admin may `cancel`, since a
- * cancellation is the one transition an interested party has a reason to lie
- * about. "Who actually delivered it" has the opposite property: the partner
- * is the one person who genuinely knows, and admin marking it from a phone
- * call is transcription, not verification.
+ * Who moves it: MalFleks admin, via `/admin/orders`, through the actions in
+ * `src/app/actions/orders.ts` — and, for the two decisions they are the ones
+ * who actually know the answer to, the partners themselves:
+ *
+ * - The owner's call on 6 Sep 2026: the branch or courier fulfilling an order
+ *   may mark it `fulfilled`, from `/partner/orders`, through
+ *   `markOrderFulfilledByPartner` below. "Who actually delivered it" is known
+ *   by the partner; admin marking it from a phone call is transcription.
+ * - The owner's call on 3 Oct 2026: the **branch** an order was sent to may
+ *   answer a `pending` order itself — confirm it, or decline it with a reason
+ *   — through `src/server/orders/branch-decisions.ts`. Until then `confirmed`
+ *   meant an admin had rung the branch and asked; the branch saying so
+ *   directly is the same fact with one fewer phone call in it. The customer's
+ *   page already said "Waiting for the branch", and now it is true.
+ *
+ * What a partner still may **not** do is cancel a `confirmed` order: by then
+ * the customer has been asked to pay and may have, so backing out is a refund
+ * decision, and that stays admin's. `declineOrder` below is therefore guarded
+ * on `pending` alone, in the WHERE, not on the wider set `cancelOrder` allows.
  */
 
 /** The states a transition may move an order *to*. `pending` is never a target. */
@@ -119,7 +127,13 @@ async function writeTransition(
   orderId: string,
   target: OrderTarget,
   adminUid: string,
-  note: string | null
+  note: string | null,
+  /**
+   * Narrows the statuses this particular caller may move the order *from*.
+   * Never widens them: it is intersected with the table's own edges, so the
+   * only thing a caller can do with it is allow less than an admin is allowed.
+   */
+  onlyFrom?: readonly string[]
 ): Promise<TransitionOutcome> {
   const db = getPrisma();
 
@@ -129,8 +143,13 @@ async function writeTransition(
   });
   const check = canTransition(order, target);
   if (!check.ok) return check;
+  if (onlyFrom && order && !onlyFrom.includes(order.status)) {
+    return { ok: false, reason: "invalid-transition" };
+  }
 
-  const sources = sourceStatusesFor(target);
+  const sources = sourceStatusesFor(target).filter(
+    (status) => !onlyFrom || onlyFrom.includes(status)
+  );
 
   return db.$transaction(async (tx) => {
     // Re-read inside the transaction so the event records the status the row
@@ -225,6 +244,22 @@ export function cancelOrder(
     adminUid,
     trimmed === "" ? null : trimmed
   );
+}
+
+/**
+ * The branch saying "we can't supply this" — a cancellation that is only
+ * valid from `pending`, with a reason. See the module comment for why a
+ * branch may decline an unanswered order but not back out of a confirmed one.
+ *
+ * Ownership is the caller's job (`branch-decisions.ts` proves it from the
+ * session before calling this); this function only holds the status guard.
+ */
+export function declineOrder(
+  orderId: string,
+  actorUid: string,
+  reason: string
+): Promise<TransitionOutcome> {
+  return writeTransition(orderId, "cancelled", actorUid, reason.trim(), ["pending"]);
 }
 
 /** Delivered / handed off, request complete. Only valid from `confirmed`. Terminal. */

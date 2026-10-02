@@ -239,17 +239,83 @@ export async function checkPaymentForCustomer(customerId: string, reference: str
   return checkoutForCustomer(customerId, reference);
 }
 
-/** Pay state per reference, for the list on the account page. One query. */
-export async function checkoutStatesForCustomer(customerId: string): Promise<Map<string, "ready" | "paid" | "waiting">> {
+/**
+ * Where one of a customer's orders stands, for the list on the account page.
+ *
+ * - `waiting` -- the branch has not answered yet.
+ * - `ready` -- confirmed and unpaid: there is something to pay.
+ * - `paid` -- paid, and not yet marked delivered.
+ * - `delivered` -- marked delivered (`fulfilled`), paid through MalFleks or not.
+ * - `cancelled` -- will not be fulfilled. `refundDue` says whether a payment
+ *   had been captured, because "cancelled" means something different to a
+ *   customer who has paid.
+ */
+export type AccountOrderState = "waiting" | "ready" | "paid" | "delivered" | "cancelled";
+
+export interface AccountOrderStatus {
+  state: AccountOrderState;
+  /** Why it was cancelled, when it was and a reason was given. */
+  cancelReason: string | null;
+  /** Cancelled after the customer had paid. */
+  refundDue: boolean;
+  /**
+   * The saved copy must stay on the account page for now: it is the
+   * customer's only way back to this order's Pay or Track page. True while
+   * the order is confirmed -- whether still unpaid, or paid and not yet
+   * delivered.
+   */
+  keepSavedCopy: boolean;
+}
+
+function accountStatus(order: { status: string; decisionNote: string | null; payments: { status: string }[] }): AccountOrderStatus {
+  const paid = order.payments.some((p) => p.status === "captured");
+  const state: AccountOrderState =
+    order.status === "cancelled"
+      ? "cancelled"
+      : order.status === "fulfilled"
+        ? "delivered"
+        : paid
+          ? "paid"
+          : order.status === "confirmed"
+            ? "ready"
+            : "waiting";
+  return {
+    state,
+    cancelReason: state === "cancelled" ? order.decisionNote : null,
+    refundDue: state === "cancelled" && paid,
+    keepSavedCopy: order.status === "confirmed",
+  };
+}
+
+/**
+ * Every one of a customer's orders by reference, for the account page. One
+ * query.
+ *
+ * Until 3 Oct 2026 this left cancelled orders out and reported a delivered
+ * one as "paid", so the account page showed no status at all on a cancelled
+ * order and offered "Track this order" on both. Every order MalFleks holds
+ * for this customer is now in the map, each with a state.
+ */
+export async function checkoutStatesForCustomer(customerId: string): Promise<Map<string, AccountOrderStatus>> {
   const orders = await getPrisma().order.findMany({
-    where: { customerId, status: { in: ["pending", "confirmed", "fulfilled"] } },
-    select: { reference: true, status: true, payments: { select: { status: true } } },
+    where: { customerId },
+    select: { reference: true, status: true, decisionNote: true, payments: { select: { status: true } } },
   });
-  const states = new Map<string, "ready" | "paid" | "waiting">();
-  for (const o of orders) {
-    if (o.payments.some((p) => p.status === "captured")) states.set(o.reference, "paid");
-    else if (o.status === "confirmed") states.set(o.reference, "ready");
-    else if (o.status === "pending") states.set(o.reference, "waiting");
-  }
-  return states;
+  return new Map(orders.map((o) => [o.reference, accountStatus(o)]));
+}
+
+/**
+ * Whether a customer's live order means their saved copy of it must not be
+ * removed yet -- the server-side half of the "Remove" rule on the account
+ * page, asked by `deleteOrderRequest` before it deletes anything.
+ *
+ * `customerId` is in the WHERE, so a reference belonging to someone else's
+ * order answers `false` and reveals nothing.
+ */
+export async function savedCopyMustStay(customerId: string, reference: string): Promise<boolean> {
+  const order = await getPrisma().order.findFirst({
+    where: { customerId, reference },
+    select: { status: true, decisionNote: true, payments: { select: { status: true } } },
+  });
+  return order ? accountStatus(order).keepSavedCopy : false;
 }

@@ -13,6 +13,7 @@ import Link from "next/link";
 import { ViewTransition } from "react";
 import { motion } from "motion/react";
 import ProductIcon from "@/components/product/ProductIcon";
+import ProductPhoto from "@/components/product/ProductPhoto";
 import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
@@ -70,14 +71,29 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           exit={{ "product-view": "auto", default: "none" }}
           update="none"
         >
-          <div
-            className="flex h-24 w-full shrink-0 items-center justify-center rounded-xl sm:h-20 sm:w-20"
-            style={{ background: `${brand.accentColor}18` }}
-          >
-            <ProductIcon
-              icon={product.image}
-              className="h-12 w-12"
-              style={{ color: iconAccent(brand.accentColor) }}
+          {/* The main photo is what a shopper scans search results by, so a
+              listing that has one shows it here — square, whole, never
+              cropped — and the tinted icon tile remains for listings without
+              one (and for a photo that fails to load). The wrapper is one
+              element in both cases, which the transition above needs. */}
+          <div className="shrink-0 overflow-hidden rounded-xl">
+            <ProductPhoto
+              src={product.photoUrl}
+              alt={product.name}
+              sizes="(min-width: 640px) 80px, 96px"
+              className="h-24 w-24 sm:h-20 sm:w-20"
+              fallback={
+                <div
+                  className="flex h-24 w-full items-center justify-center sm:h-20 sm:w-20"
+                  style={{ background: `${brand.accentColor}18` }}
+                >
+                  <ProductIcon
+                    icon={product.image}
+                    className="h-12 w-12"
+                    style={{ color: iconAccent(brand.accentColor) }}
+                  />
+                </div>
+              }
             />
           </div>
         </ViewTransition>
@@ -98,7 +114,9 @@ export default function ListingCard({ listing }: { listing: Listing }) {
           </h3>
 
           <p className="mt-1 truncate text-xs text-muted">
-            {branch.name} — {branch.city}
+            {branch.name}
+            {/* Most branch names already end in their city; say it once. */}
+            {branch.name.includes(branch.city) ? "" : ` — ${branch.city}`}
           </p>
         </div>
 

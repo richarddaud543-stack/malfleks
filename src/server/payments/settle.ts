@@ -1,6 +1,7 @@
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { accruePayouts } from "@/server/money/payouts";
+import { notifyPartnersOfPayment } from "@/server/notify/events";
 import { sendPaymentReceipts } from "./receipts";
 
 /**
@@ -113,8 +114,12 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
   });
 
   // After the commit, and only for the call that actually captured: a receipt
-  // to the customer and a note to MalFleks. Never throws.
-  if (outcome === "captured") await sendPaymentReceipts(payment.id);
+  // to the customer, a note to MalFleks, and "it is paid -- deliver it" to the
+  // branch and courier. Neither throws, and neither can change the outcome.
+  if (outcome === "captured") {
+    await sendPaymentReceipts(payment.id);
+    await notifyPartnersOfPayment(payment.id);
+  }
   return outcome;
 }
 

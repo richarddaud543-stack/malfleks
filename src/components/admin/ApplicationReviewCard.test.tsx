@@ -181,6 +181,10 @@ describe("ApplicationReviewCard — a failed decision is never silent", () => {
       renderCard();
 
       fireEvent.click(rejectButton());
+      // A reason is required before the confirm button will do anything.
+      fireEvent.change(screen.getByLabelText(/why are you rejecting this/i), {
+        target: { value: "Could not verify the business" },
+      });
       fireEvent.click(confirmRejectButton());
 
       const alert = await screen.findByRole("alert");

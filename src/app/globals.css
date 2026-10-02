@@ -259,6 +259,11 @@ h3 {
   justify-content: center;
   gap: 0.375rem;
   border-radius: 9999px;
+  /* 44px: the smallest target a thumb reliably hits. Before 3 Oct 2026 this
+     had no floor and call sites shrank it with `py-1.5 text-xs` until the
+     "Pay now" button was 28px tall. A floor here cannot be undone by padding
+     utilities at the call site. */
+  min-height: 2.75rem;
   padding: 0.625rem 1.25rem;
   font-size: 0.875rem;
   font-weight: 600;
@@ -292,6 +297,29 @@ h3 {
 .btn-ink {
   background: var(--foreground);
   color: var(--background);
+}
+
+/* The quiet third: "Back", "Cancel", "Browse instead". Previously rebuilt by
+   hand at every call site with slightly different borders each time. */
+.btn-outline {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--foreground);
+  font-weight: 500;
+}
+.btn-outline:hover,
+.btn-outline:focus-visible {
+  border-color: color-mix(in srgb, var(--foreground) 35%, transparent);
+}
+
+/* One disabled look for every pill, so a button that will not respond never
+   looks like one that will. */
+.btn-pill:disabled,
+.btn-pill[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none;
+  box-shadow: none;
 }
 .btn-ink:hover,
 .btn-ink:focus-visible {

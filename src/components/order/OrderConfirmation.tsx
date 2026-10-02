@@ -148,12 +148,32 @@ export default function OrderConfirmation() {
         <div>
           <h2 className="font-display text-lg font-medium">What happens next</h2>
           <ol className="mt-4 space-y-4">
+            {/* Where the request went is the first thing this screen owes the
+                customer, and it is different for the two cases. A signed-in
+                request is written to MalFleks and the branch is emailed to
+                confirm it; a signed-out one never leaves this tab (see
+                `OrderRequestForm`). This step used to say "has already
+                reached MalFleks and the branch" to both. */}
             <Step n={1}>
-              Nothing has been paid and nothing has been reserved. This
-              request has already reached MalFleks and {order.branch.name} —
-              it stays &ldquo;pending&rdquo; until the branch calls to confirm
-              stock and price, so treat it as a heads-up rather than a done
-              deal.
+              {order.savedToAccount ? (
+                <>
+                  Nothing has been paid and nothing has been reserved. This
+                  request has reached MalFleks, and {order.branch.name} has
+                  been asked to confirm it. It stays &ldquo;pending&rdquo;
+                  until the branch confirms stock and price — we email you
+                  when it does — so treat it as a heads-up rather than a done
+                  deal.
+                </>
+              ) : (
+                <>
+                  Nothing has been paid and nothing has been reserved. Because
+                  you weren&apos;t signed in, this request has not been sent
+                  to MalFleks or to {order.branch.name} — it exists in this
+                  browser tab only. Use the reference above when you contact{" "}
+                  {brandDelivered ? "the branch" : "the branch or the agent"}{" "}
+                  yourself.
+                </>
+              )}
             </Step>
             <Step n={2}>
               {brandDelivered ? (

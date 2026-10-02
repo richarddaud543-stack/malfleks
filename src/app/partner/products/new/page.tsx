@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ListProductForm from "@/components/partner/ListProductForm";
+import { listingAiFeatures } from "@/server/ai/listing-help";
 import { requirePartner } from "@/server/partners/portal";
 
 export const metadata: Metadata = {
@@ -45,7 +46,7 @@ export default async function NewProductPage() {
         product the way you would to a customer standing in front of you.
       </p>
 
-      <ListProductForm />
+      <ListProductForm ai={listingAiFeatures()} />
     </div>
   );
 }

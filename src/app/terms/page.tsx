@@ -65,7 +65,8 @@ export default function TermsPage() {
           </p>
         </section>
 
-        <section>
+        {/* `id` so the footer's "Paying, delivery and refunds" link lands here. */}
+        <section id="paying" className="scroll-mt-28">
           <h2 className="font-display text-lg font-medium text-foreground">
             Paying
           </h2>

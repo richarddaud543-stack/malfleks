@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import ProductIcon from "@/components/product/ProductIcon";
+import ProductPhoto from "@/components/product/ProductPhoto";
 import { formatTZS } from "@/lib/format";
 import type { PartnerSubmission } from "@/server/partners/portal";
 
@@ -56,9 +57,21 @@ export default function SubmissionTable({
         >
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex min-w-0 gap-4">
-              <ProductIcon
-                icon={submission.image}
-                className="h-10 w-10 shrink-0 text-muted"
+              {/* The partner's own main photo when they sent one — it is how
+                  they tell two similar listings apart — and the icon when
+                  they did not. The name is printed right beside it, so the
+                  photo's alt text is left empty rather than read out twice. */}
+              <ProductPhoto
+                src={submission.photoUrl}
+                alt=""
+                size={56}
+                className="rounded-lg border border-border"
+                fallback={
+                  <ProductIcon
+                    icon={submission.image}
+                    className="h-10 w-10 shrink-0 text-muted"
+                  />
+                }
               />
               <div className="min-w-0">
                 <p className="truncate font-display text-lg font-medium">

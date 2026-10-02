@@ -5,7 +5,7 @@ import {
   listOrderRequestsForCustomer,
   type SavedOrderRequest,
 } from "@/server/orders/saved-requests";
-import { checkoutStatesForCustomer } from "@/server/orders/checkout";
+import { checkoutStatesForCustomer, type AccountOrderStatus } from "@/server/orders/checkout";
 import { partnerForUser } from "@/server/partners/portal";
 import SavedRequestCard from "@/components/account/SavedRequestCard";
 
@@ -57,11 +57,12 @@ export default async function AccountPage() {
 
   let requests: SavedOrderRequest[];
   let unavailable = false;
-  // Which of these can be paid for, are paid, or are still with the branch.
-  // A convenience on top of the list: if it cannot be read, the cards simply
-  // show without a Pay button and the checkout page still works by reference.
-  const payStates = await checkoutStatesForCustomer(session.uid).catch(
-    () => new Map<string, "waiting" | "ready" | "paid">(),
+  // Where each of these stands: with the branch, ready to pay, paid,
+  // delivered or cancelled. A convenience on top of the list: if it cannot be
+  // read, the cards simply show without a status or a Pay button, and the
+  // checkout page still works by reference.
+  const orderStates = await checkoutStatesForCustomer(session.uid).catch(
+    () => new Map<string, AccountOrderStatus>(),
   );
   try {
     requests = await listOrderRequestsForCustomer(session.uid);
@@ -136,7 +137,7 @@ export default async function AccountPage() {
             <SavedRequestCard
               key={request.id}
               request={request}
-              payState={payStates.get(request.reference) ?? null}
+              status={orderStates.get(request.reference) ?? null}
             />
           ))}
         </ul>

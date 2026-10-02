@@ -14,10 +14,15 @@ import {
   getBrandById,
   getBranchById,
 } from "@/server/repositories";
+import ProductGallery from "@/components/product/ProductGallery";
 import ProductShowcase from "@/components/product/ProductShowcase";
 import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { describeBranchLocation, formatTZS } from "@/lib/format";
+import { buildProductJsonLd, serializeJsonLd } from "@/lib/product-json-ld";
+import { productPhotoList } from "@/lib/product-photo";
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import { resolveSiteUrl } from "@/lib/site-url";
 import {
   orderBlockReason,
   previewDelivery,
@@ -44,10 +49,24 @@ export async function generateMetadata({
 
   const description = `${product.name} from ${brand.name} — ${formatTZS(product.priceTZS)}. ${product.description}`;
 
+  // The main photo, when there is one, is what a shared link shows in
+  // WhatsApp, Facebook and X. Without it a product link shared into a group
+  // chat — which is how most things are sold here — arrives as bare text.
+  // Listings with only an icon get no image rather than a picture of an icon.
+  const [mainPhoto] = productPhotoList(product);
+  const title = `${product.name} — ${brand.name}`;
+
   return {
-    title: `${product.name} — ${brand.name}`,
+    title,
     description,
-    openGraph: { title: `${product.name} — ${brand.name}`, description },
+    openGraph: {
+      title,
+      description,
+      ...(mainPhoto ? { images: [{ url: mainPhoto, alt: product.name }] } : {}),
+    },
+    twitter: mainPhoto
+      ? { card: "summary_large_image", title, description, images: [mainPhoto] }
+      : { card: "summary", title, description },
   };
 }
 
@@ -83,14 +102,39 @@ export default async function ProductPage({
     resolveDeliveryRoute(branch, agents)
   );
 
+  const photos = productPhotoList(product);
+
+  // What search engines read to show price and availability under the link.
+  const structuredData = buildProductJsonLd({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    category: product.category,
+    priceTZS: product.priceTZS,
+    inStock: product.inStock,
+    photos,
+    brandName: brand.name,
+    sellerName: branch.name,
+    url: `${resolveSiteUrl().replace(/\/+$/, "")}/products/${product.id}`,
+  });
+
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">
-      <Link
-        href={`/brands/${brand.slug}/branches/${branch.id}`}
-        className="text-sm text-muted hover:text-foreground"
-      >
-        ← {branch.name}
-      </Link>
+      <script
+        type="application/ld+json"
+        // Partner-written text goes in here, so it is serialised with `<`
+        // escaped — see `serializeJsonLd`.
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }}
+      />
+      <Breadcrumbs
+        siteUrl={resolveSiteUrl().replace(/\/+$/, "")}
+        trail={[
+          { label: "Brands", href: "/brands" },
+          { label: brand.name, href: `/brands/${brand.slug}` },
+          { label: branch.name, href: `/brands/${brand.slug}/branches/${branch.id}` },
+          { label: product.name },
+        ]}
+      />
 
       <div className="mt-6 grid gap-10 lg:grid-cols-2">
         {/* Sticky on desktop so the product panel holds while the specs
@@ -112,13 +156,22 @@ export default async function ProductPage({
             exit={{ "product-view": "auto", default: "none" }}
             update="none"
           >
-            <div className="h-[360px] w-full sm:h-[440px]">
-              <ProductShowcase
-                accentColor={brand.accentColor}
-                icon={product.image}
-                photoUrl={product.photoUrl}
-              />
-            </div>
+            {/* Real photos get the gallery; a listing without any keeps the
+                icon panel it always had. One wrapping element either way, so
+                the shared-element transition above has a single stable node
+                to morph into. */}
+            {photos.length > 0 ? (
+              <div className="w-full">
+                <ProductGallery photos={photos} name={product.name} />
+              </div>
+            ) : (
+              <div className="h-[360px] w-full sm:h-[440px]">
+                <ProductShowcase
+                  accentColor={brand.accentColor}
+                  icon={product.image}
+                />
+              </div>
+            )}
           </ViewTransition>
         </ScrollReveal>
 
@@ -132,10 +185,31 @@ export default async function ProductPage({
           <p className="mt-1 text-xs uppercase tracking-wide text-muted">
             {product.category}
           </p>
-          <p className="mt-4 text-2xl font-semibold">
-            {formatTZS(product.priceTZS)}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <p className="text-2xl font-semibold">
+              {formatTZS(product.priceTZS)}
+            </p>
+            {/* Said in words, next to the price, in both states. Until now
+                the page only spoke up when something was *out* of stock, and
+                only further down in the delivery line — so "in stock" was
+                something a customer had to infer from silence. */}
+            <span
+              data-testid="stock-label"
+              className={`rounded-full px-3 py-1 text-xs font-medium ${
+                product.inStock
+                  ? "bg-accent/15 text-accent"
+                  : "bg-foreground/10 text-foreground"
+              }`}
+            >
+              {product.inStock ? "In stock" : "Out of stock"}
+            </span>
+          </div>
+          {/* `whitespace-pre-line`: a partner who wrote the description as a
+              few short lines — what it is, what's in the box, the warranty —
+              gets those lines back, instead of one run-on paragraph. */}
+          <p className="mt-4 whitespace-pre-line text-muted">
+            {product.description}
           </p>
-          <p className="mt-4 text-muted">{product.description}</p>
 
           <div className="mt-6">
             <DeliveryRouteLine outlook={outlook} size="prominent" />
@@ -190,7 +264,9 @@ export default async function ProductPage({
                   names the branch, and "Available at…" under "this can't be
                   ordered" contradicts itself. */}
               <p className="mt-3 text-xs text-muted">
-                Available at {branch.name}, {branch.city}
+                Available at {branch.name}
+                {/* Most branch names already end in their city. */}
+                {branch.name.includes(branch.city) ? "" : `, ${branch.city}`}
               </p>
             </div>
           )}

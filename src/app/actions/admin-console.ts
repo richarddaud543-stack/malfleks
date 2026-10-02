@@ -85,6 +85,10 @@ export async function recordRefundAction(_prev: ConsoleState, formData: FormData
     const { recordRefund } = await import("@/server/money/payouts");
     const outcome = await recordRefund(orderId, amount, field(formData, "reference"), session.uid);
     if (outcome.ok) {
+      // Recorded and committed: tell the customer how much and under what
+      // reference. Notification only -- the refund itself is unchanged.
+      const { notifyRefundRecorded } = await import("@/server/notify/events");
+      await notifyRefundRecorded(orderId, amount, field(formData, "reference"));
       revalidateMoney(orderId);
       return { status: "ok", message: "Refund recorded." };
     }
@@ -136,6 +140,10 @@ export async function markPayoutPaidAction(_prev: ConsoleState, formData: FormDa
     const { markPayoutPaid } = await import("@/server/money/payouts");
     const outcome = await markPayoutPaid(field(formData, "batchId"), field(formData, "reference"), session.uid);
     if (outcome.ok) {
+      // Recorded as sent, by this call (a repeat is `not-pending`): tell the
+      // branch or courier the amount and the reference to look for.
+      const { notifyPayoutSent } = await import("@/server/notify/events");
+      await notifyPayoutSent(field(formData, "batchId"));
       revalidateMoney();
       return { status: "ok", message: "Recorded as sent." };
     }
@@ -187,6 +195,11 @@ export async function setPartnerStatusAction(_prev: ConsoleState, formData: Form
       };
       return { status: "error", message: messages[outcome.reason] };
     }
+    // The status changed (a repeat is `no-change` above): tell the partner,
+    // with the reason for a suspension.
+    const { notifyPartnerStatus } = await import("@/server/notify/events");
+    await notifyPartnerStatus(partnerId);
+
     revalidatePath("/admin/partners", "layout");
     revalidatePath("/admin");
     revalidatePath("/partner");

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import LiveProducts from "@/components/partner/LiveProducts";
 import SubmissionTable from "@/components/partner/SubmissionTable";
 import {
   countSubmissionsForPartner,
@@ -9,6 +10,7 @@ import {
   type PartnerCounts,
   type PartnerSubmission,
 } from "@/server/partners/portal";
+import { listLiveProductsForBranch, type LiveProduct } from "@/server/partners/stock";
 
 export const metadata: Metadata = {
   title: "Your MalFleks listings",
@@ -64,6 +66,14 @@ export default async function PartnerPage() {
     unavailable = true;
   }
 
+  // What is actually on the shop for this branch, with the stock switch. Its
+  // own read and its own failure: if it cannot be loaded the section is left
+  // out, rather than taking the listings above down with it or showing an
+  // empty list that reads as "nothing of yours is live".
+  let liveProducts: LiveProduct[] | null = null;
+  if (isBrand && partner.branchId) {
+    liveProducts = await listLiveProductsForBranch(partner.branchId).catch(() => null);
+  }
 
   return (
     <div className="mx-auto max-w-4xl px-5 py-16">
@@ -190,6 +200,10 @@ export default async function PartnerPage() {
               <SubmissionTable submissions={submissions} />
             </div>
           </section>
+
+          {liveProducts && (
+            <LiveProducts products={liveProducts} canChange={!suspended} />
+          )}
         </>
       )}
     </div>

@@ -1,4 +1,5 @@
 import { logServerError } from "@/server/error-log";
+import { runStuckOrderSafetyNet } from "@/server/orders/stuck";
 import { reconcileDue } from "@/server/payments/reconcile";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,17 @@ export const dynamic = "force-dynamic";
  * prerendered shop generates almost none -- which is how production was found
  * paused on 1 Oct 2026, while the cached catalogue kept looking healthy. A
  * daily read is enough to keep it awake.
+ *
+ * ## The second job: orders that have stopped moving
+ *
+ * After the payment check, the same run sends MalFleks's inbox one digest of
+ * stuck orders and reminds each branch once about an order it has not
+ * answered in a day -- see `src/server/orders/stuck.ts`. It rides on this
+ * cron because the Hobby plan allows daily jobs only and one daily run is
+ * enough for both. It is independent of ClickPesa (it runs whether or not the
+ * credentials are set, and whether or not the payment check succeeded), it
+ * cancels nothing, and it cannot fail this route: a payment check that worked
+ * still answers 200 if the digest did not send.
  */
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET?.trim();
@@ -38,19 +50,32 @@ export async function GET(request: Request): Promise<Response> {
 
   const ready = Boolean(process.env.CLICKPESA_CLIENT_ID?.trim() && process.env.CLICKPESA_API_KEY?.trim());
 
+  // Every open payment that wasn't checked in the last 6 hours, up to 20 --
+  // a fifth of the day's API budget, the rest left for checkout links.
+  let results: Awaited<ReturnType<typeof reconcileDue>> = [];
+  let reconcileFailed = false;
   try {
-    // Every open payment that wasn't checked in the last 6 hours, up to 20 --
-    // a fifth of the day's API budget, the rest left for checkout links.
-    const results = ready ? await reconcileDue({ staleAfterMinutes: 360, limit: 20 }) : [];
-    return Response.json({
-      ok: true,
-      checked: results.length,
-      captured: results.filter((r) => r.outcome === "captured").length,
-      results: results.map((r) => ({ ref: r.providerRef, outcome: r.outcome, clickpesa: r.providerStatus })),
-      ...(ready ? {} : { skipped: "ClickPesa credentials not set on this deployment" }),
-    });
+    results = ready ? await reconcileDue({ staleAfterMinutes: 360, limit: 20 }) : [];
   } catch (error) {
     await logServerError("clickpesa-reconcile-cron", error);
-    return Response.json({ ok: false }, { status: 500 });
+    reconcileFailed = true;
   }
+
+  // Runs whether or not the payment check worked -- a ClickPesa outage is no
+  // reason to skip telling anyone what is stuck. Never throws: each half logs
+  // its own failure and reports `null`.
+  const stuck = await runStuckOrderSafetyNet();
+
+  if (reconcileFailed) {
+    return Response.json({ ok: false, stuckOrders: stuck.digest, branchReminders: stuck.branchReminders }, { status: 500 });
+  }
+  return Response.json({
+    ok: true,
+    checked: results.length,
+    captured: results.filter((r) => r.outcome === "captured").length,
+    results: results.map((r) => ({ ref: r.providerRef, outcome: r.outcome, clickpesa: r.providerStatus })),
+    stuckOrders: stuck.digest,
+    branchReminders: stuck.branchReminders,
+    ...(ready ? {} : { skipped: "ClickPesa credentials not set on this deployment" }),
+  });
 }

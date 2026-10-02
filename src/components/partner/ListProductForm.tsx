@@ -1,9 +1,15 @@
 "use client";
 
 import { useId, useRef, useState } from "react";
+
+import {
+  PRODUCT_CATEGORIES,
+  specSuggestionsFor,
+} from "@/lib/product-categories";
 import Link from "next/link";
 
 import { listProductForPartner } from "@/app/actions/partner-products";
+import DescriptionHelper from "@/components/partner/DescriptionHelper";
 import ProductIcon from "@/components/product/ProductIcon";
 import ProductPhotoUpload from "@/components/partner/ProductPhotoUpload";
 import { formatTZS } from "@/lib/format";
@@ -14,6 +20,7 @@ import {
 import { matchProductIcons } from "@/lib/product-icon-match";
 import {
   MAX_DESCRIPTION,
+  MAX_SPECS,
   emptyProductListing,
   validateProductListing,
   type ProductListingErrors,
@@ -41,7 +48,7 @@ const FIELD_ORDER: ProductListingField[] = [
   "price",
   "description",
   "image",
-  "photoUrl",
+  "photoUrls",
   "specs",
 ];
 
@@ -56,14 +63,27 @@ const FAILURE_TEXT: Record<string, string> = {
   "missing-field": "Something in the form came through empty. Check it over.",
   "invalid-price": "The price has to be a whole number of shillings.",
   "invalid-photo":
-    "That photo didn't come through properly. Remove it and try uploading again.",
+    "One of the photos didn't come through properly. Remove it and try uploading again.",
+  "invalid-name": "Give the product a name customers would recognise.",
+  "invalid-description": `The description should be a sentence or two, and no more than ${MAX_DESCRIPTION} characters.`,
+  "invalid-image": "Choose one of the pictures from the list.",
+  "invalid-specs": `Every detail needs both a label and a value, and there can be at most ${MAX_SPECS}.`,
   "rate-limited":
     "You've submitted a few of these in quick succession. Wait a bit and try again.",
   failed:
     "We couldn't save this right now. Nothing was recorded — your answers are still here, so try again in a moment.",
 };
 
-export default function ListProductForm() {
+export default function ListProductForm({
+  ai = { describe: false, cleanPhoto: false },
+}: {
+  /**
+   * Which optional AI helpers this deployment has keys for. The page works
+   * that out on the server; with neither, the form is exactly the form it
+   * always was.
+   */
+  ai?: { describe: boolean; cleanPhoto: boolean };
+} = {}) {
   const fieldId = useId();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -73,6 +93,12 @@ export default function ListProductForm() {
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  // Photos still being shrunk or uploaded. Sending now would file the listing
+  // without them, so the button waits.
+  const [photosBusy, setPhotosBusy] = useState(false);
+  // Bumped by "List another" so the photo control starts again from empty —
+  // it keeps its own per-photo state, which resetting `input` cannot reach.
+  const [formRound, setFormRound] = useState(0);
 
   function update(patch: Partial<ProductListingInput>) {
     const next = { ...input, ...patch };
@@ -81,6 +107,20 @@ export default function ListProductForm() {
       const result = validateProductListing(next);
       setErrors(result.ok ? {} : result.errors);
     }
+  }
+
+  /** Adds a suggested detail label, ready for its value to be typed. */
+  function addSuggestedSpec(label: string) {
+    // Reuse the first completely blank row rather than leaving it stranded
+    // above the new ones — the form starts with one.
+    const blank = input.specs.findIndex(
+      (spec) => spec.key.trim() === "" && spec.value.trim() === "",
+    );
+    const specs =
+      blank === -1
+        ? [...input.specs, { key: label, value: "" }]
+        : input.specs.map((spec, i) => (i === blank ? { key: label, value: "" } : spec));
+    update({ specs });
   }
 
   function updateSpec(index: number, patch: { key?: string; value?: string }) {
@@ -112,7 +152,7 @@ export default function ListProductForm() {
       category: result.value.category,
       description: result.value.description,
       image: result.value.image,
-      photoUrl: result.value.photoUrl || undefined,
+      photoUrls: result.value.photoUrls,
       priceTZS: result.value.priceTZS,
       inStock: result.value.inStock,
       specs: result.value.specs,
@@ -149,6 +189,8 @@ export default function ListProductForm() {
               setInput(emptyProductListing);
               setAttempted(false);
               setErrors({});
+              setPhotosBusy(false);
+              setFormRound((round) => round + 1);
               setDone(false);
             }}
             className="btn-pill btn-lime px-6 py-2.5 text-sm"
@@ -185,6 +227,24 @@ export default function ListProductForm() {
   // "Suggested" row with nothing in it.
   const suggestedIcons = matchProductIcons(`${input.name} ${input.category}`);
 
+  // Detail labels buyers ask about for this kind of product, offered only
+  // while the partner has not started writing details of their own. Once any
+  // value has been typed the chips step aside: they are a head start, and a
+  // row of suggestions beside details already written reads as "you missed
+  // these". Tapping a chip adds a label with no value, so several can be
+  // added in a row before the first value is typed.
+  const usedSpecLabels = new Set(
+    input.specs.map((spec) => spec.key.trim().toLowerCase()).filter(Boolean),
+  );
+  const offeredSpecs = specSuggestionsFor(input.category);
+  const specValuesEmpty = input.specs.every((spec) => spec.value.trim() === "");
+  const specChips = specValuesEmpty
+    ? offeredSpecs.filter((label) => !usedSpecLabels.has(label.toLowerCase()))
+    : [];
+
+  const descriptionLength = input.description.trim().length;
+  const descriptionOver = descriptionLength > MAX_DESCRIPTION;
+
   return (
     <form
       ref={formRef}
@@ -214,7 +274,7 @@ export default function ListProductForm() {
         <Field
           id={`${fieldId}-category`}
           label="What kind of product is it?"
-          hint="A word or two customers would search for — Phones, Cars, Laptops."
+          hint="A word or two customers would search for. Pick one from the list, or type your own."
           hintId={`${fieldId}-category-hint`}
           error={errors.category}
           errorId={`${fieldId}-category-error`}
@@ -228,7 +288,18 @@ export default function ListProductForm() {
             aria-invalid={Boolean(errors.category) || undefined}
             aria-describedby={describe("category", true)}
             className={fieldClass(Boolean(errors.category))}
+            // Still a free text box — a shop can sell something we did not
+            // think of — with the known categories offered as it is typed.
+            // The server folds "phones " and "PHONES" onto "Phones" either
+            // way; see `product-categories.ts`.
+            list={`${fieldId}-category-list`}
+            autoComplete="off"
           />
+          <datalist id={`${fieldId}-category-list`}>
+            {PRODUCT_CATEGORIES.map((category) => (
+              <option key={category} value={category} />
+            ))}
+          </datalist>
         </Field>
 
         <Field
@@ -258,7 +329,7 @@ export default function ListProductForm() {
         <Field
           id={`${fieldId}-description`}
           label="Describe it"
-          hint={`What a customer reads before ordering. Up to ${MAX_DESCRIPTION} characters.`}
+          hint="What a customer reads before ordering. Say what it is, whether it is new or used, what comes in the box, any warranty, and anything else a buyer should know."
           hintId={`${fieldId}-description-hint`}
           error={errors.description}
           errorId={`${fieldId}-description-error`}
@@ -270,9 +341,39 @@ export default function ListProductForm() {
             value={input.description}
             onChange={(e) => update({ description: e.target.value })}
             aria-invalid={Boolean(errors.description) || undefined}
-            aria-describedby={describe("description", true)}
+            aria-describedby={
+              [describe("description", true), `${fieldId}-description-count`]
+                .filter(Boolean)
+                .join(" ")
+            }
             className={fieldClass(Boolean(errors.description))}
           />
+          {/* Counted the way the validator counts it — trimmed — so the
+              number never disagrees with the error under it. Not a live
+              region: announcing every keystroke would bury the field for a
+              screen-reader user. It is tied to the textarea with
+              `aria-describedby` instead, so it is read on focus. */}
+          <p
+            id={`${fieldId}-description-count`}
+            data-testid="description-count"
+            className={`mt-1.5 text-right text-xs tabular-nums ${
+              descriptionOver ? "font-medium text-red-600" : "text-muted"
+            }`}
+          >
+            {descriptionLength} / {MAX_DESCRIPTION}
+          </p>
+          {ai.describe && (
+            <DescriptionHelper
+              facts={() => ({
+                name: input.name,
+                category: input.category,
+                notes: input.description,
+                specs: input.specs,
+                photoUrl: input.photoUrls[0] ?? null,
+              })}
+              onUse={(description) => update({ description })}
+            />
+          )}
         </Field>
 
         <fieldset className="border-0 p-0" data-field="image">
@@ -367,9 +468,12 @@ export default function ListProductForm() {
         </fieldset>
 
         <ProductPhotoUpload
-          value={input.photoUrl}
-          onChange={(photoUrl) => update({ photoUrl })}
-          error={errors.photoUrl}
+          key={formRound}
+          value={input.photoUrls}
+          onChange={(photoUrls) => update({ photoUrls })}
+          onBusyChange={setPhotosBusy}
+          error={errors.photoUrls}
+          cleanBackground={ai.cleanPhoto}
         />
 
         <fieldset className="border-0 p-0">
@@ -379,6 +483,26 @@ export default function ListProductForm() {
           <p className="mt-1 text-xs text-muted">
             Year, colour, storage, engine — whatever a buyer asks about.
           </p>
+          {specChips.length > 0 && (
+            <div className="mt-3">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                Buyers usually ask about
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {specChips.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => addSuggestedSpec(label)}
+                    aria-label={`Add a detail for ${label}`}
+                    className="min-h-11 rounded-full border border-accent/40 bg-accent/[0.03] px-4 text-sm text-foreground transition-colors hover:border-accent/70"
+                  >
+                    + {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-3 grid gap-2">
             {input.specs.map((spec, index) => (
               <div key={index} className="grid gap-2 sm:grid-cols-2">
@@ -438,10 +562,14 @@ export default function ListProductForm() {
 
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || photosBusy}
         className="btn-pill btn-lime mt-8 w-full px-6 py-3 text-sm disabled:opacity-60"
       >
-        {submitting ? "Sending…" : "Send for review"}
+        {submitting
+          ? "Sending…"
+          : photosBusy
+            ? "Waiting for photos to upload…"
+            : "Send for review"}
       </button>
       <p className="mt-3 text-center text-xs text-muted">
         Nothing here reaches customers until MalFleks publishes it.

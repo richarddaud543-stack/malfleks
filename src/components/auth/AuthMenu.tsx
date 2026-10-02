@@ -40,7 +40,7 @@ export default function AuthMenu({
       <Link
         href="/sign-in"
         onClick={onNavigate}
-        className={`rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
+        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
           compact ? "flex-1 text-center" : ""
         }`}
       >
@@ -63,28 +63,45 @@ export default function AuthMenu({
   }
 
   return (
-    <div className={`flex items-center gap-2 ${compact ? "flex-1" : ""}`}>
+    <div className={`relative flex items-center gap-2 ${compact ? "flex-1 flex-wrap" : ""}`}>
       <Link
         href="/account"
         onClick={onNavigate}
-        className={`rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
+        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
           compact ? "flex-1 text-center" : ""
         }`}
       >
         {/* The first name only: a nav pill is not the place for
             "Rehema Mwakalinga-Kimaro". The full name is on /account. */}
-        {session.name ? session.name.split(" ")[0] : "My account"}
+        {session.name ? `${session.name.split(" ")[0]} · Orders` : "My orders"}
       </Link>
       <button
         type="button"
         onClick={handleSignOut}
         disabled={pending}
-        className="rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-60"
+        className="min-h-11 rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-60"
       >
         {pending ? "Signing out…" : "Sign out"}
       </button>
-      <span role="status" className="sr-only">
-        {failed ? "Sign out failed. Please try again." : ""}
+      {/* Visible, not only announced. This used to be `sr-only`, so a sighted
+          customer pressed "Sign out", saw the button go back to "Sign out",
+          and had no way to know they were still signed in — on a shared
+          phone that is the wrong thing to be unsure about. The region is
+          always mounted so a screen reader hears the text arrive; it only
+          takes up space once there is something in it. In the desktop pill it
+          hangs below the control so the nav does not change width; in the
+          mobile menu it takes its own row. */}
+      <span
+        role="alert"
+        className={
+          failed
+            ? compact
+              ? "w-full text-sm text-red-700 dark:text-red-400"
+              : "absolute right-0 top-full z-10 mt-2 whitespace-nowrap rounded-xl border border-red-600/40 bg-background px-3 py-1.5 text-xs text-red-700 shadow-sm dark:text-red-400"
+            : "sr-only"
+        }
+      >
+        {failed ? "Sign out failed — you are still signed in. Try again." : ""}
       </span>
     </div>
   );

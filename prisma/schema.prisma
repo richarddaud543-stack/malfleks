@@ -125,6 +125,15 @@ model Product {
   // shape before trusting a value from the client.
   photoUrl String?
 
+  // Every photo of this item, in the order shoppers see them — at most six.
+  // `photoUrl` above stays "the main photo" and is always the first entry
+  // here, so everything written before the gallery existed (cards, the admin
+  // console, order snapshots) keeps working without knowing about the list.
+  // Rows from before this column have an empty list and a possibly-set
+  // `photoUrl`; `productPhotoList` in src/lib/product-photo.ts is the one
+  // place that reads the two together. Same bucket rule as `photoUrl`.
+  photoUrls String[] @default([])
+
   sortOrder Int
 
   // Taken off the shop by an admin from /admin/catalogue. Null = on sale.
@@ -332,6 +341,14 @@ model Order {
   // server's own clock.
   requestedAt DateTime
   createdAt   DateTime @default(now())
+
+  // When the branch was sent its one reminder that this order is still
+  // waiting on them (the daily run in `src/server/orders/stuck.ts`, for an
+  // order pending more than 24 hours). Null = never reminded. A timestamp
+  // claimed by a guarded update *before* the email is sent, so two runs can
+  // never both remind, and so "once per order" is a fact in the database
+  // rather than a hope about a cron schedule.
+  branchRemindedAt DateTime?
 
   /// Append-only status history. See `OrderEvent`.
   events OrderEvent[]
@@ -724,6 +741,10 @@ model ProductSubmission {
   // Same field, same rules as `Product.photoUrl` — carried over verbatim by
   // `publishSubmission` when the submission is approved.
   photoUrl String?
+
+  // Same field, same rules as `Product.photoUrls` — the main photo first,
+  // at most six, copied across verbatim by `publishSubmission`.
+  photoUrls String[] @default([])
 
   specs ProductSubmissionSpec[]
 

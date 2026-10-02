@@ -1,5 +1,6 @@
+import { normalizeCategory } from "./product-categories";
 import { PRODUCT_ICON_KEYS } from "./product-icons";
-import { isValidProductPhotoUrl } from "./product-photo";
+import { MAX_PRODUCT_PHOTOS, normalizeProductPhotoUrls } from "./product-photo";
 
 /**
  * Validating a product a partner wants to list.
@@ -7,8 +8,16 @@ import { isValidProductPhotoUrl } from "./product-photo";
  * Pure, and the same shape as `validatePartnerApplication` and
  * `validateOrderRequest`: strings in, a per-field error record out, a
  * discriminated result so the success branch narrows without a cast. The
- * browser runs this so the partner is told early; `submitProduct` checks the
- * same things again on the server, and that copy is the one that counts.
+ * browser runs this so the partner is told early; `submitProduct` runs **this
+ * same function** again on the server, and that copy is the one that counts.
+ *
+ * That sentence used to be a promise rather than a fact: the server checked
+ * only for blank fields and a positive price, so the description length, the
+ * 12-detail cap, the picture whitelist and the price ceiling were enforced in
+ * the browser alone — which is to say, not enforced. A Server Action is a
+ * public endpoint; anything only the form refuses, a script can send. There
+ * is one set of rules now, and `submissions.integration.test.ts` proves the
+ * server refuses each of them.
  *
  * ## Why the price is a string here
  *
@@ -29,10 +38,11 @@ export interface ProductListingInput {
   /** A `ProductIconKey`. Not a URL — see the note on `PRODUCT_ICON_KEYS`. */
   image: string;
   /**
-   * A real, uploaded photo — optional, additive to `image`. Empty string
-   * means "no photo, just the icon," which is a valid, complete listing.
+   * Real, uploaded photos — optional, additive to `image`, main one first.
+   * An empty list means "no photo, just the icon," which is a valid, complete
+   * listing. At most six; see `MAX_PRODUCT_PHOTOS`.
    */
-  photoUrl: string;
+  photoUrls: string[];
   /** As typed. Parsed here, not by the caller. */
   price: string;
   inStock: boolean;
@@ -44,7 +54,7 @@ export const emptyProductListing: ProductListingInput = {
   category: "",
   description: "",
   image: "",
-  photoUrl: "",
+  photoUrls: [],
   price: "",
   inStock: true,
   specs: [{ key: "", value: "" }],
@@ -62,7 +72,9 @@ export interface ValidatedProductListing {
   category: string;
   description: string;
   image: string;
-  /** Empty string, never undefined, when no photo was uploaded. */
+  /** De-duplicated, main photo first. Empty when no photo was uploaded. */
+  photoUrls: string[];
+  /** The main photo — `photoUrls[0]` — or an empty string when there is none. */
   photoUrl: string;
   /** Whole shillings, a positive integer. */
   priceTZS: number;
@@ -89,13 +101,26 @@ export const MAX_SPECS = 12;
  */
 export const MAX_PRICE_TZS = 2_000_000_000;
 
+export interface ProductListingOptions {
+  /**
+   * The Supabase project URL photo URLs are checked against. Defaults to
+   * `NEXT_PUBLIC_SUPABASE_URL`, which is the right answer in the browser; the
+   * server passes the value it resolved through `supabaseAuthConfig()` so the
+   * two layers cannot disagree about which project "ours" means.
+   */
+  supabaseUrl?: string;
+}
+
 export function validateProductListing(
   input: ProductListingInput,
+  options: ProductListingOptions = {},
 ): ProductListingValidation {
   const errors: ProductListingErrors = {};
 
   const name = input.name.trim();
-  const category = input.category.trim();
+  // A known category in its one spelling ("phones " becomes "Phones"); an
+  // unknown one as typed, trimmed and single-spaced. See `product-categories`.
+  const category = normalizeCategory(input.category);
   const description = input.description.trim();
   const image = input.image.trim();
 
@@ -122,13 +147,17 @@ export function validateProductListing(
     errors.image = "That isn't one of the pictures we can show.";
   }
 
-  // Optional. `ProductPhotoUpload` only ever hands back a URL from our own
-  // bucket, so a non-empty value that fails this check means the upload
-  // itself failed partway — not a typo a partner could fix by re-typing it.
-  const photoUrl = input.photoUrl.trim();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
-  if (photoUrl !== "" && !isValidProductPhotoUrl(photoUrl, supabaseUrl)) {
-    errors.photoUrl = "That photo didn't finish uploading properly. Remove it and try again.";
+  // Optional. `ProductPhotoUpload` only ever hands back URLs from our own
+  // bucket, so a value that fails this check means an upload failed partway
+  // — not a typo a partner could fix by re-typing it.
+  const supabaseUrl =
+    options.supabaseUrl ?? process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
+  const photos = normalizeProductPhotoUrls(input.photoUrls ?? [], supabaseUrl);
+  if (!photos.ok) {
+    errors.photoUrls =
+      photos.reason === "too-many"
+        ? `A listing can have up to ${MAX_PRODUCT_PHOTOS} photos. Remove some and try again.`
+        : "One of the photos didn't finish uploading properly. Remove it and try again.";
   }
 
   const price = input.price.trim().replace(/[,\s]/g, "");
@@ -168,7 +197,8 @@ export function validateProductListing(
       category,
       description,
       image,
-      photoUrl,
+      photoUrls: photos.ok ? photos.urls : [],
+      photoUrl: photos.ok ? (photos.urls[0] ?? "") : "",
       priceTZS: Number(price),
       inStock: input.inStock,
       specs,

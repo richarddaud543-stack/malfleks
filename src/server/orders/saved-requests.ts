@@ -152,6 +152,27 @@ export async function listOrderRequestsForCustomer(
   }));
 }
 
+/**
+ * The reference on one of this customer's own saved requests, or `null`.
+ *
+ * Exists for `deleteOrderRequest`, which has to ask "is the order behind this
+ * saved copy still in progress" before it removes the copy. Scoped by
+ * `customerId` in the WHERE like every other read here: an id belonging to
+ * someone else answers `null`.
+ */
+export async function savedRequestReference(
+  customerId: string,
+  id: string,
+  db: PrismaClient = getPrisma(),
+): Promise<string | null> {
+  if (!isValidRequestId(id)) return null;
+  const row = await db.savedOrderRequest.findFirst({
+    where: { id, customerId },
+    select: { reference: true },
+  });
+  return row?.reference ?? null;
+}
+
 export type DeleteOutcome =
   | { deleted: true }
   | { deleted: false; reason: "invalid-id" | "not-found" };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveOAuthOrigin, resolveSiteUrl } from "./site-url";
+import { resolveAdminUrl, resolveOAuthOrigin, resolveSiteUrl } from "./site-url";
 
 /**
  * These exist because the empty-string case is not hypothetical: it broke the
@@ -157,5 +157,29 @@ describe("resolveOAuthOrigin", () => {
         configuredAdminHost: "",
       }),
     ).toBe("https://malfleks.vercel.app");
+  });
+});
+
+/**
+ * Links in MalFleks's own emails. `/admin` is only served on the admin host,
+ * so "new order" and "new application" emails that linked to the shop's
+ * origin opened a 404 in the one inbox that needed them to work.
+ */
+describe("resolveAdminUrl", () => {
+  it("uses the admin host when one is configured, whatever form it was pasted in", () => {
+    for (const configured of ["admin.malfleks.example", "https://admin.malfleks.example/", "ADMIN.malfleks.example:443"]) {
+      expect(
+        resolveAdminUrl({ MALFLEKS_ADMIN_HOST: configured, NEXT_PUBLIC_SITE_URL: "https://malfleks.example" }),
+      ).toBe("https://admin.malfleks.example");
+    }
+  });
+
+  it("falls back to the site's own origin when no admin host is set, because /admin answers there", () => {
+    expect(resolveAdminUrl({ NEXT_PUBLIC_SITE_URL: "https://malfleks.example" })).toBe("https://malfleks.example");
+    expect(resolveAdminUrl({ MALFLEKS_ADMIN_HOST: "  ", NEXT_PUBLIC_SITE_URL: "https://malfleks.example" })).toBe("https://malfleks.example");
+  });
+
+  it("keeps http for a local admin host", () => {
+    expect(resolveAdminUrl({ MALFLEKS_ADMIN_HOST: "localhost:3001" })).toBe("http://localhost:3001");
   });
 });

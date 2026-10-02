@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
   getAllBranches,
@@ -10,6 +9,8 @@ import {
   getProductsByBranchId,
 } from "@/server/repositories";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import { resolveSiteUrl } from "@/lib/site-url";
 import ProductGrid from "@/components/product/ProductGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 
@@ -70,12 +71,14 @@ export default async function BranchPage({
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">
       <ScrollReveal>
-        <Link
-          href={`/brands/${brand.slug}`}
-          className="text-sm text-muted hover:text-foreground"
-        >
-          ← {brand.name}
-        </Link>
+        <Breadcrumbs
+          siteUrl={resolveSiteUrl().replace(/\/+$/, "")}
+          trail={[
+            { label: "Brands", href: "/brands" },
+            { label: brand.name, href: `/brands/${brand.slug}` },
+            { label: branch.name },
+          ]}
+        />
         <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
           <div>
             <p className="font-accent-serif italic text-accent">

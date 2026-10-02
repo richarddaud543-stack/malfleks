@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import { removeProductPhotoAction, setMainProductPhotoAction } from "@/app/actions/admin-catalogue-photos";
 import { setProductHiddenAction, setProductStockAction, updateProductAction } from "@/app/actions/admin-console";
 import ActionForm from "@/components/admin/ActionForm";
+import ProductIcon from "@/components/product/ProductIcon";
+import ProductPhoto from "@/components/product/ProductPhoto";
 import { Badge, Empty, hrefWith, inputClass, labelClass, PageHeader, Pager, placeLabel, Tile, Tiles } from "@/components/admin/ui";
 import { formatTZS } from "@/lib/charts";
 import { searchCatalogue } from "@/server/admin/catalogue";
@@ -119,7 +122,22 @@ export default async function AdminCataloguePage({ searchParams }: { searchParam
           {result.rows.map((p) => (
             <li key={p.id} className={`rounded-xl border bg-white ${p.hiddenAt ? "border-dashed border-border" : "border-border"}`}>
               <div className="flex flex-wrap items-start justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
+                {/* What the shop shows for this product: its main photo, or
+                    its icon when it has none. An operator scanning for the
+                    listing with the wrong picture should not have to open
+                    each one to find it. */}
+                <ProductPhoto
+                  src={p.photos[0]}
+                  alt=""
+                  size={48}
+                  className="rounded-md border border-border"
+                  fallback={
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md border border-border">
+                      <ProductIcon icon={p.image} className="h-7 w-7 text-muted" />
+                    </span>
+                  }
+                />
+                <div className="min-w-0 flex-1">
                   <p className="font-medium">
                     {p.name}
                     {p.hiddenAt && (
@@ -225,6 +243,66 @@ export default async function AdminCataloguePage({ searchParams }: { searchParam
                     </div>
                   </ActionForm>
                 </details>
+                {p.photos.length > 0 && (
+                  <details className="group/photos w-full">
+                    <summary className="inline-flex cursor-pointer list-none rounded-md border border-border bg-white px-2.5 py-1 text-xs font-medium hover:border-accent">
+                      <span className="group-open/photos:hidden">
+                        Photos ({p.photos.length})
+                      </span>
+                      <span className="hidden group-open/photos:inline">Close photos</span>
+                    </summary>
+                    {/* Remove one photo, or choose which comes first. Nothing
+                        here edits a photo — a listing's pictures are the
+                        partner's evidence of what they are selling. */}
+                    <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                      {p.photos.map((photo, i) => (
+                        <li key={photo} className="flex gap-3 rounded-lg border border-border/60 p-2">
+                          <a href={photo} target="_blank" rel="noreferrer" aria-label={`Open photo ${i + 1} of ${p.name} full size`}>
+                            <ProductPhoto
+                              src={photo}
+                              alt={`${p.name} — photo ${i + 1}`}
+                              size={96}
+                              className="rounded-md border border-border"
+                              fallback={
+                                <span className="flex h-24 w-24 items-center justify-center rounded-md border border-border text-center text-xs text-muted">
+                                  Won&apos;t load
+                                </span>
+                              }
+                            />
+                          </a>
+                          <div className="flex min-w-0 flex-col items-start gap-2">
+                            <p className="text-xs text-muted">
+                              {i === 0 ? "Main photo — shown in search" : `Photo ${i + 1}`}
+                            </p>
+                            {i > 0 && (
+                              <ActionForm
+                                action={setMainProductPhotoAction}
+                                hidden={{ productId: p.id, photoUrl: photo }}
+                                label="Make main"
+                                size="xs"
+                                ariaLabel={`Make photo ${i + 1} the main photo of ${p.name}`}
+                              />
+                            )}
+                            <ActionForm
+                              action={removeProductPhotoAction}
+                              hidden={{ productId: p.id, photoUrl: photo }}
+                              label="Remove"
+                              size="xs"
+                              tone="danger"
+                              confirm={
+                                p.photos.length === 1
+                                  ? "This is its only photo. The shop will show the icon instead."
+                                  : "Customers will no longer see this photo."
+                              }
+                              confirmLabel="Yes, remove it"
+                              ariaLabel={`Remove photo ${i + 1} of ${p.name}`}
+                            />
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
               </div>
             </li>
           ))}

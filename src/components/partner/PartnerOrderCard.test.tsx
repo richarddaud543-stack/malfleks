@@ -32,7 +32,7 @@ const base: ListedOrder = {
   branchName: "Toyota — Dar es Salaam",
   branchCity: "Dar es Salaam",
   branchPhone: null,
-  routeKind: "branch",
+  routeKind: "brand",
   routeCarrier: "Toyota",
   routeAgentPhone: null,
   routeEtaEstimate: null,
@@ -93,15 +93,26 @@ describe("PartnerOrderCard", () => {
     expect(screen.getByText(/Pikipiki Express, 1–2 days/)).toBeVisible();
   });
 
-  // The deliberate omission.
-  it("offers no status buttons — moving an order is MalFleks admin's call", () => {
+  // Buttons appear only where the page has proved the viewer may decide.
+  it("offers no decision buttons unless the page says this partner may decide", () => {
     render(<PartnerOrderCard order={base} />);
 
-    // Giving a partner these would need status.ts to learn who may move what,
-    // and inventing that rule in a component is a security decision in the
-    // wrong place.
+    // The page works out `canDecide` from the database (the branch's own
+    // active partner, never a courier); the card must not guess.
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(screen.getByText("New — waiting on you")).toBeVisible();
+  });
+
+  it("lets the branch confirm or decline its own pending order", () => {
+    render(<PartnerOrderCard order={base} canDecide />);
+
+    expect(screen.getByRole("button", { name: /confirm MALFLEKS-4F2A/i })).toBeVisible();
+    expect(screen.getByRole("button", { name: /can't fulfil MALFLEKS-4F2A/i })).toBeVisible();
+  });
+
+  it("offers no decision on an order that is already decided", () => {
+    render(<PartnerOrderCard order={{ ...base, status: "confirmed" }} canDecide />);
+    expect(screen.queryByRole("button", { name: /confirm MALFLEKS-4F2A/i })).not.toBeInTheDocument();
   });
 
   it("labels a cancelled order as cancelled rather than as waiting", () => {

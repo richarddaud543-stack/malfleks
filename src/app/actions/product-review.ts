@@ -30,8 +30,17 @@ export type ProductReviewResult =
         | "not-found"
         | "already-reviewed"
         | "no-branch"
-        | "slug-taken";
+        | "slug-taken"
+        | "reason-required";
     };
+
+/**
+ * A product sent back is emailed to the partner with the reason, and the
+ * reason is the only thing that stops them resubmitting the identical
+ * product. Required here as well as in the form, because a Server Action can
+ * be called without the form.
+ */
+const MIN_REASON_LENGTH = 3;
 
 // One shared guard: auth configured, right hostname, session, admin.
 // See server/auth/admin-session.ts for why it lives in one place now.
@@ -69,6 +78,12 @@ export async function publishProductSubmission(
     const outcome = await publishSubmission(submissionId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
+    // Published, by this call: tell the partner it is on sale. Sent from here
+    // rather than from `submissions.ts` so the write stays a write. Never
+    // throws, and a second publish returns `already-reviewed` above.
+    const { notifyProductDecision } = await import("@/server/notify/events");
+    await notifyProductDecision(submissionId);
+
     await revalidateCatalogue();
     return { ok: true };
   } catch (error) {
@@ -84,10 +99,16 @@ export async function rejectProductSubmission(
   const session = await requireAdminSession();
   if (!session) return { ok: false, reason: "forbidden" };
 
+  const reason = typeof note === "string" ? note.trim() : "";
+  if (reason.length < MIN_REASON_LENGTH) return { ok: false, reason: "reason-required" };
+
   try {
     const { rejectSubmission } = await import("@/server/partners/submissions");
-    const outcome = await rejectSubmission(submissionId, session.uid, note);
+    const outcome = await rejectSubmission(submissionId, session.uid, reason);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    const { notifyProductDecision } = await import("@/server/notify/events");
+    await notifyProductDecision(submissionId);
 
     // Nothing customer-facing changed, but the partner's own page shows the
     // decision and the reason — that is the whole point of writing one.

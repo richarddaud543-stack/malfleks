@@ -44,7 +44,7 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
         <button
           type="button"
           onClick={() => setArmed(true)}
-          className="rounded-full border border-accent px-4 py-1.5 text-xs font-medium text-accent transition-colors hover:bg-accent hover:text-background"
+          className="min-h-11 rounded-full border border-accent px-5 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-background"
         >
           Mark delivered
         </button>
@@ -55,7 +55,7 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
             type="button"
             disabled={pending}
             onClick={() => setArmed(false)}
-            className="rounded-full border border-border px-3 py-1 text-xs text-muted disabled:opacity-50"
+            className="min-h-11 rounded-full border border-border px-4 py-2 text-sm text-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
             Back
           </button>
@@ -73,7 +73,7 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
                 }
               })
             }
-            className="rounded-full border border-accent bg-accent px-3 py-1 text-xs font-medium text-background disabled:opacity-50"
+            className="min-h-11 rounded-full border border-accent bg-accent px-4 py-2 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? "Marking…" : "Yes, delivered"}
           </button>

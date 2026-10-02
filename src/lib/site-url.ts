@@ -47,6 +47,22 @@ export function resolveSiteUrl(env: Record<string, string | undefined> = process
 }
 
 /**
+ * The origin the admin console answers on, for links in MalFleks's own emails.
+ *
+ * `/admin` is only served on `MALFLEKS_ADMIN_HOST` (see `admin-host.ts`), so a
+ * link built from `resolveSiteUrl()` 404s the moment a separate admin host is
+ * configured -- which is exactly the production setup. With no admin host set
+ * the console answers on every host, so the site's own origin is the right
+ * fallback rather than no link at all.
+ */
+export function resolveAdminUrl(env: Record<string, string | undefined> = process.env): string {
+  const host = adminHost(env.MALFLEKS_ADMIN_HOST);
+  if (!host) return resolveSiteUrl(env);
+  const proto = host.startsWith("localhost") || host.startsWith("127.0.0.1") ? "http" : "https";
+  return `${proto}://${host}`;
+}
+
+/**
  * The origin a Google OAuth redirect should come back to.
  *
  * ## The bug this exists to prevent

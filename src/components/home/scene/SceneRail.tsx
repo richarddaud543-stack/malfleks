@@ -6,6 +6,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useGSAP } from "@gsap/react";
 import ProductIcon from "@/components/product/ProductIcon";
+import ProductPhoto from "@/components/product/ProductPhoto";
 import { formatTZS } from "@/lib/format";
 import type { FeaturedItem } from "@/components/home/featured";
 import { usePrefersReducedMotion } from "./useSceneTimeline";
@@ -110,14 +111,26 @@ export default function SceneRail({ items }: { items: FeaturedItem[] }) {
                   at 15.29:1 on this ground) and the brand is identified by its
                   name above. One accent per moment, which is the restraint
                   docs/research/motion-dev-design.md found in motion.dev's UI. */}
+              {/* A real photo, when the product has one, in the same square
+                  frame as everywhere else — sized to the tile's height and
+                  centred, so a card with a photo is exactly as tall as one
+                  without and the rail's measured width does not change. */}
               <div
-                className="mt-7 flex h-40 items-center justify-center rounded-2xl"
+                className="mt-7 flex h-40 items-center justify-center overflow-hidden rounded-2xl"
                 style={{ background: "var(--scene-ground)" }}
               >
-                <ProductIcon
-                  icon={product.image}
-                  className="h-20 w-20"
-                  style={{ color: "var(--scene-mint)" }}
+                <ProductPhoto
+                  src={product.photoUrl}
+                  alt={product.name}
+                  sizes="160px"
+                  className="h-40 w-40"
+                  fallback={
+                    <ProductIcon
+                      icon={product.image}
+                      className="h-20 w-20"
+                      style={{ color: "var(--scene-mint)" }}
+                    />
+                  }
                 />
               </div>
 

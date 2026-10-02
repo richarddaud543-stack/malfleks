@@ -1,5 +1,6 @@
 import { getPrisma } from "@/server/db/client";
-import { isValidProductPhotoUrl } from "@/lib/product-photo";
+import { validateProductListing } from "@/lib/product-listing";
+import { productPhotoList } from "@/lib/product-photo";
 import { supabaseAuthConfig } from "@/server/auth/config";
 
 /**
@@ -34,6 +35,8 @@ export interface ReviewableSubmission {
   priceTZS: number;
   image: string;
   photoUrl: string | null;
+  /** Every photo, main one first. Empty when the submission has none. */
+  photoUrls: string[];
   description: string;
   inStock: boolean;
   specs: Array<{ key: string; value: string }>;
@@ -49,7 +52,15 @@ export interface SubmitProductInput {
   /** Whole shillings. A string from a form is parsed by the caller, not here. */
   priceTZS: number;
   image: string;
-  /** Optional. Empty/omitted means "icon only," a valid, complete listing. */
+  /**
+   * Optional, main photo first, at most six. Empty/omitted means "icon
+   * only," a valid, complete listing.
+   */
+  photoUrls?: string[];
+  /**
+   * The single-photo field from before the gallery. Still accepted so an
+   * older caller keeps working: it is read only when `photoUrls` is absent.
+   */
   photoUrl?: string;
   description: string;
   inStock?: boolean;
@@ -62,6 +73,10 @@ export type SubmitBlocker =
   | "partner-suspended"
   | "invalid-price"
   | "invalid-photo"
+  | "invalid-name"
+  | "invalid-description"
+  | "invalid-image"
+  | "invalid-specs"
   | "missing-field";
 
 export type SubmitOutcome =
@@ -158,12 +173,13 @@ export async function submitProduct(
   if (partner.kind !== "brand") return { ok: false, reason: "not-a-branch-partner" };
   if (partner.status !== "active") return { ok: false, reason: "partner-suspended" };
 
-  const name = input.name.trim();
-  const category = input.category.trim();
-  const description = input.description.trim();
-  const image = input.image.trim();
-
-  if (name === "" || category === "" || description === "" || image === "") {
+  // Blank fields first, under their own reason, so "you left something
+  // empty" is never reported as "your description is too short".
+  if (
+    [input.name, input.category, input.description, input.image].some(
+      (field) => typeof field !== "string" || field.trim() === "",
+    )
+  ) {
     return { ok: false, reason: "missing-field" };
   }
 
@@ -173,19 +189,48 @@ export async function submitProduct(
     return { ok: false, reason: "invalid-price" };
   }
 
-  // Optional, but when present it must actually be one of our own uploaded
-  // photos — never an arbitrary URL a client could send instead. The browser
-  // copy of this same check (`product-listing.ts`) is a courtesy; this one is
-  // the boundary that counts, exactly as the module doc says for price.
-  const photoUrl = (input.photoUrl ?? "").trim();
-  const supabaseUrl = supabaseAuthConfig()?.url ?? "";
-  if (photoUrl !== "" && !isValidProductPhotoUrl(photoUrl, supabaseUrl)) {
-    return { ok: false, reason: "invalid-photo" };
+  // The same function the form runs. Until 2026-10-03 this was a handful of
+  // blank-field checks and the rest of the rules — description length, the
+  // 12-detail cap, the picture whitelist, the price ceiling — lived only in
+  // the browser, where a script calling the Server Action directly never
+  // meets them. An 80,000-character description, a picture key that draws
+  // nothing, or a price past what the `Int` column can hold all reached the
+  // admin queue. One set of rules now, and this is the copy that counts.
+  //
+  // The photo check uses the project URL the server resolved for itself,
+  // never anything derived from the request.
+  const checked = validateProductListing(
+    {
+      name: input.name,
+      category: input.category,
+      description: input.description,
+      image: input.image,
+      photoUrls: Array.isArray(input.photoUrls)
+        ? input.photoUrls
+        : input.photoUrl
+          ? [input.photoUrl]
+          : [],
+      // Already known to be a positive integer, so this is its plain digits.
+      price: String(input.priceTZS),
+      inStock: input.inStock ?? true,
+      specs: Array.isArray(input.specs) ? input.specs : [],
+    },
+    { supabaseUrl: supabaseAuthConfig()?.url ?? "" },
+  );
+
+  if (!checked.ok) {
+    const { errors } = checked;
+    if (errors.price) return { ok: false, reason: "invalid-price" };
+    if (errors.photoUrls) return { ok: false, reason: "invalid-photo" };
+    if (errors.name) return { ok: false, reason: "invalid-name" };
+    if (errors.description) return { ok: false, reason: "invalid-description" };
+    if (errors.image) return { ok: false, reason: "invalid-image" };
+    if (errors.specs) return { ok: false, reason: "invalid-specs" };
+    return { ok: false, reason: "missing-field" };
   }
 
-  const specs = (input.specs ?? [])
-    .map((spec) => ({ key: spec.key.trim(), value: spec.value.trim() }))
-    .filter((spec) => spec.key !== "" && spec.value !== "");
+  const { name, category, description, image, photoUrls, specs, priceTZS, inStock } =
+    checked.value;
 
   const created = await db.productSubmission.create({
     data: {
@@ -194,11 +239,15 @@ export async function submitProduct(
       brandId: partner.brandId,
       name,
       category,
-      priceTZS: input.priceTZS,
+      priceTZS,
       image,
-      photoUrl: photoUrl === "" ? null : photoUrl,
+      // `photoUrl` is the main photo — always the first of the list — so
+      // everything that only knows the single column keeps showing the right
+      // picture.
+      photoUrl: photoUrls[0] ?? null,
+      photoUrls,
       description,
-      inStock: input.inStock ?? true,
+      inStock,
       specs: {
         create: specs.map((spec, position) => ({ ...spec, position })),
       },
@@ -231,6 +280,7 @@ function mapSubmission(row: {
   priceTZS: number;
   image: string;
   photoUrl: string | null;
+  photoUrls: string[];
   description: string;
   inStock: boolean;
   createdAt: Date;
@@ -250,6 +300,7 @@ function mapSubmission(row: {
     priceTZS: row.priceTZS,
     image: row.image,
     photoUrl: row.photoUrl,
+    photoUrls: productPhotoList(row),
     description: row.description,
     inStock: row.inStock,
     specs: row.specs.map((s) => ({ key: s.key, value: s.value })),
@@ -294,6 +345,7 @@ export async function publishSubmission(
       priceTZS: true,
       image: true,
       photoUrl: true,
+      photoUrls: true,
       description: true,
       inStock: true,
       specs: { orderBy: { position: "asc" as const } },
@@ -376,7 +428,11 @@ export async function publishSubmission(
         category: submission.category,
         priceTZS: submission.priceTZS,
         image: submission.image,
-        photoUrl: submission.photoUrl,
+        // Both columns, kept in step: the list as submitted (or, for a
+        // submission from before the gallery, its one photo), and the main
+        // photo as the first of it.
+        photoUrl: productPhotoList(submission)[0] ?? null,
+        photoUrls: productPhotoList(submission),
         description: submission.description,
         inStock: submission.inStock,
         sortOrder: (last?.sortOrder ?? 0) + 1,

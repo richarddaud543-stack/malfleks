@@ -77,7 +77,7 @@ export type DeleteResult =
   | { deleted: true }
   | {
       deleted: false;
-      reason: "signed-out" | "unavailable" | "invalid-id" | "not-found";
+      reason: "signed-out" | "unavailable" | "invalid-id" | "not-found" | "order-in-progress";
     };
 
 /**
@@ -94,6 +94,15 @@ export type DeleteResult =
  * `customerId`, so a forged id belonging to another customer matches no rows
  * and reads as not-found. Under Firestore this needed a format check as well,
  * because an id could be a *path* — that hazard is gone.
+ *
+ * **One thing it refuses:** removing the saved copy of an order that is
+ * confirmed and unpaid, or paid and not yet delivered (`order-in-progress`).
+ * The card on `/account` is the customer's only way back to that order's Pay
+ * and Track pages, and removing it would not cancel the order — it would only
+ * hide it from the one person who is about to pay for it or is waiting on it.
+ * The button is not offered in that state; this is the check that holds when
+ * the action is called anyway. Once the order is delivered or cancelled, or
+ * while it is still waiting on the branch, the copy can be removed as before.
  */
 export async function deleteOrderRequest(id: string): Promise<DeleteResult> {
   if (!isAuthConfigured()) return { deleted: false, reason: "unavailable" };
@@ -102,9 +111,18 @@ export async function deleteOrderRequest(id: string): Promise<DeleteResult> {
   if (!session) return { deleted: false, reason: "signed-out" };
 
   try {
-    const { deleteOrderRequestForCustomer } = await import(
+    const { deleteOrderRequestForCustomer, savedRequestReference } = await import(
       "@/server/orders/saved-requests"
     );
+
+    const reference = await savedRequestReference(session.uid, id);
+    if (reference) {
+      const { savedCopyMustStay } = await import("@/server/orders/checkout");
+      if (await savedCopyMustStay(session.uid, reference)) {
+        return { deleted: false, reason: "order-in-progress" };
+      }
+    }
+
     const outcome = await deleteOrderRequestForCustomer(session.uid, id);
     if (!outcome.deleted) return { deleted: false, reason: outcome.reason };
 

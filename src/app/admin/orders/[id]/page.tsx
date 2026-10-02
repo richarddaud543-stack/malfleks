@@ -424,12 +424,33 @@ const STATUS_WORDS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * The same three moves when a partner made them. A branch answering its own
+ * order is a different fact from an admin phoning to ask, and the history
+ * should say which it was.
+ */
+const PARTNER_STATUS_WORDS: Record<"branch" | "courier", Record<string, string>> = {
+  branch: {
+    confirmed: "Confirmed by the branch",
+    fulfilled: "Marked delivered by the branch",
+    cancelled: "Declined by the branch",
+  },
+  courier: {
+    fulfilled: "Marked delivered by the courier",
+  },
+};
+
+function statusWords(item: Extract<TimelineItem, { type: "status" }>): string {
+  const byPartner = item.by === "branch" || item.by === "courier" ? PARTNER_STATUS_WORDS[item.by][item.to] : undefined;
+  return byPartner ?? STATUS_WORDS[item.to] ?? `Moved to ${item.to}`;
+}
+
 function describeEvent(item: TimelineItem): string {
   switch (item.type) {
     case "created":
       return "Order placed";
     case "status":
-      return `${STATUS_WORDS[item.to] ?? `Moved to ${item.to}`}${item.note ? ` — “${item.note}”` : ""}`;
+      return `${statusWords(item)}${item.note ? ` — “${item.note}”` : ""}`;
     case "payment-link":
       return `Payment link created for ${formatTZS(item.amountTZS)}`;
     case "payment-captured":

@@ -25,6 +25,24 @@ describe("matchProductIcons", () => {
     expect(matchProductIcons("Ford Ranger")[0]).toBe("pickup");
   });
 
+  it("matches the everyday categories in English and Swahili", () => {
+    expect(matchProductIcons("nguo")[0]).toBe("tshirt");
+    expect(matchProductIcons("t-shirt")[0]).toBe("tshirt");
+    expect(matchProductIcons("viatu")[0]).toBe("shoe");
+    expect(matchProductIcons("sneakers")[0]).toBe("shoe");
+    expect(matchProductIcons("samani")[0]).toBe("sofa");
+    expect(matchProductIcons("urembo")[0]).toBe("bottle");
+    expect(matchProductIcons("chakula")[0]).toBe("basket");
+    expect(matchProductIcons("zana")[0]).toBe("wrench");
+    expect(matchProductIcons("Fashion")[0]).toBe("tshirt");
+    expect(matchProductIcons("Furniture")[0]).toBe("sofa");
+  });
+
+  it("does not let the furniture keyword 'table' hijack a tablet", () => {
+    expect(matchProductIcons("tablet")[0]).toBe("tablet");
+    expect(matchProductIcons("tab")[0]).toBe("tablet");
+  });
+
   it("is case-insensitive and tolerant of extra whitespace", () => {
     expect(matchProductIcons("  IPHONE  ")[0]).toBe("smartphone");
   });

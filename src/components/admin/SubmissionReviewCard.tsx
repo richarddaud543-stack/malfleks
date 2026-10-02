@@ -30,8 +30,19 @@ const FAILURE: Record<string, string> = {
     "This partner isn't on the map yet, so there is no branch to publish to. Put them on the map first, on the main admin page.",
   "slug-taken":
     "A live product already claims that URL. Ask the partner to rename it.",
+  "reason-required": "Say why it is going back — the partner is emailed the reason.",
   unavailable: "We couldn't reach the database. Nothing was changed.",
 };
+
+/** Mirrors the check in `rejectProductSubmission`, which is the one that counts. */
+const MIN_REASON_LENGTH = 3;
+
+/**
+ * `btn-pill` has no disabled look of its own, and a button that is off but
+ * looks on reads as broken when it does nothing. Greyed, no hover lift, and a
+ * not-allowed cursor.
+ */
+const DISABLED = "disabled:cursor-not-allowed disabled:opacity-50 disabled:saturate-0";
 
 export default function SubmissionReviewCard({
   submission,
@@ -46,6 +57,10 @@ export default function SubmissionReviewCard({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+
+  // The reason is the partner's only way to know what to fix, and it is
+  // emailed to them, so "Send it back" stays off until there is one.
+  const reasonOk = note.trim().length >= MIN_REASON_LENGTH;
 
   async function run(action: () => Promise<ProductReviewResult>) {
     setBusy(true);
@@ -146,7 +161,7 @@ export default function SubmissionReviewCard({
               type="button"
               disabled={busy}
               onClick={() => run(() => publishProductSubmission(submission.id))}
-              className="btn-pill btn-lime px-5 py-2 text-sm disabled:opacity-60"
+              className={`btn-pill btn-lime px-5 py-2 text-sm ${DISABLED}`}
             >
               {busy ? "Publishing…" : "Yes, publish it"}
             </button>
@@ -154,7 +169,7 @@ export default function SubmissionReviewCard({
               type="button"
               disabled={busy}
               onClick={() => setConfirming(false)}
-              className="btn-pill btn-ink px-5 py-2 text-sm"
+              className={`btn-pill btn-ink px-5 py-2 text-sm ${DISABLED}`}
             >
               Cancel
             </button>
@@ -170,25 +185,27 @@ export default function SubmissionReviewCard({
           >
             Why is it going back?
           </label>
-          <p className="mt-1 text-xs text-muted">
-            The partner reads this on their own page. It is the only place the
-            reason exists.
+          <p id={`note-hint-${submission.id}`} className="mt-1 text-xs text-muted">
+            Required. The partner is emailed this and reads it on their own
+            page — it is how they know what to fix.
           </p>
           <textarea
             id={`note-${submission.id}`}
             rows={2}
             value={note}
+            required
+            aria-describedby={`note-hint-${submission.id}`}
             onChange={(e) => setNote(e.target.value)}
             className="mt-2 w-full rounded-xl border border-foreground/15 bg-surface-2 px-4 py-2.5 text-sm outline-none"
           />
           <div className="mt-3 flex flex-wrap gap-3">
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !reasonOk}
               onClick={() =>
-                run(() => rejectProductSubmission(submission.id, note))
+                run(() => rejectProductSubmission(submission.id, note.trim()))
               }
-              className="btn-pill btn-ink px-5 py-2 text-sm disabled:opacity-60"
+              className={`btn-pill btn-ink px-5 py-2 text-sm ${DISABLED}`}
             >
               {busy ? "Sending…" : "Send it back"}
             </button>
@@ -196,7 +213,7 @@ export default function SubmissionReviewCard({
               type="button"
               disabled={busy}
               onClick={() => setRejecting(false)}
-              className="btn-pill btn-ink px-5 py-2 text-sm"
+              className={`btn-pill btn-ink px-5 py-2 text-sm ${DISABLED}`}
             >
               Cancel
             </button>

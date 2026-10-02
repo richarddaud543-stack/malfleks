@@ -20,14 +20,39 @@ describe("ProductIcon", () => {
     expect(container.querySelector("path")).toBeTruthy();
   });
 
-  it("falls back to the smartphone icon for an unrecognized key instead of crashing", () => {
-    const known = render(<ProductIcon icon="smartphone" />);
+  // The fallback used to be the smartphone. That was a guess that happened
+  // to be right while the catalogue was electronics, and a phone drawn on a
+  // sofa once it was not — an unknown key now gets the neutral package.
+  it("falls back to the neutral package for an unrecognized key, not a smartphone", () => {
+    const pkg = render(<ProductIcon icon="package" />);
+    const phone = render(<ProductIcon icon="smartphone" />);
     const unknown = render(<ProductIcon icon="totally-not-a-real-product-category" />);
 
-    const knownPath = known.container.querySelector("path")?.getAttribute("d");
+    const pkgPath = pkg.container.querySelector("path")?.getAttribute("d");
+    const phonePath = phone.container.querySelector("path")?.getAttribute("d");
     const unknownPath = unknown.container.querySelector("path")?.getAttribute("d");
 
-    expect(unknownPath).toBe(knownPath);
+    expect(unknownPath).toBe(pkgPath);
+    expect(unknownPath).not.toBe(phonePath);
+  });
+
+  it("does not mistake an inherited object property for an icon key", () => {
+    // `"toString" in icons` is true; looking it up would crash the render.
+    const { container } = render(<ProductIcon icon="toString" />);
+    expect(container.querySelectorAll("path").length).toBeGreaterThan(0);
+  });
+
+  it("draws each of the everyday-category icons differently from the package", () => {
+    const pkgPath = render(<ProductIcon icon="package" />)
+      .container.querySelector("path")
+      ?.getAttribute("d");
+    for (const key of ["tshirt", "shoe", "bottle", "sofa", "basket", "wrench"]) {
+      const d = render(<ProductIcon icon={key} />)
+        .container.querySelector("path")
+        ?.getAttribute("d");
+      expect(d, key).toBeTruthy();
+      expect(d, key).not.toBe(pkgPath);
+    }
   });
 
   it("applies the passed className and style to the svg element", () => {

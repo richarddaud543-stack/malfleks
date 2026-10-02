@@ -27,8 +27,17 @@ export type ReviewResult =
         | "unavailable"
         | "not-found"
         | "already-reviewed"
-        | "account-already-partnered";
+        | "account-already-partnered"
+        | "reason-required";
     };
+
+/**
+ * A rejection is emailed to the applicant with its reason, so a blank one is
+ * refused here as well as in the form: a Server Action can be called without
+ * the form, and "we could not approve this" with no why is an email that
+ * generates a phone call.
+ */
+const MIN_REASON_LENGTH = 3;
 
 // One shared guard: auth configured, right hostname, session, admin.
 // See server/auth/admin-session.ts for why it lives in one place now.
@@ -44,6 +53,11 @@ export async function approvePartnerApplication(
     const { approveApplication } = await import("@/server/partners/review");
     const outcome = await approveApplication(applicationId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    // After the commit, and only for the call that actually decided it: a
+    // second approve returns `already-reviewed` above and never reaches here.
+    const { notifyApplicationDecision } = await import("@/server/notify/events");
+    await notifyApplicationDecision(applicationId);
 
     revalidatePath("/admin");
     revalidatePath("/admin/applications");
@@ -61,10 +75,16 @@ export async function rejectPartnerApplication(
   const session = await requireAdminSession();
   if (!session) return { ok: false, reason: "forbidden" };
 
+  const reason = typeof note === "string" ? note.trim() : "";
+  if (reason.length < MIN_REASON_LENGTH) return { ok: false, reason: "reason-required" };
+
   try {
     const { rejectApplication } = await import("@/server/partners/review");
-    const outcome = await rejectApplication(applicationId, session.uid, note);
+    const outcome = await rejectApplication(applicationId, session.uid, reason);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    const { notifyApplicationDecision } = await import("@/server/notify/events");
+    await notifyApplicationDecision(applicationId);
 
     revalidatePath("/admin");
     revalidatePath("/admin/applications");

@@ -14,6 +14,7 @@ import {
 } from "motion/react";
 import type { Product } from "@/data";
 import ProductIcon from "./ProductIcon";
+import ProductPhoto from "./ProductPhoto";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
 
@@ -104,24 +105,31 @@ export default function ProductCard({
           exit={{ "product-view": "auto", default: "none" }}
           update="none"
         >
-          <div
-            className="flex h-32 items-center justify-center overflow-hidden rounded-xl"
-            style={{ background: `${accentColor}18` }}
-          >
-            {product.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={product.photoUrl}
-                alt={product.name}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <ProductIcon
-                icon={product.image}
-                className="h-16 w-16"
-                style={{ color: iconAccent(accentColor) }}
-              />
-            )}
+          {/* One wrapper either way, so the transition above always has a
+              single node. A real photo gets the shared square frame — whole
+              photo visible, nothing cropped to fit a banner — and the tinted
+              icon tile is what shows when there is no photo or it fails to
+              load. `sizes` follows `ProductGrid`: two columns on a phone,
+              three from `sm`, four from `lg`. */}
+          <div className="overflow-hidden rounded-xl">
+            <ProductPhoto
+              src={product.photoUrl}
+              alt={product.name}
+              sizes="(min-width: 1024px) 260px, (min-width: 640px) 33vw, 50vw"
+              className="w-full"
+              fallback={
+                <div
+                  className="flex h-32 items-center justify-center"
+                  style={{ background: `${accentColor}18` }}
+                >
+                  <ProductIcon
+                    icon={product.image}
+                    className="h-16 w-16"
+                    style={{ color: iconAccent(accentColor) }}
+                  />
+                </div>
+              }
+            />
           </div>
         </ViewTransition>
         <div className="mt-4 flex items-start justify-between gap-2">

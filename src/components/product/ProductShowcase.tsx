@@ -13,6 +13,12 @@ import { iconAccent } from "@/lib/accent";
  * an ambient colour wash in the back corners, and the real product icon
  * large in the middle.
  *
+ * **Icon only.** This used to take a `photoUrl` too and crop it into the
+ * 112px puck where the icon floats — a real photo shown at thumbnail size
+ * with its corners cut off. A product with photos is now drawn by
+ * `ProductGallery` instead, and this panel is what the page shows when there
+ * are none.
+ *
  * Renders as a single stable root (`props in, one <div> out` — `motion.div`
  * still renders one real `<div>`, an `initial`/`animate` entrance doesn't
  * change that) because this lives inside `<ViewTransition
@@ -23,12 +29,9 @@ import { iconAccent } from "@/lib/accent";
 export default function ProductShowcase({
   accentColor,
   icon,
-  photoUrl,
 }: {
   accentColor: string;
   icon: string;
-  /** A real uploaded photo. When present, replaces the icon puck below. */
-  photoUrl?: string;
 }) {
   const reduceMotion = useReducedMotion();
   const iconColor = iconAccent(accentColor);
@@ -99,23 +102,11 @@ export default function ProductShowcase({
             : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
         }
       >
-        {photoUrl ? (
-          // A real uploaded photo fills the puck instead of floating an icon
-          // over it — eslint-disable, see ProductCard.tsx for why this is a
-          // plain img rather than next/image.
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={photoUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <ProductIcon
-            icon={icon}
-            className="h-16 w-16 sm:h-20 sm:w-20"
-            style={{ color: iconColor }}
-          />
-        )}
+        <ProductIcon
+          icon={icon}
+          className="h-16 w-16 sm:h-20 sm:w-20"
+          style={{ color: iconColor }}
+        />
       </motion.div>
     </motion.div>
   );

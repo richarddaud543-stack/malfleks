@@ -186,7 +186,21 @@ export async function searchOrders(search: OrderSearch): Promise<OrderSearchResu
 
 export type TimelineItem =
   | { at: Date; type: "created" }
-  | { at: Date; type: "status"; from: string | null; to: string; actor: string | null; note: string | null }
+  | {
+      at: Date;
+      type: "status";
+      from: string | null;
+      to: string;
+      actor: string | null;
+      /**
+       * What kind of person `actor` is. An `OrderEvent` stores a bare uid, so
+       * this is resolved at read time: a uid that manages a partner is that
+       * partner's kind, anything else that is set is an admin. Null for an
+       * event with no actor at all.
+       */
+      by: "branch" | "courier" | "admin" | null;
+      note: string | null;
+    }
   | { at: Date; type: "payment-link"; amountTZS: number }
   | { at: Date; type: "payment-captured"; amountTZS: number; reference: string }
   | { at: Date; type: "payment-failed"; note: string | null }
@@ -221,11 +235,22 @@ export async function getOrderDetail(id: string) {
   });
   if (!order) return null;
 
-  const [branchPartner, courierPartner, refundableTZS] = await Promise.all([
+  // Since 3 Oct 2026 a branch may confirm or decline its own orders, and since
+  // 6 Sep a partner may mark one delivered, so "who moved it" is no longer
+  // always an admin. One lookup for every uid in this order's history.
+  const actorUids = [...new Set(order.events.map((e) => e.actorUid).filter((uid): uid is string => Boolean(uid)))];
+
+  const [branchPartner, courierPartner, refundableTZS, partnerActors] = await Promise.all([
     order.branchId ? db.partner.findFirst({ where: { branchId: order.branchId }, select: { id: true, displayName: true, phone: true, status: true } }) : null,
     order.agentId ? db.partner.findFirst({ where: { agentId: order.agentId }, select: { id: true, displayName: true, phone: true, status: true } }) : null,
     refundableFor(db, order.id),
+    actorUids.length
+      ? db.partnerUser.findMany({ where: { uid: { in: actorUids } }, select: { uid: true, partner: { select: { kind: true } } } })
+      : [],
   ]);
+  const partnerKindByUid = new Map(partnerActors.map((a) => [a.uid, a.partner.kind]));
+  const actorRole = (uid: string | null): "branch" | "courier" | "admin" | null =>
+    !uid ? null : !partnerKindByUid.has(uid) ? "admin" : partnerKindByUid.get(uid) === "courier" ? "courier" : "branch";
 
   const sum = (kind: string) => order.ledgerEntries.filter((e) => e.kind === kind).reduce((s, e) => s + e.amountTZS, 0);
   const money: OrderMoney = {
@@ -243,7 +268,7 @@ export async function getOrderDetail(id: string) {
 
   const timeline: TimelineItem[] = [{ at: order.createdAt, type: "created" }];
   for (const e of order.events) {
-    timeline.push({ at: e.createdAt, type: "status", from: e.fromStatus, to: e.toStatus, actor: e.actorUid, note: e.note });
+    timeline.push({ at: e.createdAt, type: "status", from: e.fromStatus, to: e.toStatus, actor: e.actorUid, by: actorRole(e.actorUid), note: e.note });
   }
   for (const p of order.payments) {
     timeline.push({ at: p.initiatedAt, type: "payment-link", amountTZS: p.amountTZS });

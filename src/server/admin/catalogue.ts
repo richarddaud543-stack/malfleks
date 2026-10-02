@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 
 import { getPrisma } from "@/server/db/client";
 import { MAX_PRICE_TZS } from "@/lib/product-listing";
+import { productPhotoList } from "@/lib/product-photo";
 
 /**
  * Every product on MalFleks, for the console — including hidden ones, which
@@ -35,6 +36,8 @@ export interface CatalogueRow {
   description: string;
   image: string;
   photoUrl: string | null;
+  /** Every photo, main one first. Empty when the product has none. */
+  photos: string[];
   brandName: string;
   branchName: string;
   branchCity: string;
@@ -86,6 +89,7 @@ export async function searchCatalogue(search: CatalogueSearch) {
         description: true,
         image: true,
         photoUrl: true,
+        photoUrls: true,
         brand: { select: { name: true } },
         branch: { select: { name: true, city: true } },
         _count: { select: { orders: true } },
@@ -111,6 +115,7 @@ export async function searchCatalogue(search: CatalogueSearch) {
         description: r.description,
         image: r.image,
         photoUrl: r.photoUrl,
+        photos: productPhotoList(r),
         brandName: r.brand.name,
         branchName: r.branch.name,
         branchCity: r.branch.city,
@@ -189,4 +194,81 @@ export async function setProductHidden(productId: string, hidden: boolean): Prom
 export async function setProductStock(productId: string, inStock: boolean): Promise<{ ok: boolean }> {
   const { count } = await getPrisma().product.updateMany({ where: { id: productId }, data: { inStock } });
   return { ok: count === 1 };
+}
+
+// ---------------------------------------------------------------------------
+// Photos
+// ---------------------------------------------------------------------------
+
+export type ProductPhotoOutcome =
+  | { ok: true }
+  | { ok: false; reason: "not-found" | "no-such-photo" | "changed" };
+
+/** The photo list with one photo taken out, or `null` if it is not in it. Pure. */
+export function withoutPhoto(photos: readonly string[], url: string): string[] | null {
+  return photos.includes(url) ? photos.filter((photo) => photo !== url) : null;
+}
+
+/** The photo list with one photo moved to the front, or `null` if it is not in it. Pure. */
+export function withMainPhoto(photos: readonly string[], url: string): string[] | null {
+  return photos.includes(url) ? [url, ...photos.filter((photo) => photo !== url)] : null;
+}
+
+/**
+ * Applies a change to a live product's photos.
+ *
+ * Read, compute, then write **only if the row still holds what was read** —
+ * `photoUrl` and `photoUrls` are both in the WHERE. Two operators tidying the
+ * same listing at once otherwise overwrite each other: one removes photo 3,
+ * the other makes photo 3 the main one from a list read a second earlier, and
+ * the removed photo is back on the shop. The loser is told to look again
+ * rather than silently winning. Same shape as every other guarded
+ * `updateMany` in this console.
+ *
+ * `photoUrl` is rewritten alongside the list every time, so "the main photo
+ * is the first of the list" stays true for everything that reads only the one
+ * column.
+ */
+async function changeProductPhotos(
+  productId: string,
+  change: (photos: string[]) => string[] | null,
+): Promise<ProductPhotoOutcome> {
+  const db = getPrisma();
+  const product = await db.product.findUnique({
+    where: { id: productId },
+    select: { photoUrl: true, photoUrls: true },
+  });
+  if (!product) return { ok: false, reason: "not-found" };
+
+  const next = change(productPhotoList(product));
+  if (!next) return { ok: false, reason: "no-such-photo" };
+
+  const { count } = await db.product.updateMany({
+    where: {
+      id: productId,
+      photoUrl: product.photoUrl,
+      photoUrls: { equals: product.photoUrls },
+    },
+    data: { photoUrls: next, photoUrl: next[0] ?? null },
+  });
+  return count === 1 ? { ok: true } : { ok: false, reason: "changed" };
+}
+
+/**
+ * Takes one photo off a live product — a photo that shows the wrong item, a
+ * phone number written across it, somebody's face. The listing itself stays
+ * up; with its last photo gone it falls back to its icon.
+ *
+ * The file is left in the bucket. The console holds no Storage credentials
+ * that could delete another account's upload (there is no service-role key
+ * anywhere in this app, by design), and nothing links to the file once the
+ * product stops naming it.
+ */
+export function removeProductPhoto(productId: string, url: string): Promise<ProductPhotoOutcome> {
+  return changeProductPhotos(productId, (photos) => withoutPhoto(photos, url));
+}
+
+/** Chooses which of a live product's photos shoppers see first. */
+export function setMainProductPhoto(productId: string, url: string): Promise<ProductPhotoOutcome> {
+  return changeProductPhotos(productId, (photos) => withMainPhoto(photos, url));
 }

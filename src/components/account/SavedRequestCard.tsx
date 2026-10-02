@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatTZS } from "@/lib/format";
 import { deliveryRouteLabel, formatPhone } from "@/lib/order";
+import type { AccountOrderStatus } from "@/server/orders/checkout";
 import type { SavedOrderRequest } from "@/server/orders/saved-requests";
 import DeleteSavedRequest from "./DeleteSavedRequest";
 
@@ -18,16 +19,23 @@ import DeleteSavedRequest from "./DeleteSavedRequest";
  */
 export default function SavedRequestCard({
   request,
-  payState = null,
+  status = null,
 }: {
   request: SavedOrderRequest;
   /**
-   * Where this order stands on payment, when MalFleks still has the order:
-   * "waiting" on the branch, "ready" to pay, or "paid". `null` for a request
-   * whose order was cancelled or that predates checkout.
+   * Where the order behind this request stands: waiting on the branch, ready
+   * to pay, paid, delivered or cancelled. `null` when MalFleks holds no order
+   * for it (it predates orders being kept) or the status could not be read.
    */
-  payState?: "waiting" | "ready" | "paid" | null;
+  status?: AccountOrderStatus | null;
 }) {
+  const state = status?.state ?? null;
+  // A cancelled order has nothing to track, and "Track this order" under it
+  // read as though it were still on its way. A delivered one keeps the link,
+  // named for what it now is: a record.
+  const trackLabel =
+    state === "cancelled" ? null : state === "delivered" ? "See the delivery record" : "Track this order";
+
   const branchHref = `/brands/${request.brand.slug ?? request.brand.id}/branches/${request.branch.id}`;
   const requestedAt = new Date(request.requestedAt);
   const dateIsUsable = !Number.isNaN(requestedAt.getTime());
@@ -101,45 +109,80 @@ export default function SavedRequestCard({
         </div>
       </dl>
 
-      {payState && (
-        <p className="mt-5 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm">
-          {payState === "ready" && (
+      {state && (
+        <p
+          data-testid="order-state"
+          className={`mt-5 rounded-xl border px-4 py-3 text-sm ${
+            state === "cancelled" ? "border-red-600/40 bg-red-600/5" : "border-border bg-surface-2"
+          }`}
+        >
+          {state === "ready" && (
             <>
               <span className="font-medium">The branch has confirmed this order.</span> Pay to complete it.
             </>
           )}
-          {payState === "waiting" && (
+          {state === "waiting" && (
             <>
               <span className="font-medium">Waiting for the branch to confirm.</span> Nothing is due yet — you&apos;ll pay here once
               they do.
             </>
           )}
-          {payState === "paid" && (
+          {state === "paid" && (
             <>
               <span className="font-medium">Paid.</span> MalFleks holds your payment until it is delivered.
+            </>
+          )}
+          {state === "delivered" && (
+            <>
+              <span className="font-medium">Delivered.</span> This order has been marked delivered. Thank you for buying
+              through MalFleks.
+            </>
+          )}
+          {state === "cancelled" && (
+            <>
+              <span className="font-medium">Cancelled.</span>{" "}
+              {status?.cancelReason ? `The reason given: ${status.cancelReason}. ` : "This order will not be delivered. "}
+              {status?.refundDue
+                ? "Your payment will be refunded — we email you when the refund has been sent."
+                : "You have not been charged."}
             </>
           )}
         </p>
       )}
 
       <div className="mt-5 flex flex-wrap items-center gap-4">
-        {payState === "ready" && (
+        {state === "ready" && (
           <Link
             href={`/pay/${encodeURIComponent(request.reference)}`}
-            className="btn-pill btn-lime px-5 py-1.5 text-xs font-medium"
+            className="btn-pill btn-lime px-5"
           >
             Pay now
           </Link>
         )}
-        <Link
-          href={`/track/${encodeURIComponent(request.reference)}`}
-          className="btn-pill btn-ink px-4 py-1.5 text-xs"
-        >
-          Track this order
-        </Link>
+        {trackLabel && (
+          <Link
+            href={`/track/${encodeURIComponent(request.reference)}`}
+            className="btn-pill btn-ink px-4"
+          >
+            {trackLabel}
+          </Link>
+        )}
         {/* The only other interactive part of an otherwise static card, so it
-            is the only other part that is a client component. */}
-        <DeleteSavedRequest id={request.id} reference={request.reference} />
+            is the only other part that is a client component. While the order
+            is confirmed -- unpaid, or paid and on its way -- this card is the
+            customer's only way back to Pay and Track, so Remove is replaced
+            by a sentence saying why (and `deleteOrderRequest` refuses too). */}
+        <DeleteSavedRequest
+          id={request.id}
+          reference={request.reference}
+          blocked={
+            status?.keepSavedCopy
+              ? state === "ready"
+                ? "unpaid"
+                : "undelivered"
+              : null
+          }
+        />
       </div>
     </li>
   );

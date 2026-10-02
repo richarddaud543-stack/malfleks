@@ -3,10 +3,13 @@
  *
  * `Product.image` is **an icon identifier, not a URL** — always required, and
  * `ProductIcon` draws one of these as a continuous-line contour from inline
- * SVG paths, falling back to `smartphone` for anything it does not recognise.
- * That fallback is why this list exists in a plain module rather than only
- * inside the component: a partner picking from a list cannot type a key that
- * silently renders a phone on a pickup truck.
+ * SVG paths. Anything it does not recognise is drawn as a plain package
+ * (`UNKNOWN_PRODUCT_ICON` below). It used to be drawn as a smartphone, which
+ * was a tolerable guess while the catalogue was phones and cars and became a
+ * phone on a sofa the day it stopped being. A partner picking from this list
+ * still cannot type an unknown key — the fallback is for a row written by an
+ * older build or by hand — and that is why the list lives in a plain module
+ * rather than only inside the component.
  *
  * A real, partner-uploaded photo is a separate, optional field —
  * `Product.photoUrl`, in the `product-photos` Supabase Storage bucket (see
@@ -21,8 +24,10 @@
  *
  * Order matters: this is the order the partner's picture chooser renders in, so
  * it runs devices → audio → power → connectivity → screens/capture/gaming →
- * vehicles (four wheels, then two) → home & backup-power appliances, rather
- * than alphabetically.
+ * vehicles (four wheels, then two) → home & backup-power appliances → the
+ * everyday categories added when the shop opened up beyond electronics
+ * (clothing, shoes, beauty, furniture, food, tools) → "something else" last,
+ * rather than alphabetically.
  */
 export const PRODUCT_ICON_KEYS = [
   "smartphone",
@@ -53,9 +58,23 @@ export const PRODUCT_ICON_KEYS = [
   "fan",
   "microwave",
   "gas-cylinder",
+  "tshirt",
+  "shoe",
+  "bottle",
+  "sofa",
+  "basket",
+  "wrench",
+  "package",
 ] as const;
 
 export type ProductIconKey = (typeof PRODUCT_ICON_KEYS)[number];
+
+/**
+ * What `ProductIcon` draws for a key it does not know: a neutral package.
+ * Deliberately says nothing about what is inside — the honest picture for
+ * "we don't know what this is" is not a confident drawing of something else.
+ */
+export const UNKNOWN_PRODUCT_ICON: ProductIconKey = "package";
 
 /** What a partner reads in the picture chooser. */
 export const PRODUCT_ICON_LABELS: Record<ProductIconKey, string> = {
@@ -87,6 +106,13 @@ export const PRODUCT_ICON_LABELS: Record<ProductIconKey, string> = {
   fan: "Fan",
   microwave: "Microwave",
   "gas-cylinder": "Gas cylinder",
+  tshirt: "Clothing",
+  shoe: "Shoes",
+  bottle: "Beauty",
+  sofa: "Furniture",
+  basket: "Food",
+  wrench: "Tools",
+  package: "Something else",
 };
 
 export function isProductIconKey(value: string): value is ProductIconKey {
@@ -133,4 +159,11 @@ export const PRODUCT_ICON_KEYWORDS: Record<ProductIconKey, string[]> = {
   fan: ["fan", "stand fan", "pedestal fan", "ceiling fan", "feni"],
   microwave: ["microwave", "microwave oven", "oven"],
   "gas-cylinder": ["gas cylinder", "cooking gas", "lpg", "gas cooker", "mtungi"],
+  tshirt: ["clothes", "clothing", "fashion", "shirt", "t-shirt", "tshirt", "dress", "trousers", "jeans", "nguo", "shati", "gauni", "suruali", "kitenge"],
+  shoe: ["shoe", "shoes", "sneakers", "sandals", "boots", "heels", "viatu", "kiatu", "raba", "ndala"],
+  bottle: ["beauty", "cosmetics", "lotion", "perfume", "makeup", "skincare", "shampoo", "urembo", "vipodozi", "manukato"],
+  sofa: ["sofa", "couch", "furniture", "chair", "table", "bed", "wardrobe", "samani", "kiti", "meza", "kitanda", "kabati"],
+  basket: ["food", "groceries", "grocery", "rice", "flour", "sugar", "cooking oil", "snacks", "chakula", "vyakula", "mchele", "unga", "sukari"],
+  wrench: ["tools", "tool", "spanner", "wrench", "drill", "hammer", "hardware", "zana", "vifaa", "spana", "nyundo"],
+  package: ["other", "package", "parcel", "box", "kifurushi", "nyingine"],
 };

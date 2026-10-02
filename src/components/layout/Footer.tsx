@@ -20,6 +20,7 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-foreground">Explore</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted">
+              <li><Link href="/search" className="transition-colors hover:text-foreground">Search products</Link></li>
               <li><Link href="/brands" className="transition-colors hover:text-foreground">All brands</Link></li>
               <li><Link href="/agents" className="transition-colors hover:text-foreground">Delivery agents</Link></li>
               <li><Link href="/locator" className="transition-colors hover:text-foreground">Branch locator</Link></li>
@@ -39,6 +40,8 @@ export default function Footer() {
           <div>
             <h3 className="text-sm font-semibold text-foreground">MalFleks</h3>
             <ul className="mt-3 space-y-2 text-sm text-muted">
+              <li><Link href="/account" className="transition-colors hover:text-foreground">Your orders</Link></li>
+              <li><Link href="/terms#paying" className="transition-colors hover:text-foreground">Paying, delivery and refunds</Link></li>
               <li><Link href="/contact" className="transition-colors hover:text-foreground">Contact</Link></li>
               <li><Link href="/terms" className="transition-colors hover:text-foreground">Terms of use</Link></li>
               <li><Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>

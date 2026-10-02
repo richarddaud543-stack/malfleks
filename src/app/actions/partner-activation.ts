@@ -78,6 +78,11 @@ export async function activateBrand(
     const outcome = await activateBrandPartner(partnerId, input);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
+    // On the map now: tell the partner, who until this existed found out by
+    // checking. A second activation returns `already-live` above.
+    const { notifyPartnerActivated } = await import("@/server/notify/events");
+    await notifyPartnerActivated(partnerId);
+
     await revalidateCatalogue();
     return { ok: true };
   } catch (error) {
@@ -99,6 +104,9 @@ export async function activateCourier(
     );
     const outcome = await activateCourierPartner(partnerId, input);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    const { notifyPartnerActivated } = await import("@/server/notify/events");
+    await notifyPartnerActivated(partnerId);
 
     await revalidateCatalogue();
     return { ok: true };

@@ -98,12 +98,14 @@ async function notifyOfApplication(input: PartnerApplicationInput): Promise<void
     const { partnerApplicationMessage, sendNotification } = await import(
       "@/server/notify/email"
     );
-    const { resolveSiteUrl } = await import("@/lib/site-url");
+    // The admin host, not the shop's: `/admin` is not served on the public
+    // host, so a link built from `resolveSiteUrl()` was a 404.
+    const { resolveAdminUrl } = await import("@/lib/site-url");
     const { subject, body } = partnerApplicationMessage({
       kind: input.kind,
       businessName: input.businessName.trim(),
       city: input.city,
-      siteUrl: resolveSiteUrl(),
+      adminUrl: resolveAdminUrl(),
     });
     await sendNotification(subject, body);
   } catch (error) {

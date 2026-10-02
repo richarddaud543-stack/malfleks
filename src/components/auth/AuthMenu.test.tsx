@@ -47,8 +47,9 @@ describe("AuthMenu", () => {
     mockSession(true, "Neema Mushi");
     render(<AuthMenu />);
 
-    // First name only in a nav pill; the full name belongs on /account.
-    const link = await screen.findByRole("link", { name: "Neema" });
+    // First name only in a nav pill, and the word "Orders" so the pill says
+    // where it goes; the full name belongs on /account.
+    const link = await screen.findByRole("link", { name: "Neema · Orders" });
     expect(link).toHaveAttribute("href", "/account");
     expect(screen.getByRole("button", { name: "Sign out" })).toBeEnabled();
   });
@@ -56,7 +57,7 @@ describe("AuthMenu", () => {
   it("falls back to a label when the provider gave no name", async () => {
     mockSession(true, null);
     render(<AuthMenu />);
-    expect(await screen.findByRole("link", { name: "My account" })).toBeVisible();
+    expect(await screen.findByRole("link", { name: "My orders" })).toBeVisible();
   });
 
   it("signs out and refreshes the tree", async () => {

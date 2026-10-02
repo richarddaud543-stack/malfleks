@@ -1,3 +1,5 @@
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import { resolveSiteUrl } from "@/lib/site-url";
 import BrandLogo from "@/components/brand/BrandLogo";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -65,8 +67,13 @@ export default async function BrandPage({
         className="blob -z-10 h-[360px] w-[360px] -left-20 -top-20 opacity-30"
         style={{ background: brand.accentColor }}
       />
+      {/* This page had no way back to the brand list at all. */}
+      <Breadcrumbs
+        siteUrl={resolveSiteUrl().replace(/\/+$/, "")}
+        trail={[{ label: "Brands", href: "/brands" }, { label: brand.name }]}
+      />
       <ScrollReveal>
-        <div className="flex flex-wrap items-center gap-5">
+        <div className="mt-2 flex flex-wrap items-center gap-5">
           <div className="relative h-20 w-20 rounded-2xl bg-white p-4 shadow-xl">
             <BrandLogo brand={brand} sizes="80px" className="object-contain p-4" />
           </div>

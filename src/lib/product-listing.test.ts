@@ -24,7 +24,7 @@ const good: ProductListingInput = {
   description:
     "A one-owner hybrid saloon with full service history, sold from the showroom floor.",
   image: "sedan",
-  photoUrl: "",
+  photoUrls: [],
   price: "48,500,000",
   inStock: true,
   specs: [{ key: "Year", value: "2024" }],
@@ -94,8 +94,8 @@ describe("validateProductListing", () => {
 
   describe("the picture", () => {
     it("rejects a key ProductIcon cannot draw", () => {
-      // Without this, `ProductIcon` falls back to `smartphone` and a pickup
-      // truck is listed with a phone next to it.
+      // Without this, `ProductIcon` falls back to the plain package and a
+      // pickup truck is listed with a cardboard box next to it.
       expect(errorsFor({ image: "tractor" }).image).toBeDefined();
     });
 
@@ -146,5 +146,66 @@ describe("validateProductListing", () => {
   it("trims before measuring, so spaces are not content", () => {
     expect(errorsFor({ name: "  A  " }).name).toBeDefined();
     expect(errorsFor({ category: "   " }).category).toBeDefined();
+  });
+
+  describe("category", () => {
+    it("folds a spacing or case variant of a known category onto its one spelling", () => {
+      const result = validateProductListing({ ...good, category: "  phones " });
+      expect(result.ok && result.value.category).toBe("Phones");
+
+      const shouting = validateProductListing({ ...good, category: "HOME   APPLIANCES" });
+      expect(shouting.ok && shouting.value.category).toBe("Home appliances");
+    });
+
+    it("keeps a category it does not know, only trimmed and single-spaced", () => {
+      const result = validateProductListing({ ...good, category: "  Solar   Panels " });
+      expect(result.ok && result.value.category).toBe("Solar Panels");
+    });
+  });
+
+  describe("photos", () => {
+    const SUPABASE = "https://project.supabase.co";
+    const photo = (name: string) =>
+      `${SUPABASE}/storage/v1/object/public/product-photos/uid-1/${name}.webp`;
+    const check = (photoUrls: string[]) =>
+      validateProductListing({ ...good, photoUrls }, { supabaseUrl: SUPABASE });
+
+    it("accepts a listing with no photos at all", () => {
+      const result = check([]);
+      expect(result.ok && result.value.photoUrls).toEqual([]);
+      expect(result.ok && result.value.photoUrl).toBe("");
+    });
+
+    it("keeps the order given and reports the first as the main photo", () => {
+      const result = check([photo("b"), photo("a")]);
+      expect(result.ok && result.value.photoUrls).toEqual([photo("b"), photo("a")]);
+      expect(result.ok && result.value.photoUrl).toBe(photo("b"));
+    });
+
+    it("drops a repeated photo rather than storing it twice", () => {
+      const result = check([photo("a"), photo("b"), photo("a")]);
+      expect(result.ok && result.value.photoUrls).toEqual([photo("a"), photo("b")]);
+    });
+
+    it("refuses a photo from anywhere but our own bucket", () => {
+      const result = check([photo("a"), "https://evil.example/cat.jpg"]);
+      expect(result.ok).toBe(false);
+      expect(!result.ok && result.errors.photoUrls).toBeDefined();
+    });
+
+    it("refuses a seventh photo", () => {
+      const seven = Array.from({ length: 7 }, (_, i) => photo(`p${i}`));
+      const result = check(seven);
+      expect(!result.ok && result.errors.photoUrls).toMatch(/up to 6/);
+      expect(check(seven.slice(0, 6)).ok).toBe(true);
+    });
+
+    it("refuses every photo when Supabase is not configured, rather than trusting any URL", () => {
+      const result = validateProductListing(
+        { ...good, photoUrls: [photo("a")] },
+        { supabaseUrl: "" },
+      );
+      expect(result.ok).toBe(false);
+    });
   });
 });

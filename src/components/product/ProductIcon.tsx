@@ -1,4 +1,4 @@
-import { type ProductIconKey } from "@/lib/product-icons";
+import { UNKNOWN_PRODUCT_ICON, type ProductIconKey } from "@/lib/product-icons";
 
 export type { ProductIconKey };
 
@@ -27,6 +27,9 @@ interface ProductIconProps {
  * The four vehicles deliberately share a chassis (ground line y=30.5, wheels at
  * x=12/32 r=4.2) so they align when a category row shows them side by side;
  * what tells them apart is roof height and the shape of the glass.
+ *
+ * A key this map does not have is drawn as `package` — a plain parcel that
+ * claims nothing about its contents. See `UNKNOWN_PRODUCT_ICON`.
  */
 const icons: Record<
   ProductIconKey,
@@ -374,6 +377,89 @@ const icons: Record<
     ),
     accent: <path d="M20 6.5h4" />,
   },
+  tshirt: {
+    contour: (
+      <>
+        <path d="M16 6 5.5 11.5l3.5 7 5-2.2V36a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V16.3l5 2.2 3.5-7L28 6" />
+        <path d="M16 6a6 6 0 0 0 12 0" />
+      </>
+    ),
+    accent: <path d="M24.5 21h3.5" />,
+  },
+  shoe: {
+    contour: (
+      <>
+        <path d="M5 33V19a2 2 0 0 1 2-2h4.5l2 3a13 13 0 0 0 8.6 5.6l10.5 1.9A7.5 7.5 0 0 1 39 33" />
+        <path d="M5 33h34v2.5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2Z" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M17.5 22.5 15 25" />
+        <path d="M21.5 24.5 19 27" />
+      </>
+    ),
+  },
+  bottle: {
+    contour: (
+      <>
+        <path d="M15 18h14a3 3 0 0 1 3 3v16a3 3 0 0 1-3 3H15a3 3 0 0 1-3-3V21a3 3 0 0 1 3-3Z" />
+        <path d="M19 18v-5h6v5" />
+        <path d="M22 13V6.5h6.5A1.5 1.5 0 0 1 30 8v1.5" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M17 26h10" />
+        <path d="M17 30.5h6" />
+      </>
+    ),
+  },
+  sofa: {
+    contour: (
+      <>
+        <path d="M10 20v-5a4 4 0 0 1 4-4h16a4 4 0 0 1 4 4v5" />
+        <path d="M6 20a4 4 0 0 1 4 4v4h24v-4a4 4 0 0 1 8 0v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8a4 4 0 0 1 4-4Z" />
+        <path d="M8 34v3M36 34v3" />
+      </>
+    ),
+    accent: <path d="M22 20v8" />,
+  },
+  basket: {
+    contour: (
+      <>
+        <path d="M5 19h34" />
+        <path d="M8 19l2.6 16.6A3 3 0 0 0 13.6 38h16.8a3 3 0 0 0 3-2.4L36 19" />
+        <path d="M13 19a9 9 0 0 1 18 0" />
+      </>
+    ),
+    accent: (
+      <>
+        <path d="M17 24.5v8" />
+        <path d="M22 24.5v8" />
+        <path d="M27 24.5v8" />
+      </>
+    ),
+  },
+  wrench: {
+    contour: (
+      <>
+        <path d="M32.2 6.1 28.7 9.6l5.7 5.7 3.5-3.5A7 7 0 1 1 32.2 6.1Z" />
+        <path d="M28.2 19.4 12.8 34.8a2.5 2.5 0 0 1-3.6-3.6L24.6 15.8" />
+      </>
+    ),
+    accent: <path d="M11 33h0" />,
+  },
+  package: {
+    contour: (
+      <>
+        <path d="M7 14 22 6l15 8v16l-15 8-15-8Z" />
+        <path d="M7 14l15 8 15-8" />
+        <path d="M22 22v16" />
+      </>
+    ),
+    accent: <path d="M14.5 10l15 8" />,
+  },
 };
 
 export default function ProductIcon({
@@ -383,7 +469,11 @@ export default function ProductIcon({
   accentColor,
   strokeWidth = 2,
 }: ProductIconProps) {
-  const resolved: ProductIconKey = icon in icons ? (icon as ProductIconKey) : "smartphone";
+  // `Object.hasOwn`, not `in`: "toString" is `in` every object, and would be
+  // looked up as an icon and crash on the destructure below.
+  const resolved: ProductIconKey = Object.hasOwn(icons, icon)
+    ? (icon as ProductIconKey)
+    : UNKNOWN_PRODUCT_ICON;
   const { contour, accent } = icons[resolved];
 
   return (

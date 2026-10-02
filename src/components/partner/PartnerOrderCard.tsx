@@ -1,6 +1,7 @@
 import { formatTZS } from "@/lib/format";
 import type { ListedOrder } from "@/server/orders/list-orders";
 import type { DeliveryPingView } from "@/server/orders/tracking";
+import BranchDecisionButtons from "./BranchDecisionButtons";
 import DeliveryPingButton from "./DeliveryPingButton";
 import MarkFulfilledButton from "./MarkFulfilledButton";
 
@@ -13,12 +14,17 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
  * the reference** — so the phone number is a `tel:` link and the reference is
  * the largest thing on the card after the product.
  *
- * One status button exists here, deliberately narrow: `MarkFulfilledButton`,
- * shown only on a `confirmed` order. Every other move between pending,
- * confirmed and cancelled stays MalFleks admin's, through the guarded
- * transitions in `src/server/orders/status.ts` — see that module's doc
- * comment for why `fulfilled` is the one transition where the partner, not
- * admin, is the person who actually knows the answer.
+ * The controls here are the moves a partner is the right person to make — see
+ * `src/server/orders/status.ts` for the whole table:
+ *
+ * - `BranchDecisionButtons` on a `pending` order, for the branch it was sent
+ *   to: confirm it, or decline it with a reason. Only when `canDecide` is
+ *   set, which the page derives from the session; a courier looking at the
+ *   same order gets the label and no buttons, because whether the branch has
+ *   the product is not the courier's to say.
+ * - `MarkFulfilledButton` on a `confirmed` order, for whoever is delivering.
+ *
+ * Cancelling a confirmed order stays MalFleks admin's.
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -26,6 +32,12 @@ const STATUS_LABEL: Record<string, string> = {
   confirmed: "Confirmed",
   cancelled: "Cancelled",
   fulfilled: "Fulfilled",
+};
+
+/** What a courier sees: a pending order is waiting on the branch, not on them. */
+const COURIER_STATUS_LABEL: Record<string, string> = {
+  ...STATUS_LABEL,
+  pending: "New — waiting on the branch",
 };
 
 const STATUS_CLASS: Record<string, string> = {
@@ -38,12 +50,30 @@ const STATUS_CLASS: Record<string, string> = {
 export default function PartnerOrderCard({
   order,
   lastPing = null,
+  canDecide = false,
+  viewer = "branch",
 }: {
   order: ListedOrder;
   /** This order's newest `DeliveryPing`, or `null` — only meaningful (and
    *  only fetched by the page) once the order is `"confirmed"`. */
   lastPing?: DeliveryPingView | null;
+  /**
+   * Whether the person looking is the active partner who owns this order's
+   * branch. The page works it out from the session; the Server Actions behind
+   * the buttons prove it again from the database, so this only decides what
+   * is drawn.
+   */
+  canDecide?: boolean;
+  /** Who is looking: the branch the order was sent to, or the courier carrying it. */
+  viewer?: "branch" | "courier";
 }) {
+  const labels = viewer === "courier" ? COURIER_STATUS_LABEL : STATUS_LABEL;
+  // `routeKind` is "brand" (the branch's own fleet) or "agent" (a courier) —
+  // see `DeliveryRouteKind` in `src/lib/order.ts`. This used to compare
+  // against "branch", which is not a route kind, so a branch delivering its
+  // own order was told "Delivery by Toyota own fleet" instead.
+  const branchDelivers = order.routeKind === "brand";
+
   return (
     <li className="glass-card rounded-2xl px-5 py-5 sm:px-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -63,7 +93,7 @@ export default function PartnerOrderCard({
             STATUS_CLASS[order.status] ?? "bg-foreground/10"
           }`}
         >
-          {STATUS_LABEL[order.status] ?? order.status}
+          {labels[order.status] ?? order.status}
         </span>
       </div>
 
@@ -106,13 +136,22 @@ export default function PartnerOrderCard({
       </div>
 
       <p className="mt-4 text-xs text-muted">
-        {order.routeKind === "branch"
+        {branchDelivers && viewer === "branch"
           ? "You are delivering this one yourself."
           : `Delivery by ${order.routeCarrier}${
               order.routeEtaEstimate ? `, ${order.routeEtaEstimate}` : ""
             }.`}
         {order.routeAgentPhone && ` Courier: ${order.routeAgentPhone}.`}
       </p>
+
+      {/* The branch's answer. Only a pending order has a question to answer. */}
+      {order.status === "pending" && canDecide && (
+        <BranchDecisionButtons orderId={order.id} reference={order.reference} />
+      )}
+
+      {order.status === "cancelled" && order.decisionNote && (
+        <p className="mt-4 text-xs text-muted">Reason given: {order.decisionNote}</p>
+      )}
 
       {/* Both controls only apply to a confirmed order — see
           `postDeliveryPing` and `markOrderFulfilledByPartner`'s own notes on

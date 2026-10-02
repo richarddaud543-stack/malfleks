@@ -67,8 +67,10 @@ export async function submitOrder(
 
     // See `notifyOfOrder`: announced, never awaited for correctness. The
     // order is written; the customer's confirmation does not depend on an
-    // email API being reachable.
-    await notifyOfOrder(outcome.value.reference);
+    // email API being reachable. The branch is told only about a signed-in
+    // customer's order -- that is the only kind the form sends here, and the
+    // only kind that can be confirmed, paid for and tracked.
+    await notifyOfOrder(outcome.value.reference, Boolean(session?.uid));
 
     return { ok: true, reference: outcome.value.reference };
   } catch (error) {
@@ -93,12 +95,16 @@ export async function submitOrder(
  * vocabulary is deliberately identical for "not an admin" and "no such
  * order": neither tells a caller anything about whether an order id exists.
  *
- * **`markOrderFulfilled` now has a partner-facing sibling.** Since 6 Sep
- * 2026, the branch or courier actually fulfilling an order may mark it
- * `fulfilled` themselves — see `markOrderFulfilledByPartner` in `./status.ts`
- * and `src/app/actions/partner-orders.ts`. Every other transition here
- * (`confirmOrder`, `cancelOrder`) stays admin-only: this file's own boundary
- * is unchanged, the new one is a separate action with a separate trust check.
+ * **These have partner-facing siblings.** Since 6 Sep 2026 the branch or
+ * courier fulfilling an order may mark it `fulfilled` themselves, and since
+ * 3 Oct 2026 the branch an order was sent to may confirm or decline it while
+ * it is still `pending` — see `src/app/actions/partner-orders.ts`. The admin
+ * keeps every power here; this file's own boundary is unchanged, and the
+ * partner actions are separate endpoints with a separate trust check.
+ *
+ * After each transition commits, the people it concerns are told (see
+ * `src/server/notify/events.ts`): the customer when an order is cancelled or
+ * delivered, as well as the pay link they were already sent on confirmation.
  */
 
 export type OrderTransitionResult =
@@ -159,6 +165,11 @@ export async function cancelOrder(
     const outcome = await applyCancel(orderId, session.uid, reason);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
+    // Committed, and only this call moved it: tell the customer, saying
+    // whether they were charged. Never throws.
+    const { notifyOrderCancelled } = await import("@/server/notify/events");
+    await notifyOrderCancelled(orderId);
+
     revalidatePath("/admin/orders", "layout");
     revalidatePath("/admin");
     return { ok: true };
@@ -179,6 +190,10 @@ export async function markOrderFulfilled(
     const { markOrderFulfilled: applyFulfil } = await import("@/server/orders/status");
     const outcome = await applyFulfil(orderId, session.uid);
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
+
+    // Committed, and only this call moved it: thank the customer. Never throws.
+    const { notifyOrderDelivered } = await import("@/server/notify/events");
+    await notifyOrderDelivered(orderId);
 
     revalidatePath("/admin/orders", "layout");
     revalidatePath("/admin");
@@ -220,28 +235,23 @@ export async function sendPaymentLink(
 }
 
 /**
- * Announce a new order request to MalFleks's own inbox.
+ * Announce a new order request: to MalFleks's own inbox, and to the branch it
+ * was sent to.
  *
  * Its own try/catch, inside the caller's try, so that a mail failure can never
  * be mistaken for an order failure — the customer has a reference and the row
- * is committed by the time this runs.
+ * is committed by the time this runs. `notifyOfNewOrder` already swallows its
+ * own failures; this is the second belt.
  *
- * The email carries the reference and a link, not the customer's name, phone
- * number or address. Those live in `/admin/orders` behind a session; putting
- * them in an inbox copies personal data somewhere with a much longer memory
- * and much weaker access control, for no operational gain.
+ * Neither email carries the customer's name, phone number or address. Those
+ * live in `/admin/orders` and `/partner/orders` behind a session; putting them
+ * in an inbox copies personal data somewhere with a much longer memory and
+ * much weaker access control, for no operational gain.
  */
-async function notifyOfOrder(reference: string): Promise<void> {
+async function notifyOfOrder(reference: string, tellBranch: boolean): Promise<void> {
   try {
-    const { orderRequestMessage, sendNotification } = await import(
-      "@/server/notify/email"
-    );
-    const { resolveSiteUrl } = await import("@/lib/site-url");
-    const { subject, body } = orderRequestMessage({
-      reference,
-      siteUrl: resolveSiteUrl(),
-    });
-    await sendNotification(subject, body);
+    const { notifyOfNewOrder } = await import("@/server/notify/events");
+    await notifyOfNewOrder(reference, { tellBranch });
   } catch (error) {
     // The order is saved. Nothing here is worth failing it for — but a
     // Brevo outage is exactly what the launch checklist's "unproven" flag on

@@ -141,7 +141,8 @@ describe("checkoutForCustomer", () => {
 
     const paid = await checkoutForCustomer(ASHA, o.reference);
     expect(paid).toMatchObject({ state: "paid", checkoutLink: null, paymentReference: "CPPAID1" });
-    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toBe("paid");
+    // Paid and on its way: the saved copy on /account must stay put.
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "paid", keepSavedCopy: true });
   });
 
   it("stops asking ClickPesa for a link after three failures in a row", async () => {
@@ -162,7 +163,13 @@ describe("checkoutForCustomer", () => {
       state: "cancelled",
       cancelReason: "Out of stock",
     });
-    expect((await checkoutStatesForCustomer(ASHA)).has(o.reference)).toBe(false);
+    // The account page used to show nothing at all for a cancelled order.
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toEqual({
+      state: "cancelled",
+      cancelReason: "Out of stock",
+      refundDue: false,
+      keepSavedCopy: false,
+    });
   });
 });
 

@@ -12,7 +12,7 @@
 // interleave the reads before either write, which is what the
 // `updateMany`-with-status-in-WHERE guard exists for. Do not delete them.
 
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { getPrisma } from "@/server/db/client";
 import { createTestDatabase, type TestDatabase } from "@/server/db/test-database";
@@ -70,7 +70,10 @@ function productInput(overrides: Record<string, unknown> = {}) {
     name: `Test Product ${productSeq}`,
     category: "electronics",
     priceTZS: 65_000,
-    image: "/images/products/test.svg",
+    // A real icon key. This fixture used to say "/images/products/test.svg",
+    // which the server accepted only because it was not checking the picture
+    // against the list at all — see "runs the same rules as the form" below.
+    image: "smartphone",
     description: "A product submitted by a branch partner.",
     specs: [
       { key: "Colour", value: "Black" },
@@ -215,6 +218,201 @@ describe("submitProduct — the trust boundary", () => {
     await expect(
       getPrisma().product.count({ where: { id: `sub-${id}` } }),
     ).resolves.toBe(0);
+  });
+});
+
+// The rules in `src/lib/product-listing.ts` used to be enforced only by the
+// form. A Server Action is a public endpoint, so "only by the form" meant
+// "not at all" for anyone who called it directly. Each case below is a value
+// the browser would have refused and the server used to store.
+describe("submitProduct — runs the same rules as the form", () => {
+  const SUPABASE = "https://project.supabase.co";
+  const photo = (name: string) =>
+    `${SUPABASE}/storage/v1/object/public/product-photos/uid-1/${name}.webp`;
+
+  /** Refused, and nothing was written. */
+  async function expectRefused(overrides: Record<string, unknown>, reason: string) {
+    const partnerId = await branchPartner();
+    const before = await getPrisma().productSubmission.count({ where: { partnerId } });
+
+    await expect(
+      submitProduct(partnerId, productInput(overrides) as never),
+    ).resolves.toEqual({ ok: false, reason });
+
+    await expect(
+      getPrisma().productSubmission.count({ where: { partnerId } }),
+    ).resolves.toBe(before);
+  }
+
+  beforeAll(() => {
+    // The bucket prefix is derived from this, exactly as in production. Set
+    // here rather than read from any file: the suite must not depend on what
+    // a developer's environment happens to hold.
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", SUPABASE);
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+  });
+
+  afterAll(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("refuses a description that is too short", async () => {
+    await expectRefused({ description: "Nice phone." }, "invalid-description");
+  });
+
+  it("refuses a description that is too long", async () => {
+    await expectRefused({ description: "x".repeat(801) }, "invalid-description");
+  });
+
+  it("refuses thirteen details", async () => {
+    const specs = Array.from({ length: 13 }, (_, i) => ({
+      key: `Detail ${i + 1}`,
+      value: `Value ${i + 1}`,
+    }));
+    await expectRefused({ specs }, "invalid-specs");
+  });
+
+  it("accepts twelve details, the most a listing may carry", async () => {
+    const partnerId = await branchPartner();
+    const specs = Array.from({ length: 12 }, (_, i) => ({
+      key: `Detail ${i + 1}`,
+      value: `Value ${i + 1}`,
+    }));
+    const outcome = await submitProduct(partnerId, productInput({ specs }));
+    expect(outcome.ok).toBe(true);
+  });
+
+  it("refuses a half-filled detail instead of quietly dropping it", async () => {
+    await expectRefused({ specs: [{ key: "Colour", value: "" }] }, "invalid-specs");
+  });
+
+  it("refuses a picture key that is not one of ours", async () => {
+    await expectRefused({ image: "tractor" }, "invalid-image");
+    // The old fixture value: a path, which `ProductIcon` cannot draw.
+    await expectRefused({ image: "/images/products/test.svg" }, "invalid-image");
+  });
+
+  it("refuses a price past the ceiling", async () => {
+    await expectRefused({ priceTZS: 2_000_000_001 }, "invalid-price");
+  });
+
+  it("accepts a price exactly at the ceiling", async () => {
+    const partnerId = await branchPartner();
+    const outcome = await submitProduct(partnerId, productInput({ priceTZS: 2_000_000_000 }));
+    expect(outcome.ok).toBe(true);
+  });
+
+  it("refuses a photo URL outside our bucket", async () => {
+    await expectRefused({ photoUrls: ["https://evil.example/tracker.gif"] }, "invalid-photo");
+    // One good photo does not carry a bad one in with it.
+    await expectRefused(
+      { photoUrls: [photo("front"), "https://evil.example/tracker.gif"] },
+      "invalid-photo",
+    );
+    // Same host, a different bucket.
+    await expectRefused(
+      { photoUrls: [`${SUPABASE}/storage/v1/object/public/avatars/uid-1/a.webp`] },
+      "invalid-photo",
+    );
+    // The single-photo field from before the gallery is checked the same way.
+    await expectRefused({ photoUrl: "https://evil.example/tracker.gif" }, "invalid-photo");
+  });
+
+  it("refuses a seventh photo", async () => {
+    const photoUrls = Array.from({ length: 7 }, (_, i) => photo(`p${i}`));
+    await expectRefused({ photoUrls }, "invalid-photo");
+  });
+
+  it("stores a known category in its one spelling", async () => {
+    const partnerId = await branchPartner();
+    const outcome = await submitProduct(partnerId, productInput({ category: "  phones " }));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const row = await getPrisma().productSubmission.findUniqueOrThrow({
+      where: { id: outcome.value.id },
+    });
+    expect(row.category).toBe("Phones");
+  });
+
+  it("stores the photos in order, without repeats, with the first as the main photo", async () => {
+    const partnerId = await branchPartner();
+    const outcome = await submitProduct(
+      partnerId,
+      productInput({ photoUrls: [photo("front"), photo("back"), photo("front")] }),
+    );
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const row = await getPrisma().productSubmission.findUniqueOrThrow({
+      where: { id: outcome.value.id },
+    });
+    expect(row.photoUrls).toEqual([photo("front"), photo("back")]);
+    expect(row.photoUrl).toBe(photo("front"));
+  });
+
+  it("stores no photos as an empty list and a null main photo", async () => {
+    const id = await pendingSubmission();
+    const row = await getPrisma().productSubmission.findUniqueOrThrow({ where: { id } });
+    expect(row.photoUrls).toEqual([]);
+    expect(row.photoUrl).toBeNull();
+  });
+
+  it("still accepts the single-photo field an older caller sends", async () => {
+    const partnerId = await branchPartner();
+    const outcome = await submitProduct(partnerId, productInput({ photoUrl: photo("only") }));
+    expect(outcome.ok).toBe(true);
+    if (!outcome.ok) return;
+
+    const row = await getPrisma().productSubmission.findUniqueOrThrow({
+      where: { id: outcome.value.id },
+    });
+    expect(row.photoUrls).toEqual([photo("only")]);
+    expect(row.photoUrl).toBe(photo("only"));
+  });
+
+  it("copies every photo to the live product on publish, main photo first", async () => {
+    const partnerId = await branchPartner();
+    const submitted = await submitProduct(
+      partnerId,
+      productInput({ photoUrls: [photo("front"), photo("back"), photo("box")] }),
+    );
+    if (!submitted.ok) throw new Error(`fixture setup failed: ${submitted.reason}`);
+
+    const published = await publishSubmission(submitted.value.id, "admin-1");
+    expect(published.ok).toBe(true);
+    if (!published.ok) return;
+
+    const product = await getPrisma().product.findUniqueOrThrow({
+      where: { id: published.value.productId },
+    });
+    expect(product.photoUrls).toEqual([photo("front"), photo("back"), photo("box")]);
+    expect(product.photoUrl).toBe(photo("front"));
+
+    // And the shop's own read hands the list on.
+    const { getProductById } = await import("@/server/repositories");
+    const shown = await getProductById(product.id);
+    expect(shown?.photoUrls).toEqual([photo("front"), photo("back"), photo("box")]);
+    expect(shown?.photoUrl).toBe(photo("front"));
+  });
+
+  it("publishes a submission from before the gallery with its one photo as a one-photo list", async () => {
+    const id = await pendingSubmission();
+    // What a row written before the `photoUrls` column looks like.
+    await getPrisma().productSubmission.update({
+      where: { id },
+      data: { photoUrl: photo("legacy"), photoUrls: [] },
+    });
+
+    const published = await publishSubmission(id, "admin-1");
+    expect(published.ok).toBe(true);
+    if (!published.ok) return;
+
+    const product = await getPrisma().product.findUniqueOrThrow({
+      where: { id: published.value.productId },
+    });
+    expect(product.photoUrls).toEqual([photo("legacy")]);
+    expect(product.photoUrl).toBe(photo("legacy"));
   });
 });
 

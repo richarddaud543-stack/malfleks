@@ -44,6 +44,10 @@ export default async function PartnerOrdersPage() {
   // filter returns *every* customer's order, for every branch.
   const orders = scope ? await listOrders(scope).catch(() => null) : [];
   const isCourier = partner.kind === "courier";
+  // Only the active partner who owns the branch gets the confirm/decline
+  // buttons. This decides what is drawn; `confirmOrderAsBranch` and
+  // `declineOrderAsBranch` re-prove it from the database on every press.
+  const canDecide = !isCourier && partner.status === "active" && Boolean(partner.branchId);
 
   // Only a `"confirmed"` order can take a new ping (see `postDeliveryPing`),
   // so that is the only set worth a query for — most of a queue is `pending`
@@ -65,8 +69,15 @@ export default async function PartnerOrdersPage() {
       <p className="mt-3 max-w-prose text-muted">
         {isCourier
           ? "Deliveries a customer routed to you. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, arrange the fee with the branch and the customer directly."
-          : "A customer asking to buy from your branch. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, agree the payment with them directly."}
+          : "A customer asking to buy from your branch. Confirm a new order if you have it at the listed price, or say you can't — the customer is told either way, and asked to pay once you confirm. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery."}
       </p>
+
+      {!isCourier && partner.status !== "active" && (
+        <p className="mt-4 rounded-xl border border-red-600/40 px-4 py-3 text-sm text-muted">
+          Your account is suspended, so you can see these orders but can&apos;t
+          confirm or decline them. MalFleks is handling them for now.
+        </p>
+      )}
 
       {orders === null ? (
         <div className="glass-card mt-10 rounded-2xl border border-red-600/40 px-6 py-5">
@@ -107,6 +118,8 @@ export default async function PartnerOrdersPage() {
               key={order.id}
               order={order}
               lastPing={lastPings.get(order.id) ?? null}
+              canDecide={canDecide}
+              viewer={isCourier ? "courier" : "branch"}
             />
           ))}
         </ul>

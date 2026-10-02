@@ -40,6 +40,10 @@ export type ListProductResult =
         | "missing-field"
         | "invalid-price"
         | "invalid-photo"
+        | "invalid-name"
+        | "invalid-description"
+        | "invalid-image"
+        | "invalid-specs"
         | "rate-limited"
         | "failed";
     };
@@ -49,6 +53,9 @@ export interface ListProductInput {
   category: string;
   description: string;
   image: string;
+  /** Main photo first, at most six. Checked on the server, never trusted. */
+  photoUrls?: string[];
+  /** The single-photo field from before the gallery; see `submitProduct`. */
   photoUrl?: string;
   priceTZS: number;
   inStock?: boolean;
@@ -79,6 +86,7 @@ export async function listProductForPartner(
       category: input.category,
       description: input.description,
       image: input.image,
+      photoUrls: input.photoUrls,
       photoUrl: input.photoUrl,
       priceTZS: input.priceTZS,
       inStock: input.inStock,

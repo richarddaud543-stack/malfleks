@@ -42,9 +42,6 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <span className="rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted">
-            EN
-          </span>
           <AuthMenu />
           <Link href="/locator" className="btn-pill btn-ink">
             Find a branch
@@ -54,9 +51,23 @@ export default function Navbar() {
           </Link>
         </div>
 
+        {/* Search is what most people came to do, so on a phone it stays in
+            view beside the menu button instead of one tap behind it. */}
+        <Link
+          href="/search"
+          onClick={() => setOpen(false)}
+          className="ml-auto inline-flex min-h-11 items-center gap-1.5 rounded-full px-3 text-sm font-medium text-foreground/80 hover:text-foreground lg:hidden"
+        >
+          <svg aria-hidden="true" viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+            <circle cx="9" cy="9" r="5.5" />
+            <path d="m13.5 13.5 3.5 3.5" />
+          </svg>
+          Search
+        </Link>
+
         <button
           onClick={() => setOpen((v) => !v)}
-          className="flex h-9 w-9 flex-col items-center justify-center gap-1.5 lg:hidden"
+          className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 lg:hidden"
           aria-label="Toggle menu"
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -91,7 +102,7 @@ export default function Navbar() {
                   key={l.href}
                   href={l.href}
                   onClick={() => setOpen(false)}
-                  className="rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-surface hover:text-foreground"
+                  className="flex min-h-11 items-center rounded-xl px-3 py-2.5 text-sm font-medium text-foreground/80 hover:bg-surface hover:text-foreground"
                 >
                   {l.label}
                 </Link>

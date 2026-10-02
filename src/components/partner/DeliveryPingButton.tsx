@@ -109,7 +109,7 @@ export default function DeliveryPingButton({
           value={note}
           onChange={(e) => setNote(e.target.value)}
           disabled={busy}
-          className="rounded-full border border-border bg-background px-3 py-1.5 text-xs"
+          className="min-h-11 rounded-full border border-border bg-background px-3 py-1.5 text-sm"
         >
           {NOTES.map((label) => (
             <option key={label} value={label}>
@@ -121,7 +121,7 @@ export default function DeliveryPingButton({
           type="button"
           onClick={handleReport}
           disabled={busy}
-          className="btn-pill btn-ink px-4 py-1.5 text-xs disabled:opacity-60"
+          className="btn-pill btn-ink px-4"
         >
           {status === "locating"
             ? "Finding you…"

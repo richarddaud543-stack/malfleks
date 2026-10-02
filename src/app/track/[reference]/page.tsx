@@ -55,7 +55,7 @@ export default async function TrackOrderPage({
   // attacker something a wrong reference should not.
   if (!order) notFound();
 
-  const payState = (await checkoutStatesForCustomer(session.uid).catch(() => null))?.get(order.reference) ?? null;
+  const payState = (await checkoutStatesForCustomer(session.uid).catch(() => null))?.get(order.reference)?.state ?? null;
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">

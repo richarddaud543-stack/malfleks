@@ -30,7 +30,7 @@ export default function Error({
         </button>
         <Link
           href="/brands"
-          className="btn-pill border border-border px-7 py-3 text-sm font-medium text-foreground transition-colors hover:border-foreground/30"
+          className="btn-pill btn-outline px-7 py-3"
         >
           Browse all brands
         </Link>
