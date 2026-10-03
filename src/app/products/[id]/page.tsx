@@ -15,6 +15,7 @@ import {
   getBranchById,
 } from "@/server/repositories";
 import ProductGallery from "@/components/product/ProductGallery";
+import SafePay from "@/components/trust/SafePay";
 import ProductShowcase from "@/components/product/ProductShowcase";
 import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import ScrollReveal from "@/components/motion/ScrollReveal";
@@ -268,6 +269,9 @@ export default async function ProductPage({
                 {/* Most branch names already end in their city. */}
                 {branch.name.includes(branch.city) ? "" : `, ${branch.city}`}
               </p>
+              {/* The reason to buy here rather than by sending money to a
+                  seller's number — said before the customer commits. */}
+              <SafePay className="mt-6" />
             </div>
           )}
         </ScrollReveal>

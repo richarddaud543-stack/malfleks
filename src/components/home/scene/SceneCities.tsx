@@ -6,7 +6,7 @@ import type { Branch, DeliveryAgent } from "@/data";
 import { usePrefersReducedMotion, useSceneReveal } from "./useSceneTimeline";
 
 /**
- * Scene 04 — the four cities.
+ * Scene 05 — the four cities.
  *
  * MalFleks is a Tanzanian marketplace and the old home page never said so past
  * the first paragraph. This scene is the place claim: four cities, what is
@@ -69,7 +69,7 @@ export default function SceneCities({
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
             <p data-reveal className="scene-eyebrow">
-              04 — Where
+              05 — Where
             </p>
             <h2 data-reveal className="scene-display-sm mt-5 max-w-2xl">
               {cityCountWord} {cities.length === 1 ? "city" : "cities"},{" "}

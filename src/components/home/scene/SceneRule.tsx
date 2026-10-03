@@ -5,7 +5,7 @@ import type { Branch } from "@/data";
 import { usePrefersReducedMotion, useSceneReveal } from "./useSceneTimeline";
 
 /**
- * Scene 02 — the rule.
+ * Scene 03 — the rule.
  *
  * This is the scene the whole redesign exists for. MalFleks's product is not the
  * catalogue, it is one boolean on a branch: `deliveryOffered`. Four lines of
@@ -35,7 +35,7 @@ export default function SceneRule({ branches }: { branches: Branch[] }) {
     <section ref={scope} className="relative px-5 py-28 sm:py-36">
       <div className="mx-auto max-w-6xl">
         <p data-reveal className="scene-eyebrow">
-          02 — The rule
+          03 — The rule
         </p>
         <h2 data-reveal className="scene-display-sm mt-5 max-w-3xl">
           One question, asked at{" "}

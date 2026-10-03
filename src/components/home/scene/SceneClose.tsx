@@ -5,7 +5,7 @@ import { useRef } from "react";
 import { usePrefersReducedMotion, useSceneReveal } from "./useSceneTimeline";
 
 /**
- * Scene 05 — the close.
+ * Scene 06 — the close.
  *
  * The quiet moment the research asks for: after the rail's pinned horizontal
  * travel, the page stops moving and asks for one thing. Two links, no motion
@@ -29,7 +29,7 @@ export default function SceneClose() {
       />
       <div className="relative mx-auto max-w-3xl text-center">
         <p data-reveal className="scene-eyebrow">
-          05 — Start
+          06 — Start
         </p>
         <h2 data-reveal className="scene-display-sm mt-6">
           Find it, then find out{" "}

@@ -14,7 +14,7 @@ import { usePrefersReducedMotion } from "./useSceneTimeline";
 gsap.registerPlugin(ScrollTrigger, useGSAP);
 
 /**
- * Scene 03 — the catalogue, as a scroll-driven rail.
+ * Scene 04 — the catalogue, as a scroll-driven rail.
  *
  * The section pins and vertical scroll drives the rail sideways. This is the
  * one genuinely scroll-*linked* effect on the page, and it is here rather than
@@ -80,7 +80,7 @@ export default function SceneRail({ items }: { items: FeaturedItem[] }) {
       aria-labelledby="scene-rail-heading"
     >
       <div className="mx-auto max-w-6xl px-5">
-        <p className="scene-eyebrow">03 — The catalogue</p>
+        <p className="scene-eyebrow">04 — The catalogue</p>
         <h2 id="scene-rail-heading" className="scene-display-sm mt-5 max-w-3xl">
           One pick from <em className="scene-serif">every</em> brand
         </h2>

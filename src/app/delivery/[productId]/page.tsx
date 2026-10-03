@@ -9,6 +9,7 @@ import {
   getBranchById,
 } from "@/server/repositories";
 import OrderRequestForm from "@/components/order/OrderRequestForm";
+import SafePay from "@/components/trust/SafePay";
 import ScrollReveal from "@/components/motion/ScrollReveal";
 import { describeBranchLocation, formatTZS } from "@/lib/format";
 import {
@@ -153,12 +154,15 @@ export default async function DeliveryPage({
           </Link>
         </div>
       ) : (
-        <OrderRequestForm
-          product={product}
-          brand={brand}
-          branch={branch}
-          route={route}
-        />
+        <>
+          <SafePay compact className="mb-8" />
+          <OrderRequestForm
+            product={product}
+            brand={brand}
+            branch={branch}
+            route={route}
+          />
+        </>
       )}
     </div>
   );

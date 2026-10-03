@@ -70,9 +70,11 @@ export default function OrderSummary({
       </dl>
 
       <p className="mt-4 text-xs text-muted">
-        Delivery is arranged directly with{" "}
-        {brandDelivered ? "the branch" : "the agent"} and is not included in
-        this total.
+        {brandDelivered
+          ? "The branch delivers this itself."
+          : "The courier's delivery fee is added at checkout."}{" "}
+        You pay the full amount to MalFleks, so there is nothing to pay at the
+        door.
       </p>
     </div>
   );

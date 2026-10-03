@@ -1,5 +1,6 @@
 import BrandMarquee from "@/components/home/BrandMarquee";
 import SceneOverture from "@/components/home/scene/SceneOverture";
+import ScenePromise from "@/components/home/scene/ScenePromise";
 import SceneRule from "@/components/home/scene/SceneRule";
 import SceneRail from "@/components/home/scene/SceneRail";
 import SceneCities from "@/components/home/scene/SceneCities";
@@ -23,10 +24,11 @@ import {
  * explicitly *not* effect count. So the page argues one idea, in order:
  *
  *   01 Overture  — what MalFleks is, in the founder's own words
- *   02 The rule  — `deliveryOffered`, the boolean the whole product turns on
- *   03 Catalogue — a scroll-linked rail; the only pinned effect on the page
- *   04 Where     — four cities, every number derived from the real data
- *   05 Close     — the quiet moment, and one ask
+ *   02 Promise   — the money is held until the order arrives (3 Oct 2026)
+ *   03 The rule  — `deliveryOffered`, the boolean the whole product turns on
+ *   04 Catalogue — a scroll-linked rail; the only pinned effect on the page
+ *   05 Where     — four cities, every number derived from the real data
+ *   06 Close     — the quiet moment, and one ask
  *
  * `data-scene="night"` scopes the inverted palette to this page alone (see
  * globals.css). Every other route keeps the light system whose contrast was
@@ -72,6 +74,7 @@ export default async function Home() {
         <BrandMarquee brands={brands} />
       </div>
 
+      <ScenePromise />
       <SceneRule branches={branches} />
       <SceneRail items={featured} />
       <SceneCities branches={branches} agents={agents} />

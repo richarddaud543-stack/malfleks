@@ -11,9 +11,11 @@ export default function Footer() {
               MalFleks<span className="text-accent-2">.</span>
             </div>
             <p className="mt-3 max-w-xs text-sm text-muted">
-              One place to browse authorized brand branches across Tanzania —
-              and get every order delivered, whether the brand handles it or
-              a local courier does.
+              Shop from brand branches across Tanzania and pay safely:
+              MalFleks holds your money until your order arrives.
+              <span lang="sw" className="mt-1 block">
+                Pesa yako inalindwa mpaka mzigo ufike.
+              </span>
             </p>
           </div>
 

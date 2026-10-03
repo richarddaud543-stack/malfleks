@@ -109,8 +109,8 @@ export default function SceneOverture({
             style={{ color: "var(--scene-muted)" }}
           >
             The shops and the couriers already exist, out in {cityList}.
-            MalFleks puts them behind one window — and when you order, it
-            routes you to the branch that actually has it.
+            MalFleks puts them behind one window, and holds your payment
+            until your order reaches you.
           </p>
 
           <div className="flex flex-wrap items-start gap-x-10 gap-y-6 lg:justify-end">

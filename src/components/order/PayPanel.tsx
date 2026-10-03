@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import SafePay from "@/components/trust/SafePay";
 import { useEffect, useState, useTransition } from "react";
 
 import { checkoutStatusAction, checkPaymentNowAction } from "@/app/actions/checkout";
@@ -170,6 +171,7 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
         )}
       </div>
 
+      <div className="space-y-4">
       <aside className="glass-card rounded-2xl p-6 text-sm" aria-label="Order summary">
         <h2 className="font-display text-lg font-medium">Your order</h2>
         <dl className="mt-4 space-y-3">
@@ -212,6 +214,8 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
           </div>
         </dl>
       </aside>
+      {view.state !== "cancelled" && <SafePay compact />}
+      </div>
     </div>
   );
 }
