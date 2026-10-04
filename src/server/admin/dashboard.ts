@@ -55,16 +55,19 @@ export interface NavCounts {
   payments: number;
   /** Payees owed + payouts not yet sent + refunds not yet recorded. */
   payouts: number;
+  /** Questions agents are waiting for the owner to answer. */
+  city: number;
 }
 
 export async function getNavCounts(): Promise<NavCounts> {
   const db = getPrisma();
-  const [orders, applications, submissions, payments, work] = await Promise.all([
+  const [orders, applications, submissions, payments, work, city] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.partnerApplication.count({ where: { status: "pending" } }),
     db.productSubmission.count({ where: { status: "pending" } }),
     db.orderPayment.count({ where: { status: "pending" } }),
     moneyWork(db),
+    db.agentHelpRequest.count({ where: { status: "open" } }),
   ]);
   return {
     orders,
@@ -72,6 +75,7 @@ export async function getNavCounts(): Promise<NavCounts> {
     submissions,
     payments,
     payouts: work.payeesOwed + work.pendingBatches + work.refundsDue.length,
+    city,
   };
 }
 

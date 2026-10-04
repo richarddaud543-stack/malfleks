@@ -1,4 +1,5 @@
 import { logServerError } from "@/server/error-log";
+import { runAgent } from "@/agents/runtime";
 import { runStuckOrderSafetyNet } from "@/server/orders/stuck";
 import { reconcileDue } from "@/server/payments/reconcile";
 
@@ -30,6 +31,14 @@ export const dynamic = "force-dynamic";
  * prerendered shop generates almost none -- which is how production was found
  * paused on 1 Oct 2026, while the cached catalogue kept looking healthy. A
  * daily read is enough to keep it awake.
+ *
+ * ## The third job: the night watchman
+ *
+ * The city's agents need a clock, and the Hobby plan allows one scheduled job
+ * a day. Rather than spend it twice, this route wakes the watchman after the
+ * payment work -- same harness, same archive, `schedule` recorded as the
+ * trigger. It cannot fail this route either: `runAgent` records its own
+ * failures and never throws.
  *
  * ## The second job: orders that have stopped moving
  *
@@ -66,8 +75,12 @@ export async function GET(request: Request): Promise<Response> {
   // its own failure and reports `null`.
   const stuck = await runStuckOrderSafetyNet();
 
+  // The city's one scheduled resident. Never throws; a crashed shift is a
+  // recorded `error` the city page shows.
+  const watch = await runAgent("watchman", "schedule");
+
   if (reconcileFailed) {
-    return Response.json({ ok: false, stuckOrders: stuck.digest, branchReminders: stuck.branchReminders }, { status: 500 });
+    return Response.json({ ok: false, stuckOrders: stuck.digest, branchReminders: stuck.branchReminders, watchman: watch.ok ? watch.run.outcome : "unknown-agent" }, { status: 500 });
   }
   return Response.json({
     ok: true,
@@ -76,6 +89,7 @@ export async function GET(request: Request): Promise<Response> {
     results: results.map((r) => ({ ref: r.providerRef, outcome: r.outcome, clickpesa: r.providerStatus })),
     stuckOrders: stuck.digest,
     branchReminders: stuck.branchReminders,
+    watchman: watch.ok ? { outcome: watch.run.outcome, summary: watch.run.summary } : { outcome: "unknown-agent" },
     ...(ready ? {} : { skipped: "ClickPesa credentials not set on this deployment" }),
   });
 }

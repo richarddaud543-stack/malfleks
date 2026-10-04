@@ -897,3 +897,123 @@ model SavedOrderRequest {
   @@index([customerId, requestedAt])
   @@index([customerId, reference])
 }
+
+// ---------------------------------------------------------------------------
+// The agents' city (4 Oct 2026)
+//
+// MalFleks's AI workforce, kept in MalFleks's own database. The roster -- who
+// the agents are and what each may read and change -- is code
+// (`src/agents/registry.ts`), because a job description is something to
+// review in a pull request, not to edit in a table. What is stored here is
+// what changes while the city runs: each agent's rank, every shift it worked,
+// what it has been taught, and what it has asked.
+//
+// Nothing in these tables is shown to a customer, and no agent can change a
+// row outside them.
+// ---------------------------------------------------------------------------
+
+// One row per agent that has ever had its rank or pause changed, plus the row
+// `"*"`, which is the whole city's switch. No row means the defaults.
+model AgentState {
+  /// The agent's key in the registry, or `"*"` for the city.
+  agentKey String @id
+
+  /// student | trainee | employed, or null for "whatever the roster says".
+  /// Ignored on the `"*"` row.
+  ///
+  /// Null rather than a default, because a row here is created by *any* change
+  /// -- pausing included -- and a defaulted rank would then be an assertion
+  /// nobody made: pausing the watchman once would quietly demote it from
+  /// employed to student, and it would stay demoted after being let work again.
+  rank String?
+
+  /// A paused agent is skipped (and the skip is recorded). On `"*"`: everyone.
+  paused Boolean @default(false)
+
+  updatedAt DateTime @updatedAt
+}
+
+// One shift. Append-only: a run is recorded when it finds nothing, when it is
+// skipped, and when it crashes -- a gap in this table must always mean "it
+// did not run", never "nothing was wrong".
+model AgentRun {
+  id String @id @default(cuid())
+
+  agentKey String
+
+  /// schedule | manual | event
+  trigger String
+
+  /// ok | attention | error | skipped
+  outcome String
+
+  /// One sentence a person can read on a phone.
+  summary String
+
+  /// `[{ level: "info" | "attention", text, href? }]`
+  findings Json
+
+  /// Flat numbers and flags the next shift compares itself against.
+  metrics Json
+
+  startedAt  DateTime
+  finishedAt DateTime
+
+  @@index([agentKey, startedAt])
+  @@index([startedAt])
+}
+
+// Something an agent has been taught. The handbook every agent starts with is
+// code (`src/agents/handbook.ts`); these are the additions: what the owner
+// wrote in the school, and every answer given at the help desk.
+model AgentLesson {
+  id String @id @default(cuid())
+
+  /// Null: every agent learns it.
+  agentKey String?
+
+  title String
+  body  String
+
+  /// owner (written in the school) | answer (given at the help desk)
+  source String
+
+  /// The question this answers, when `source` is `answer`.
+  helpRequestId String? @unique
+
+  /// A retired lesson is kept, so the record of what an agent once believed
+  /// survives, but it is no longer taught.
+  active Boolean @default(true)
+
+  createdAt DateTime @default(now())
+
+  @@index([active, agentKey])
+}
+
+// A question from an agent to the owner.
+model AgentHelpRequest {
+  id String @id @default(cuid())
+
+  agentKey String
+
+  /// A short stable name for what is being asked. Unique per agent: the same
+  /// question is asked once, ever. Answered, it becomes a lesson; dismissed,
+  /// it stays dismissed.
+  topic String
+
+  question String
+
+  /// What the agent was looking at when it asked.
+  context String?
+
+  /// open | answered | dismissed
+  status String @default("open")
+
+  answer     String?
+  answeredAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([agentKey, topic])
+  @@index([status, createdAt])
+}
