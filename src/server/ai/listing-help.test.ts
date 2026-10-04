@@ -1,7 +1,17 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { buildDraftFacts, cleanPhotoBackground, draftDescription, DRAFT_INSTRUCTIONS, DRAFT_MAX_CHARS, listingAiFeatures, tidyDraft } from "./listing-help";
+import {
+  buildDraftFacts,
+  CLEAN_INSTRUCTIONS,
+  cleanPhotoBackground,
+  draftDescription,
+  DRAFT_INSTRUCTIONS,
+  DRAFT_MAX_CHARS,
+  listingAiFeatures,
+  SAME_ITEM_INSTRUCTIONS,
+  tidyDraft,
+} from "./listing-help";
 
 const SUPABASE = "https://proj.supabase.co";
 const PHOTO = `${SUPABASE}/storage/v1/object/public/product-photos/uid-1/a.webp`;
@@ -15,6 +25,9 @@ beforeEach(() => {
   vi.stubEnv("ANTHROPIC_API_KEY", "");
   vi.stubEnv("PHOTOROOM_API_KEY", "");
   vi.stubEnv("AI_LISTING_MODEL", "");
+  vi.stubEnv("GEMINI_API_KEY", "");
+  vi.stubEnv("AI_GEMINI_TEXT_MODEL", "");
+  vi.stubEnv("AI_GEMINI_IMAGE_MODEL", "");
 });
 
 afterEach(() => {
@@ -36,6 +49,11 @@ describe("listingAiFeatures", () => {
     vi.stubEnv("ANTHROPIC_API_KEY", "k");
     expect(listingAiFeatures()).toEqual({ describe: true, cleanPhoto: false });
     vi.stubEnv("PHOTOROOM_API_KEY", "k");
+    expect(listingAiFeatures()).toEqual({ describe: true, cleanPhoto: true });
+  });
+
+  it("the Google key alone switches on both", () => {
+    vi.stubEnv("GEMINI_API_KEY", "g");
     expect(listingAiFeatures()).toEqual({ describe: true, cleanPhoto: true });
   });
 });
@@ -139,5 +157,132 @@ describe("cleanPhotoBackground", () => {
       .mockResolvedValueOnce(new Response(new Blob([new Uint8Array([1])]), { status: 200 }))
       .mockResolvedValueOnce(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     await expect(cleanPhotoBackground(PHOTO)).resolves.toEqual({ ok: false, reason: "provider-failed" });
+  });
+});
+
+/* ---------- the Google key ---------- */
+
+const GEMINI_TEXT = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent";
+const GEMINI_IMAGE = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-image:generateContent";
+
+const photoResponse = (type = "image/webp") => new Response(new Blob([new Uint8Array([1, 2, 3])], { type }), { status: 200, headers: { "content-type": type } });
+const geminiText = (text: string) => new Response(JSON.stringify({ candidates: [{ content: { parts: [{ text }] } }] }), { status: 200 });
+const geminiImage = (mimeType = "image/png") =>
+  new Response(JSON.stringify({ candidates: [{ content: { parts: [{ inlineData: { mimeType, data: Buffer.from([7, 7, 7]).toString("base64") } }] } }] }), { status: 200 });
+
+describe("draftDescription with the Google key", () => {
+  it("sends the same instructions and facts, the photo inline, and the key in a header only", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    fetchMock.mockResolvedValueOnce(photoResponse()).mockResolvedValueOnce(geminiText(" Sealed black wireless earbuds with a one year shop warranty. "));
+
+    await expect(draftDescription({ ...INPUT, photoUrl: PHOTO })).resolves.toEqual({
+      ok: true,
+      description: "Sealed black wireless earbuds with a one year shop warranty.",
+    });
+
+    expect(fetchMock.mock.calls[0][0]).toBe(PHOTO);
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe(GEMINI_TEXT);
+    expect(url).not.toContain("g-key");
+    expect(init.headers["x-goog-api-key"]).toBe("g-key");
+    const parts = JSON.parse(init.body).contents[0].parts;
+    expect(parts[0].inline_data).toEqual({ mime_type: "image/webp", data: Buffer.from([1, 2, 3]).toString("base64") });
+    expect(parts[1].text).toContain("Use ONLY the facts");
+    expect(parts[1].text).toContain("One year shop warranty");
+  });
+
+  it("is preferred over the older key, and still writes when the photo cannot be read", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    vi.stubEnv("ANTHROPIC_API_KEY", "a-key");
+    fetchMock.mockResolvedValueOnce(new Response("gone", { status: 404 })).mockResolvedValueOnce(geminiText("A sealed pair of black wireless earbuds."));
+
+    await expect(draftDescription({ ...INPUT, photoUrl: PHOTO })).resolves.toEqual({ ok: true, description: "A sealed pair of black wireless earbuds." });
+    const [url, init] = fetchMock.mock.calls[1];
+    expect(url).toBe(GEMINI_TEXT);
+    expect(JSON.parse(init.body).contents[0].parts).toHaveLength(1);
+  });
+
+  it("reports a refusal, an empty answer or a network error as a failure", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    fetchMock.mockResolvedValueOnce(new Response("quota", { status: 429 }));
+    await expect(draftDescription(INPUT)).resolves.toEqual({ ok: false, reason: "provider-failed" });
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ candidates: [] }), { status: 200 }));
+    await expect(draftDescription(INPUT)).resolves.toEqual({ ok: false, reason: "provider-failed" });
+    fetchMock.mockRejectedValueOnce(new Error("network"));
+    await expect(draftDescription(INPUT)).resolves.toEqual({ ok: false, reason: "provider-failed" });
+  });
+});
+
+describe("cleanPhotoBackground with the Google key", () => {
+  it("tells the image model to leave the item alone", () => {
+    expect(CLEAN_INSTRUCTIONS).toMatch(/only the background changed/);
+    expect(CLEAN_INSTRUCTIONS).toMatch(/Do NOT change the product in any way/);
+    expect(CLEAN_INSTRUCTIONS).toMatch(/no text, no price/);
+    expect(SAME_ITEM_INSTRUCTIONS).toMatch(/you are not sure, answer false/);
+  });
+
+  it("still refuses a URL that is not one of this project's product photos", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    await expect(cleanPhotoBackground("https://evil.example/x.jpg")).resolves.toEqual({ ok: false, reason: "invalid-photo" });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("hands back the picture only after a second call confirms the item is unchanged", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    fetchMock
+      .mockResolvedValueOnce(photoResponse())
+      .mockResolvedValueOnce(geminiImage())
+      .mockResolvedValueOnce(geminiText('{"same_item": true, "difference": ""}'));
+
+    await expect(cleanPhotoBackground(PHOTO)).resolves.toEqual({ ok: true, base64: Buffer.from([7, 7, 7]).toString("base64"), contentType: "image/png" });
+
+    const [imageUrl, imageInit] = fetchMock.mock.calls[1];
+    expect(imageUrl).toBe(GEMINI_IMAGE);
+    const imageBody = JSON.parse(imageInit.body);
+    expect(imageBody.generationConfig.responseModalities).toEqual(["IMAGE"]);
+    expect(imageBody.contents[0].parts[1].text).toBe(CLEAN_INSTRUCTIONS);
+
+    const [checkUrl, checkInit] = fetchMock.mock.calls[2];
+    expect(checkUrl).toBe(GEMINI_TEXT);
+    const checkParts = JSON.parse(checkInit.body).contents[0].parts;
+    expect(checkParts[0].inline_data.data).toBe(Buffer.from([1, 2, 3]).toString("base64"));
+    expect(checkParts[1].inline_data.data).toBe(Buffer.from([7, 7, 7]).toString("base64"));
+  });
+
+  it("throws the picture away when the check says no, is unreadable, or fails", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    const verdicts = [
+      () => geminiText('{"same_item": false, "difference": "logo missing"}'),
+      () => geminiText('{"same_item": "true"}'),
+      () => geminiText("Yes, they look the same."),
+      () => new Response("overloaded", { status: 503 }),
+    ];
+    for (const verdict of verdicts) {
+      fetchMock.mockReset();
+      fetchMock.mockResolvedValueOnce(photoResponse()).mockResolvedValueOnce(geminiImage()).mockResolvedValueOnce(verdict());
+      await expect(cleanPhotoBackground(PHOTO)).resolves.toEqual({ ok: false, reason: "not-faithful" });
+    }
+  });
+
+  it("fails cleanly when no picture comes back, or the original is not an image", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    fetchMock.mockResolvedValueOnce(photoResponse()).mockResolvedValueOnce(geminiText("I cannot edit this image."));
+    await expect(cleanPhotoBackground(PHOTO)).resolves.toEqual({ ok: false, reason: "provider-failed" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    fetchMock.mockReset();
+    fetchMock.mockResolvedValueOnce(new Response("<html>", { status: 200, headers: { "content-type": "text/html" } }));
+    await expect(cleanPhotoBackground(PHOTO)).resolves.toEqual({ ok: false, reason: "invalid-photo" });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the cut-out provider instead when its key is present", async () => {
+    vi.stubEnv("GEMINI_API_KEY", "g-key");
+    vi.stubEnv("PHOTOROOM_API_KEY", "p-key");
+    fetchMock
+      .mockResolvedValueOnce(new Response(new Blob([new Uint8Array([1])], { type: "image/webp" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([9]), { status: 200, headers: { "content-type": "image/jpeg" } }));
+    await expect(cleanPhotoBackground(PHOTO)).resolves.toMatchObject({ ok: true, contentType: "image/jpeg" });
+    expect(fetchMock.mock.calls[1][0]).toBe("https://sdk.photoroom.com/v1/segment");
   });
 });

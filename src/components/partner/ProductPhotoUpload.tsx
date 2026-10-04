@@ -30,6 +30,7 @@ const CLEAN_MESSAGES: Record<Exclude<CleanPhotoResult, { ok: true }>["reason"], 
   "rate-limited": "That's a lot of photos in one hour. Try again later.",
   "invalid-photo": "We couldn't read that photo. Remove it and add it again.",
   "provider-failed": "We couldn't clean that photo just now. Your original is unchanged.",
+  "not-faithful": "The cleaned copy changed how the item looks, so we did not use it. Your original is unchanged.",
 };
 
 /**
@@ -331,7 +332,8 @@ export default function ProductPhotoUpload({
         return;
       }
       const bytes = Uint8Array.from(atob(result.base64), (char) => char.charCodeAt(0));
-      const file = new File([bytes], "cleaned-background.jpg", { type: result.contentType });
+      const extension = result.contentType === "image/png" ? "png" : result.contentType === "image/webp" ? "webp" : "jpg";
+      const file = new File([bytes], `cleaned-background.${extension}`, { type: result.contentType });
       const [cleanedId] = await addFiles([file]);
       const added = itemsRef.current.find((entry) => entry.id === cleanedId);
       if (wasMain && added?.status === "done") makeMain(added.id);

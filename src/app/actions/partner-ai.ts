@@ -75,8 +75,8 @@ export async function draftDescriptionAction(input: {
 }
 
 export type CleanPhotoResult =
-  | { ok: true; base64: string; contentType: "image/jpeg" }
-  | { ok: false; reason: Blocker | "invalid-photo" | "provider-failed" };
+  | { ok: true; base64: string; contentType: "image/jpeg" | "image/png" | "image/webp" }
+  | { ok: false; reason: Blocker | "invalid-photo" | "provider-failed" | "not-faithful" };
 
 export async function cleanPhotoBackgroundAction(photoUrl: string): Promise<CleanPhotoResult> {
   let uid: string | undefined;
@@ -95,6 +95,8 @@ export async function cleanPhotoBackgroundAction(photoUrl: string): Promise<Clea
     if (outcome.ok) return outcome;
     if (outcome.reason === "not-configured") return { ok: false, reason: "unavailable" };
     if (outcome.reason === "provider-failed") await logServerError("ai-clean-photo", new Error("The photo provider did not return a usable image"), who.uid);
+    // Not an error, but worth counting: how often the model changes the item is what decides whether it stays switched on.
+    if (outcome.reason === "not-faithful") await logServerError("ai-clean-photo", new Error("The cleaned photo was rejected: the item did not match the original"), who.uid);
     return { ok: false, reason: outcome.reason };
   } catch (error) {
     await logServerError("ai-clean-photo", error, uid);
