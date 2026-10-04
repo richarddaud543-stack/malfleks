@@ -334,10 +334,20 @@ describe("the OrderEvent history", () => {
   });
 });
 
+/** Records the customer's money as held for this order, the way `capturePayment` leaves it. */
+let paymentSeq = 0;
+async function markPaid(orderId: string) {
+  paymentSeq += 1;
+  await getPrisma().orderPayment.create({
+    data: { orderId, providerRef: `TESTPAID${paymentSeq}`, provider: "clickpesa", amountTZS: 68_000_000, status: "captured", capturedAt: new Date() },
+  });
+}
+
 describe("markOrderFulfilledByPartner — the one transition a partner may make", () => {
-  it("marks a confirmed order fulfilled when the branch scope matches", async () => {
+  it("marks a confirmed, paid order fulfilled when the branch scope matches", async () => {
     const orderId = await pendingOrder(); // toyota-dar branch
     await confirmOrder(orderId, "admin-1");
+    await markPaid(orderId);
 
     const outcome = await markOrderFulfilledByPartner(
       orderId,
@@ -368,7 +378,44 @@ describe("markOrderFulfilledByPartner — the one transition a partner may make"
     expect(row.decidedBy).toBe("admin-1");
   });
 
-  it("refuses a still-pending order — admin has not confirmed it yet", async () => {
+  // The promise on the site is that the shop is paid after delivery, which is
+  // only true if nothing is delivered before it is paid for. Until 4 Oct 2026
+  // the partner page offered "Mark delivered" on exactly this order.
+  it("refuses a confirmed order the customer has not paid for, and leaves it confirmed", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+
+    const outcome = await markOrderFulfilledByPartner(
+      orderId,
+      { branchId: "toyota-dar", agentId: null },
+      "uid-partner-fulfil",
+    );
+    expect(outcome).toEqual({ ok: false, reason: "not-paid" });
+
+    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
+    expect(row.status).toBe("confirmed");
+    expect(row.decidedBy).toBe("admin-1");
+  });
+
+  it("does not count a payment that was only attempted", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await getPrisma().orderPayment.create({
+      data: { orderId, providerRef: "TESTOPEN1", provider: "clickpesa", amountTZS: 68_000_000, status: "pending", checkoutLink: "https://checkout.clickpesa.com/X" },
+    });
+
+    await expect(
+      markOrderFulfilledByPartner(orderId, { branchId: "toyota-dar", agentId: null }, "uid-partner-fulfil"),
+    ).resolves.toEqual({ ok: false, reason: "not-paid" });
+  });
+
+  it("still lets an admin mark an unpaid order fulfilled, for one settled outside MalFleks", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await expect(markOrderFulfilled(orderId, "admin-1")).resolves.toEqual({ ok: true });
+  });
+
+  it("refuses a still-pending order — nobody has paid for it or confirmed it", async () => {
     const orderId = await pendingOrder();
 
     const outcome = await markOrderFulfilledByPartner(
@@ -376,7 +423,17 @@ describe("markOrderFulfilledByPartner — the one transition a partner may make"
       { branchId: "toyota-dar", agentId: null },
       "uid-partner-fulfil",
     );
-    expect(outcome).toEqual({ ok: false, reason: "invalid-transition" });
+    expect(outcome).toEqual({ ok: false, reason: "not-paid" });
+  });
+
+  it("cannot mark the same order delivered twice", async () => {
+    const orderId = await pendingOrder();
+    await confirmOrder(orderId, "admin-1");
+    await markPaid(orderId);
+    const scope = { branchId: "toyota-dar", agentId: null };
+
+    await expect(markOrderFulfilledByPartner(orderId, scope, "uid-partner-fulfil")).resolves.toEqual({ ok: true });
+    await expect(markOrderFulfilledByPartner(orderId, scope, "uid-partner-fulfil")).resolves.toEqual({ ok: false, reason: "invalid-transition" });
   });
 
   it("refuses a scope with neither branchId nor agentId", async () => {
@@ -394,6 +451,7 @@ describe("markOrderFulfilledByPartner — the one transition a partner may make"
   it("appends an OrderEvent stamped with the partner's own uid, not an admin's", async () => {
     const orderId = await pendingOrder();
     await confirmOrder(orderId, "admin-1");
+    await markPaid(orderId);
     await markOrderFulfilledByPartner(
       orderId,
       { branchId: "toyota-dar", agentId: null },

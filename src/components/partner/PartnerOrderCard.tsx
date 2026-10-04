@@ -1,4 +1,5 @@
 import { formatTZS } from "@/lib/format";
+import { displayPhone } from "@/lib/order";
 import type { ListedOrder } from "@/server/orders/list-orders";
 import type { DeliveryPingView } from "@/server/orders/tracking";
 import BranchDecisionButtons from "./BranchDecisionButtons";
@@ -26,7 +27,9 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
  *
  * - On a paid, `confirmed` order the branch also gets "Can't fulfil": the
  *   order is cancelled and MalFleks refunds the customer.
- * - An order the customer has not paid for yet gets no controls at all.
+ * - An order the customer has not paid for yet gets no controls at all, and
+ *   says so in words: "Not paid yet". That includes a `confirmed` order with
+ *   no payment row at all (one confirmed before paying was required).
  */
 
 const STATUS_LABEL: Record<string, string> = {
@@ -80,11 +83,15 @@ export default function PartnerOrderCard({
   // a checkout open and no payment yet is waiting on the *customer*: there is
   // nothing for the branch to answer, and nothing to hand over.
   const awaitingPayment = order.status === "pending" && Boolean(order.payment) && !paid;
-  const label = awaitingPayment
-    ? "Not paid yet"
-    : order.status === "confirmed" && paid
-      ? "Paid — deliver now"
-      : (labels[order.status] ?? order.status);
+  // Confirmed but no money held: nothing may be handed over yet. Until 4 Oct
+  // 2026 this state still drew "Mark delivered" and the location button.
+  const confirmedUnpaid = order.status === "confirmed" && !paid;
+  const label =
+    awaitingPayment || confirmedUnpaid
+      ? "Not paid yet"
+      : order.status === "confirmed" && paid
+        ? "Paid — deliver now"
+        : (labels[order.status] ?? order.status);
 
   return (
     <li className="glass-card rounded-2xl px-5 py-5 sm:px-6">
@@ -119,7 +126,7 @@ export default function PartnerOrderCard({
             nothing at the door — MalFleks pays your share after delivery.
           </p>
         ) : (
-          order.payment && (
+          (order.payment || confirmedUnpaid) && (
             <p className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
               The customer hasn&apos;t paid yet. There is nothing to do until
               this says “Paid through MalFleks” — don&apos;t hand anything
@@ -142,7 +149,7 @@ export default function PartnerOrderCard({
           href={`tel:${order.customerPhone}`}
           className="text-accent underline decoration-border underline-offset-4"
         >
-          {order.customerPhone}
+          {displayPhone(order.customerPhone)}
         </a>
         <p className="text-muted">{order.customerAddress}</p>
       </div>
@@ -153,7 +160,7 @@ export default function PartnerOrderCard({
           : `Delivery by ${order.routeCarrier}${
               order.routeEtaEstimate ? `, ${order.routeEtaEstimate}` : ""
             }.`}
-        {order.routeAgentPhone && ` Courier: ${order.routeAgentPhone}.`}
+        {order.routeAgentPhone && ` Courier: ${displayPhone(order.routeAgentPhone)}.`}
       </p>
 
       {/* The branch's answer. Only a pending order has a question to answer. */}
@@ -170,11 +177,11 @@ export default function PartnerOrderCard({
         <p className="mt-4 text-xs text-muted">Reason given: {order.decisionNote}</p>
       )}
 
-      {/* Both controls only apply to a confirmed order — see
-          `postDeliveryPing` and `markOrderFulfilledByPartner`'s own notes on
-          why `pending`/`cancelled`/`fulfilled` don't get them at all, rather
-          than a disabled version of them. */}
-      {order.status === "confirmed" && (
+      {/* Both controls only apply to a confirmed order that has been paid for —
+          see `markOrderFulfilledByPartner`, which refuses an unpaid one on the
+          server too. `pending`/`cancelled`/`fulfilled` and unpaid orders don't
+          get them at all, rather than a disabled version of them. */}
+      {order.status === "confirmed" && paid && (
         <>
           <DeliveryPingButton orderId={order.id} initialPing={lastPing} />
           <MarkFulfilledButton orderId={order.id} />

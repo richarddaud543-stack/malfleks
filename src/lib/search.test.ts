@@ -188,6 +188,48 @@ describe("searchProducts", () => {
   });
 });
 
+// The live shop has two brands in its database and none of the seeded ones.
+// Until 4 Oct 2026 the filter lists were read from the seed regardless, so
+// the search page offered "Toyota 0", "BMW 0", "Apple 0" and thirteen empty
+// categories, and left out the shop's real brand and category altogether.
+describe("searchProducts — the filter choices come from the catalogue searched", () => {
+  const corolla = find("toyota-corolla");
+  const live: Listing[] = [
+    {
+      product: { ...corolla.product, id: "live-1", name: "FreePods 4", category: "Earbuds", brandId: "live-oraimo", branchId: "live-dodoma", priceTZS: 85_000 },
+      brand: { ...corolla.brand, id: "live-oraimo", name: "oraimo" },
+      branch: { ...corolla.branch, id: "live-dodoma", brandId: "live-oraimo", city: "Dodoma" },
+    },
+    {
+      product: { ...corolla.product, id: "live-2", name: "Power Bank 20000", category: "Power Bank", brandId: "live-oraimo", branchId: "live-dodoma", priceTZS: 60_000 },
+      brand: { ...corolla.brand, id: "live-oraimo", name: "oraimo" },
+      branch: { ...corolla.branch, id: "live-dodoma", brandId: "live-oraimo", city: "Dodoma" },
+    },
+  ];
+
+  it("offers only the brands, kinds and cities that catalogue has", () => {
+    const { facets } = searchProducts(defaultFilters, live);
+
+    expect(facets.brands).toEqual([{ value: "live-oraimo", label: "oraimo", count: 2 }]);
+    expect(facets.categories.map((c) => c.value)).toEqual(["Earbuds", "Power Bank"]);
+    expect(facets.cities).toEqual([{ value: "Dodoma", label: "Dodoma", count: 2 }]);
+  });
+
+  it("keeps a choice on offer, at zero, when another filter excludes everything in it", () => {
+    // Still a real brand with real products -- just none matching this search.
+    const { facets, listings } = searchProducts(withFilters({ q: "freepods" }), live);
+    expect(listings).toHaveLength(1);
+    expect(facets.categories.find((c) => c.value === "Power Bank")?.count).toBe(0);
+  });
+
+  it("offers nothing at all for an empty catalogue", () => {
+    const { facets } = searchProducts(defaultFilters, []);
+    expect(facets.brands).toEqual([]);
+    expect(facets.categories).toEqual([]);
+    expect(facets.cities).toEqual([]);
+  });
+});
+
 describe("isDefaultFilters / activeFilterCount", () => {
   it("recognises untouched filters", () => {
     expect(isDefaultFilters(defaultFilters)).toBe(true);

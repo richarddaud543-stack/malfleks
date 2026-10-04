@@ -1,30 +1,19 @@
-"use client";
-
-import { motion, useReducedMotion } from "motion/react";
 import ProductIcon from "./ProductIcon";
 import { iconAccent } from "@/lib/accent";
 
 /**
- * The light direction's replacement for the deleted `ProductShowcaseScene`
- * (a `MeshDistortMaterial` pedestal with the product's SVG icon floated
- * above it via a `drei` `Html` portal). Same job — give the product a
- * presence beside its specs — done as a static, layered composition
- * instead of a lit, distorted sphere: a tinted panel, two flat depth rings,
- * an ambient colour wash in the back corners, and the real product icon
- * large in the middle.
+ * What stands in for a product that has no photo: the picture the seller
+ * chose from the icon set, on a tinted panel, and the words "No photo yet".
  *
- * **Icon only.** This used to take a `photoUrl` too and crop it into the
- * 112px puck where the icon floats — a real photo shown at thumbnail size
- * with its corners cut off. A product with photos is now drawn by
- * `ProductGallery` instead, and this panel is what the page shows when there
- * are none.
+ * The words are the point. The first live listing was a headset shown as a
+ * wristwatch, because that was the icon picked; with nothing saying so, a
+ * buyer could take the drawing for the product. An icon is a category, not
+ * the item, and the page now says which it is looking at.
  *
- * Renders as a single stable root (`props in, one <div> out` — `motion.div`
- * still renders one real `<div>`, an `initial`/`animate` entrance doesn't
- * change that) because this lives inside `<ViewTransition
- * name={`product-${id}`}>` in `src/app/products/[id]/page.tsx` — the shared
- * element the card morphs into. No conditional early return here that would
- * swap out the transitioning node itself.
+ * A plain server component since 4 Oct 2026. It used to fade and scale in
+ * from nothing once its script loaded, then bob up and down forever -- the
+ * main picture on the product page was invisible until JavaScript arrived,
+ * and never still afterwards.
  */
 export default function ProductShowcase({
   accentColor,
@@ -33,81 +22,31 @@ export default function ProductShowcase({
   accentColor: string;
   icon: string;
 }) {
-  const reduceMotion = useReducedMotion();
   const iconColor = iconAccent(accentColor);
 
   return (
-    <motion.div
-      // A one-shot "materialize" on mount — the showcase's own entrance,
-      // independent of the idle float loop on the icon puck below. A spring
-      // (rather than the duration-based tween the rest of this file uses)
-      // because a settle-in is exactly the "reacts naturally" case motion.dev
-      // frames spring physics for — a single arrival, not a toggled state.
-      // Skipped outright under reduced motion: this stays the single stable
-      // root the surrounding `<ViewTransition>` requires either way, just
-      // rendered straight at its final state with no `initial` to animate
-      // from.
-      initial={reduceMotion ? false : { opacity: 0, scale: 0.94 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={
-        reduceMotion
-          ? { duration: 0 }
-          : { type: "spring", stiffness: 260, damping: 24 }
-      }
+    <div
       className="glass-card shadow-float relative flex h-full w-full items-center justify-center overflow-hidden rounded-[1.75rem] sm:rounded-[2rem]"
       style={{
         background: `linear-gradient(135deg, ${accentColor}14, var(--surface-2) 65%)`,
       }}
     >
-      {/* Ambient tint wash in the back corners — flat colour and blur
-          standing in for the old scene's coloured point lights. Static; no
-          `.blob` drift here, this panel is meant to hold still. */}
-      <div
-        aria-hidden="true"
-        className="absolute -right-16 -top-16 h-64 w-64 rounded-full blur-3xl"
-        style={{ background: accentColor, opacity: 0.16 }}
-      />
-      <div
-        aria-hidden="true"
-        className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full blur-3xl"
-        style={{ background: accentColor, opacity: 0.1 }}
-      />
-
-      {/* Concentric depth rings — the flat, restrained stand-in for the old
-          scene's 3D ring geometry beneath the pedestal. */}
-      <div
-        aria-hidden="true"
-        className="absolute flex items-center justify-center"
-      >
-        <div
-          className="h-56 w-56 rounded-full border sm:h-64 sm:w-64"
-          style={{ borderColor: `${accentColor}22` }}
-        />
-        <div
-          className="absolute h-40 w-40 rounded-full border sm:h-48 sm:w-48"
-          style={{ borderColor: `${accentColor}33` }}
-        />
+      {/* Concentric rings behind the icon: depth without a second colour. */}
+      <div aria-hidden="true" className="absolute flex items-center justify-center">
+        <div className="h-56 w-56 rounded-full border sm:h-64 sm:w-64" style={{ borderColor: `${accentColor}22` }} />
+        <div className="absolute h-40 w-40 rounded-full border sm:h-48 sm:w-48" style={{ borderColor: `${accentColor}33` }} />
       </div>
 
-      <motion.div
+      <div
         className="relative flex h-28 w-28 items-center justify-center overflow-hidden rounded-full sm:h-36 sm:w-36"
-        style={{
-          background: `${accentColor}1f`,
-          boxShadow: `0 24px 48px -20px ${accentColor}55`,
-        }}
-        animate={reduceMotion ? undefined : { y: [0, -10, 0] }}
-        transition={
-          reduceMotion
-            ? undefined
-            : { duration: 4.5, repeat: Infinity, ease: "easeInOut" }
-        }
+        style={{ background: `${accentColor}1f` }}
       >
-        <ProductIcon
-          icon={icon}
-          className="h-16 w-16 sm:h-20 sm:w-20"
-          style={{ color: iconColor }}
-        />
-      </motion.div>
-    </motion.div>
+        <ProductIcon icon={icon} className="h-16 w-16 sm:h-20 sm:w-20" style={{ color: iconColor }} />
+      </div>
+
+      <p className="absolute bottom-4 rounded-full bg-background/80 px-3 py-1 text-xs text-muted" data-testid="no-photo-note">
+        No photo yet
+      </p>
+    </div>
   );
 }

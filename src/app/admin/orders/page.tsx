@@ -129,7 +129,7 @@ export default async function AdminOrdersPage({ searchParams }: { searchParams: 
         </div>
       </form>
 
-      <nav aria-label="Order status" className="mt-4 flex gap-1.5 overflow-x-auto pb-1">
+      <nav aria-label="Order status" className="relative mt-4 flex gap-1.5 overflow-x-auto pb-1">
         {chips.map((chip) => {
           const active = current.status === chip.key;
           return (

@@ -45,7 +45,49 @@ function productPhotoRemotePatterns(): NonNullable<
   }
 }
 
+/**
+ * Headers every response carries.
+ *
+ * Before 4 Oct 2026 the site sent one browser-safety header (HSTS, added by
+ * the host). These are the rest of the standard set -- the OWASP baseline --
+ * and each is here for a reason that applies to this site:
+ *
+ * - `X-Content-Type-Options: nosniff` -- a file is only ever treated as the
+ *   type it is served as. Matters for a site that accepts photo uploads.
+ * - `X-Frame-Options: DENY` and CSP `frame-ancestors 'none'` -- no other site
+ *   may show MalFleks inside a frame, which is how a customer is tricked into
+ *   pressing "Pay" or "Cancel" on a page they cannot see (clickjacking). The
+ *   payment itself is a redirect to ClickPesa, not a frame, so nothing of
+ *   ours needs framing.
+ * - `Referrer-Policy: strict-origin-when-cross-origin` -- a link out of the
+ *   site tells the other site only that the visitor came from MalFleks, never
+ *   which page (a pay or track address carries an order reference).
+ * - `Permissions-Policy` -- the page may ask for location, which a courier
+ *   uses to report where a delivery is, and nothing else: no camera, no
+ *   microphone, no payment-request API. Photos are picked through an ordinary
+ *   file input, which this does not affect.
+ * - CSP `base-uri 'self'` and `object-src 'none'` -- two old injection routes
+ *   closed outright, at no cost.
+ *
+ * **What is deliberately not here: a script policy.** A Content-Security-
+ * Policy that restricts scripts needs a per-request nonce threaded through
+ * every page, and has to be proved against the things that cannot be tested
+ * without real accounts -- Google sign-in, the photo upload to Supabase, the
+ * redirect to ClickPesa. Getting it wrong breaks ordering silently. It is the
+ * next step, and it wants a staging run first.
+ */
+const SECURITY_HEADERS = [
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "X-Frame-Options", value: "DENY" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "geolocation=(self), camera=(), microphone=(), payment=(), usb=(), browsing-topics=()" },
+  { key: "Content-Security-Policy", value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'" },
+];
+
 const nextConfig: NextConfig = {
+  // "X-Powered-By: Next.js" tells an attacker which framework to look up and
+  // tells nobody else anything.
+  poweredByHeader: false,
   images: {
     // AVIF first, WebP for browsers without it. On mobile data the smaller
     // file is the whole point of routing photos through the optimiser.
@@ -54,6 +96,7 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      { source: "/:path*", headers: SECURITY_HEADERS },
       {
         source: "/sign-in",
         headers: [

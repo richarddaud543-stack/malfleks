@@ -75,7 +75,7 @@ export default function AdminNav({
       </div>
 
       <nav aria-label="Admin" className="lg:flex-1 lg:px-3">
-        <ul className="flex gap-1.5 overflow-x-auto px-4 pb-3 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
+        <ul className="relative flex gap-1.5 overflow-x-auto px-4 pb-3 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:px-0 lg:pb-0">
           {ITEMS.map((item) => {
             const active = isActive(item.href);
             const count = item.count && counts ? counts[item.count] : 0;

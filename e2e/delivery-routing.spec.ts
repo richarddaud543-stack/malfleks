@@ -14,7 +14,7 @@ test.describe("delivery routing", () => {
 
     await expect(page.getByTestId("brand-delivery-panel")).toBeVisible();
     await expect(page.getByTestId("local-agent-panel")).toHaveCount(0);
-    await expect(page.getByRole("button", { name: "Confirm brand delivery" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign in to order" })).toBeVisible();
   });
 
   test("branch without its own delivery shows local agents for its city", async ({ page }) => {

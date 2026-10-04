@@ -1,5 +1,6 @@
 import type { DeliveryAgent } from "@/data";
 import { formatEta } from "@/lib/format";
+import { displayPhone } from "@/lib/order";
 
 export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
   return (
@@ -29,7 +30,7 @@ export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
         */}
         {agent.phone ? (
           <a href={`tel:${agent.phone}`} className="font-medium text-accent hover:underline">
-            {agent.phone}
+            {displayPhone(agent.phone)}
           </a>
         ) : (
           <span className="text-right text-xs text-muted">

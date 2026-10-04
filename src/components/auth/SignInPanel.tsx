@@ -90,8 +90,8 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
       <div className="glass-card rounded-2xl p-6">
         <p className="text-sm text-muted">
           Sign-in isn&apos;t available on this deployment — it has no Supabase
-          authentication configuration. You can still place an order request
-          without an account; it will be held in this browser tab.
+          authentication configuration. You can still browse every shop and
+          product; ordering needs sign-in to be switched on.
         </p>
         <Link
           href="/search"
@@ -132,14 +132,14 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
       </p>
 
       <p className="mt-6 border-t border-border pt-4 text-sm text-muted">
-        You don&apos;t need an account to order.{" "}
+        You don&apos;t need an account to look around.{" "}
         <Link
           href="/search"
           className="underline underline-offset-2 hover:text-foreground"
         >
           Browse products
         </Link>{" "}
-        and request one without signing in — it just won&apos;t outlive the tab.
+        and sign in when you are ready to order.
       </p>
     </div>
   );

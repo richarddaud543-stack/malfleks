@@ -69,7 +69,7 @@ test.describe("smoke", () => {
     ["/apply", "Become a partner — MalFleks"],
     ["/products/toyota-corolla", "Toyota Corolla — Toyota — MalFleks"],
     ["/brands/toyota", "Toyota — MalFleks"],
-    ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Nyerere Road — MalFleks"],
+    ["/brands/toyota/branches/toyota-dar", "Toyota Tanzania — Dar es Salaam — MalFleks"],
     ["/delivery/toyota-corolla", "Delivery for Toyota Corolla — MalFleks"],
     ["/products/not-a-real-product", "Product not found — MalFleks"],
   ];

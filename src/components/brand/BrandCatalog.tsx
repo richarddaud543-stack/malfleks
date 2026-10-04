@@ -39,10 +39,19 @@ export default function BrandCatalog({
   const filtered =
     active === "all" ? brands : brands.filter((b) => b.category === active);
 
+  // A chip for a kind of brand nobody on MalFleks is yet ("Automotive", with
+  // two electronics shops live) filters to an empty page. Offer only the
+  // kinds that have a brand in them, and no chips at all when there would be
+  // nothing to choose between.
+  const present = new Set(brands.map((b) => b.category));
+  const offered = categories.filter((c) => c.value === "all" || present.has(c.value));
+  const showChips = offered.length > 2;
+
   return (
     <div>
+      {showChips && (
       <div className="flex flex-wrap gap-2">
-        {categories.map((c) => {
+        {offered.map((c) => {
           const isActive = active === c.value;
           return (
             <button
@@ -71,7 +80,8 @@ export default function BrandCatalog({
           );
         })}
       </div>
-      <div className="mt-8">
+      )}
+      <div className={showChips ? "mt-8" : ""}>
         <BrandGrid brands={filtered} branchesByBrandId={branchesByBrandId} />
       </div>
     </div>

@@ -35,6 +35,7 @@ export default async function BrandsPage() {
         </div>
       ) : (
         <div className="panel mt-10 p-4 sm:p-8">
+          <h2 className="sr-only">Brands</h2>
           <BrandCatalog brands={brands} branchesByBrandId={branchesByBrandId} />
         </div>
       )}

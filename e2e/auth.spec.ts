@@ -37,10 +37,10 @@ test.describe("signed out", () => {
     await button.focus();
     await expect(button).toBeFocused();
 
-    // The promise that ordering never requires an account is on the page, not
-    // just in our heads.
+    // Browsing needs no account, and the page says so. It no longer says
+    // ordering needs none: since paying became part of ordering, it does.
     await expect(
-      page.getByText(/don't need an account to order/i)
+      page.getByText(/don't need an account to look around/i)
     ).toBeVisible();
   });
 
@@ -104,40 +104,44 @@ test.describe("signed out", () => {
 
     await page.getByLabel("Full name").fill(NAME);
     await page.getByLabel(/Phone number/).fill(PHONE);
+    await page.getByLabel("Delivery city").selectOption("Dar es Salaam");
     await page.getByLabel(/Delivery address/).fill(ADDRESS);
-    await page.getByRole("button", { name: "Confirm brand delivery" }).click();
 
-    await expect(page).toHaveURL(/\/order\/confirmation$/);
-    await expect(page.getByTestId("order-confirmation")).toBeVisible();
+    // The form says so before the button is pressed, rather than only being true.
+    await expect(page.getByText(/Nothing is sent or charged yet/)).toBeVisible();
+
+    await page.getByRole("button", { name: "Sign in to order" }).click();
+
+    // To sign in -- by a plain navigation whose address names the product and
+    // nothing about the customer.
+    await expect(page).toHaveURL(/\/sign-in\?next=%2Fdelivery%2Ftoyota-corolla$/);
+    await expect(
+      page.getByRole("heading", { name: "Sign in to MalFleks", level: 1 })
+    ).toBeVisible();
 
     expect(sameOriginPosts).toEqual([]);
     expect(leaked).toEqual([]);
-
-    // And the screen says so, rather than only being true.
-    await expect(page.getByText(/lives in this browser tab only/i)).toBeVisible();
   });
 
-  test("the confirmation screen offers signing in to keep the next one", async ({
-    page,
-  }) => {
-    await page.goto("/delivery/toyota-corolla");
-    await page.getByLabel("Full name").fill("Neema Mushi");
-    await page.getByLabel(/Phone number/).fill("0754123456");
-    await page.getByLabel(/Delivery address/).fill("12 Sokoine Road, Arusha");
-    await page.getByRole("button", { name: "Confirm brand delivery" }).click();
-
-    await expect(page.getByTestId("order-confirmation")).toBeVisible();
-    const signIn = page
-      .getByTestId("order-confirmation")
-      .getByRole("link", { name: "sign in" });
-    await expect(signIn).toHaveAttribute("href", "/sign-in");
+  test("the server stores nothing for a caller with no session", async ({ page }) => {
+    // The form never calls the order action signed out. This is the same
+    // promise seen from the other side: nothing a signed-out visitor can do on
+    // the confirmation screen claims an order exists.
+    await page.goto("/order/confirmation");
+    await expect(
+      page.getByRole("heading", { name: "No order request to show" })
+    ).toBeVisible();
   });
 
-  test("/sign-in is in the sitemap and /account is not", async ({ request }) => {
+  test("the sitemap lists no page that asks not to be indexed", async ({ request }) => {
     const body = await (await request.get("/sitemap.xml")).text();
-    expect(body).toContain("/sign-in");
-    // A noindex private page advertised in a sitemap tells crawlers two
-    // opposite things.
+    // A noindex page advertised in a sitemap tells crawlers two opposite
+    // things. /sign-in and the order forms did exactly that until 4 Oct 2026.
     expect(body).not.toContain("/account");
+    expect(body).not.toContain("/sign-in");
+    expect(body).not.toContain("/delivery/");
+    // The pages that are for finding are there.
+    expect(body).toContain("/how-it-works");
+    expect(body).toContain("/products/toyota-corolla");
   });
 });

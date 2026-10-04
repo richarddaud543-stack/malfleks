@@ -50,8 +50,8 @@ export default function TanzaniaMap({
         <defs>
           <linearGradient id="tz-fill" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.26" />
-            <stop offset="55%" stopColor="var(--accent-2)" stopOpacity="0.16" />
-            <stop offset="100%" stopColor="var(--accent-3)" stopOpacity="0.13" />
+            <stop offset="55%" stopColor="var(--accent)" stopOpacity="0.14" />
+            <stop offset="100%" stopColor="var(--lime)" stopOpacity="0.16" />
           </linearGradient>
           {/* A blurred, accent-tinted copy of the outline used to read as a
               bloom against the old near-black page — the bright colour

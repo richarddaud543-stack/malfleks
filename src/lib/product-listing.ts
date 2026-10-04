@@ -1,4 +1,4 @@
-import { normalizeCategory } from "./product-categories";
+import { canonicalCategory, normalizeCategory } from "./product-categories";
 import { PRODUCT_ICON_KEYS } from "./product-icons";
 import { MAX_PRODUCT_PHOTOS, normalizeProductPhotoUrls } from "./product-photo";
 
@@ -130,6 +130,11 @@ export function validateProductListing(
 
   if (category === "") {
     errors.category = "Say what kind of product this is.";
+  } else if (!canonicalCategory(category)) {
+    // A kind we do not have would become its own search filter on the shop.
+    // The form only offers the list; this is the server holding the same line
+    // against a request that did not come from the form.
+    errors.category = "Choose one of the kinds in the list. If none fits, pick “Other”.";
   }
 
   if (description.length < MIN_DESCRIPTION) {

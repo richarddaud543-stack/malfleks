@@ -2,6 +2,7 @@ import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import { resolveSiteUrl } from "@/lib/site-url";
 import BrandLogo from "@/components/brand/BrandLogo";
 import type { Metadata } from "next";
+import { sharePreview } from "@/lib/share-metadata";
 import { notFound } from "next/navigation";
 import type { BrandCategory } from "@/data";
 import {
@@ -43,7 +44,7 @@ export async function generateMetadata({
   return {
     title: brand.name,
     description: brand.description,
-    openGraph: { title: brand.name, description: brand.description },
+    ...sharePreview({ title: `${brand.name} on MalFleks`, description: brand.description, path: `/brands/${brand.slug}` }),
   };
 }
 

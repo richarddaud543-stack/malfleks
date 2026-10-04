@@ -90,6 +90,9 @@ const ORDER_INPUT = {
   phone: "0754123456",
   address: "Mikocheni B, near the Shell station",
   agentId: null as string | null,
+  // `toyota-dar`'s own city: the action refuses a request that does not say
+  // where it is going, and `createOrder` holds the answer to the branch's city.
+  deliveryCity: "Dar es Salaam",
   reference: "",
 };
 
@@ -217,6 +220,43 @@ describe("partner applications", () => {
   });
 });
 
+describe("who may place an order, and where it may go", () => {
+  const count = () => getPrisma().order.count();
+
+  // The Terms say a request sent without signing in is not recorded. Until
+  // 4 Oct 2026 the action stored it anyway, with no owner.
+  it("writes nothing for a caller with no session", async () => {
+    session.mockResolvedValue(null);
+    const before = await count();
+
+    await expect(submitOrder({ ...ORDER_INPUT, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "signed-out" });
+    expect(await count()).toBe(before);
+    expect(sendNotification).not.toHaveBeenCalled();
+  });
+
+  it("refuses a request that does not say which city it is going to", async () => {
+    session.mockResolvedValue(CUSTOMER);
+    const before = await count();
+    const { deliveryCity: _omitted, ...withoutCity } = ORDER_INPUT;
+    void _omitted;
+
+    await expect(submitOrder({ ...withoutCity, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    await expect(submitOrder({ ...ORDER_INPUT, deliveryCity: "  ", requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    expect(await count()).toBe(before);
+  });
+
+  // The live case: a Dodoma shop, an address in Kigoma, and an order that was accepted.
+  it("refuses an order going to a city the branch does not deliver in", async () => {
+    session.mockResolvedValue(CUSTOMER);
+    const before = await count();
+
+    for (const elsewhere of ["Arusha", "elsewhere", "dar es salaam"]) {
+      await expect(submitOrder({ ...ORDER_INPUT, deliveryCity: elsewhere, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    }
+    expect(await count()).toBe(before);
+  });
+});
+
 describe("a new order", () => {
   it("tells MalFleks only: the customer is on the pay page, and the branch has nothing to do until it is paid", async () => {
     session.mockResolvedValue(CUSTOMER);
@@ -311,7 +351,7 @@ describe("a payment", () => {
   it("on a courier route, tells the courier to collect and the branch to hand over", async () => {
     // An agent-route order with a full quote, the way `payouts.integration.test.ts` builds one:
     // no city has a delivery fee yet, so the quote is written by hand.
-    const o = await order({ productId: "toyota-hilux", agentId: "arusha-swift-couriers" });
+    const o = await order({ productId: "toyota-hilux", agentId: "arusha-swift-couriers", deliveryCity: "Arusha" });
     const prisma = getPrisma();
     await prisma.order.update({
       where: { id: o.id },
@@ -463,7 +503,7 @@ describe("a product decision", () => {
         brandId: "toyota",
         status,
         name: "Toyota Vitz",
-        category: "Hatchback",
+        category: "Sedan",
         priceTZS: 24_000_000,
         image: "sedan",
         description: "A small, economical hatchback for the city.",

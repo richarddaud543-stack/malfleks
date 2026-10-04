@@ -9,7 +9,7 @@ import OrderActions from "@/components/admin/OrderActions";
 import { Badge, Card, Facts, inputClass, labelClass, Notice, PageHeader, placeLabel } from "@/components/admin/ui";
 import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 import { ageLabel, formatTZS, formatWhen } from "@/lib/charts";
-import { formatPhone } from "@/lib/order";
+import { displayPhone, formatPhone } from "@/lib/order";
 import { getOrderDetail, type TimelineItem } from "@/server/admin/orders";
 import { requireAdmin } from "@/server/auth/dal";
 
@@ -157,7 +157,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                         <span className="block text-xs">
                           {order.branchPhone && (
                             <a href={`tel:${order.branchPhone}`} className="mr-3 font-mono text-accent hover:underline">
-                              {order.branchPhone}
+                              {displayPhone(order.branchPhone)}
                             </a>
                           )}
                           {branchPartner && (

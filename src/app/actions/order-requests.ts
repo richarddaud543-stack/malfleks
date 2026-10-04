@@ -6,6 +6,7 @@ import { isAuthConfigured } from "@/server/auth/config";
 import { checkRateLimit } from "@/server/rate-limit";
 import { logServerError } from "@/server/error-log";
 import type { SaveOrderRequestInput } from "@/server/orders/saved-requests";
+import { hasDeliveryCity } from "@/server/orders/build-order-request";
 
 // Signed in only (see below), so the uid is always available — a tighter,
 // meaningful limit than the IP-based backstop `submitOrder` needs.
@@ -47,6 +48,9 @@ export async function saveOrderRequest(
 
   const limit = await checkRateLimit(session.uid, SAVE_REQUEST_RATE_LIMIT);
   if (!limit.allowed) return { saved: false, reason: "rate-limited" };
+
+  // Same rule as `submitOrder`: the request has to say where it is going.
+  if (!hasDeliveryCity(input)) return { saved: false, reason: "rejected" };
 
   try {
     // Dynamic: this module reaches the database, so it is only worth loading

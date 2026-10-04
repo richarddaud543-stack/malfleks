@@ -75,6 +75,7 @@ export default async function AgentsPage({
           </div>
         ) : (
         <div className="panel mt-8 p-4 sm:p-8">
+          <h2 className="sr-only">Couriers</h2>
           <div className="space-y-4">
             {filtered.length > 0 ? (
               filtered.map((agent, i) => (

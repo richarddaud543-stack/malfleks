@@ -32,7 +32,12 @@ export type MarkFulfilledResult =
   | { ok: true }
   | {
       ok: false;
-      reason: "signed-out" | "unavailable" | "not-a-partner" | TransitionBlocker;
+      reason:
+        | "signed-out"
+        | "unavailable"
+        | "not-a-partner"
+        | "not-paid"
+        | TransitionBlocker;
     };
 
 /**

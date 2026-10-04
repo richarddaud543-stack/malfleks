@@ -31,11 +31,16 @@ export async function generateMetadata({
   const { productId } = await params;
   const product = await getProductById(productId);
 
+  // An order form, not a page to find in a search: the product page is the
+  // one to index, and this is where it leads. `follow` so the links here
+  // still count.
+  const robots = { index: false, follow: true };
+
   if (!product) {
-    return { title: "Delivery" };
+    return { title: "Delivery", robots };
   }
 
-  return { title: `Delivery for ${product.name}` };
+  return { title: `Delivery for ${product.name}`, robots };
 }
 
 export default async function DeliveryPage({

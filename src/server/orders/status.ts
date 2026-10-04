@@ -137,7 +137,13 @@ async function writeTransition(
    * Never widens them: it is intersected with the table's own edges, so the
    * only thing a caller can do with it is allow less than an admin is allowed.
    */
-  onlyFrom?: readonly string[]
+  onlyFrom?: readonly string[],
+  /**
+   * Only move the order if no payment for it has been captured. In the WHERE
+   * of the guarded write, not checked beforehand: a payment that lands in the
+   * moment between a read and the write must lose the order to nobody.
+   */
+  unpaidOnly = false
 ): Promise<TransitionOutcome> {
   const db = getPrisma();
 
@@ -165,7 +171,11 @@ async function writeTransition(
     });
 
     const { count } = await tx.order.updateMany({
-      where: { id: orderId, status: { in: sources } },
+      where: {
+        id: orderId,
+        status: { in: sources },
+        ...(unpaidOnly ? { payments: { none: { status: "captured" } } } : {}),
+      },
       data: {
         status: target,
         decidedBy: adminUid,
@@ -266,6 +276,28 @@ export function declineOrder(
   return writeTransition(orderId, "cancelled", actorUid, reason.trim(), ["pending", "confirmed"]);
 }
 
+/**
+ * The customer changing their mind about an order they have **not paid for**.
+ *
+ * Valid from `pending` or `confirmed`, and only while no payment has been
+ * captured -- that condition is in the guarded write itself (`unpaidOnly`), so
+ * a payment arriving at the same moment cannot be cancelled out from under.
+ * An order that has been paid for is not the customer's to cancel alone: the
+ * refund is a decision, so they ask (`customer-cancel.ts`) and an admin
+ * answers.
+ *
+ * Ownership is the caller's job: `customer-cancel.ts` finds the order by
+ * `reference` **and** `customerId` before this is called.
+ */
+export const CUSTOMER_CANCEL_NOTE = "Cancelled by the customer";
+
+export function cancelOrderByCustomer(
+  orderId: string,
+  customerUid: string
+): Promise<TransitionOutcome> {
+  return writeTransition(orderId, "cancelled", customerUid, CUSTOMER_CANCEL_NOTE, ["pending", "confirmed"], true);
+}
+
 /** Delivered / handed off, request complete. Only valid from `confirmed`. Terminal. */
 export function markOrderFulfilled(
   orderId: string,
@@ -294,24 +326,47 @@ export function markOrderFulfilled(
  * order still has to cross-reference `PartnerUser`/the admin allowlist. That
  * is an acceptable gap for a single new transition kept this narrow, not an
  * oversight to fix in the same change that adds it.
+ *
+ * **Paid first (4 Oct 2026).** A partner may only mark an order delivered once
+ * MalFleks holds the customer's money for it. The promise on the site is "the
+ * shop is paid after delivery" -- which is only true if nothing is delivered
+ * before it is paid for. Before this check a confirmed order with no payment
+ * could be marked delivered from `/partner/orders`, leaving the branch owed
+ * money MalFleks never collected. An unpaid order reads as `not-paid` and
+ * nothing moves. An admin can still mark one fulfilled from the console
+ * (`markOrderFulfilled`), for the rare order settled outside MalFleks.
  */
-export function markOrderFulfilledByPartner(
+export type PartnerFulfilOutcome =
+  | TransitionOutcome
+  | { ok: false; reason: "not-paid" };
+
+export async function markOrderFulfilledByPartner(
   orderId: string,
   scope: PartnerOrderScope,
   actorUid: string,
-): Promise<TransitionOutcome> {
-  return partnerOwnedOrderId(orderId, scope).then((ownId) =>
-    ownId ? markOrderFulfilled(ownId, actorUid) : { ok: false, reason: "not-found" },
-  );
+): Promise<PartnerFulfilOutcome> {
+  const own = await partnerOwnedOrder(orderId, scope);
+  if (!own) return { ok: false, reason: "not-found" };
+  if (!own.paid) return { ok: false, reason: "not-paid" };
+  return markOrderFulfilled(own.id, actorUid);
 }
 
-/** Resolves `orderId` only if it belongs to this partner's own scope. */
-async function partnerOwnedOrderId(
+/**
+ * Resolves `orderId` only if it belongs to this partner's own scope, and says
+ * whether any payment for it has been captured.
+ */
+async function partnerOwnedOrder(
   orderId: string,
   scope: PartnerOrderScope,
-): Promise<string | null> {
+): Promise<{ id: string; paid: boolean } | null> {
   const where = partnerScopeWhere(orderId, scope);
   if (!where) return null;
-  const order = await getPrisma().order.findFirst({ where, select: { id: true } });
-  return order?.id ?? null;
+  const order = await getPrisma().order.findFirst({
+    where,
+    select: {
+      id: true,
+      payments: { where: { status: "captured" }, select: { id: true }, take: 1 },
+    },
+  });
+  return order ? { id: order.id, paid: order.payments.length > 0 } : null;
 }

@@ -23,6 +23,7 @@ import { describeBranchLocation, formatTZS } from "@/lib/format";
 import { buildProductJsonLd, serializeJsonLd } from "@/lib/product-json-ld";
 import { productPhotoList } from "@/lib/product-photo";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import { sharePreview } from "@/lib/share-metadata";
 import { resolveSiteUrl } from "@/lib/site-url";
 import {
   orderBlockReason,
@@ -53,21 +54,20 @@ export async function generateMetadata({
   // The main photo, when there is one, is what a shared link shows in
   // WhatsApp, Facebook and X. Without it a product link shared into a group
   // chat — which is how most things are sold here — arrives as bare text.
-  // Listings with only an icon get no image rather than a picture of an icon.
+  // A listing with only an icon gets the site's own share picture rather than
+  // a picture of an icon -- see `sharePreview` for why that needs saying.
   const [mainPhoto] = productPhotoList(product);
   const title = `${product.name} — ${brand.name}`;
 
   return {
     title,
     description,
-    openGraph: {
+    ...sharePreview({
       title,
       description,
-      ...(mainPhoto ? { images: [{ url: mainPhoto, alt: product.name }] } : {}),
-    },
-    twitter: mainPhoto
-      ? { card: "summary_large_image", title, description, images: [mainPhoto] }
-      : { card: "summary", title, description },
+      path: `/products/${product.id}`,
+      image: mainPhoto ? { url: mainPhoto, alt: product.name } : undefined,
+    }),
   };
 }
 

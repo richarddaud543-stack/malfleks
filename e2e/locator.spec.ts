@@ -117,17 +117,19 @@ test.describe("branch locator", () => {
     await page.goto("/locator");
 
     const search = page.getByRole("searchbox", { name: /search branches/i });
-    await search.fill("Kariakoo");
+    // A word only one seeded branch carries. This searched for "Kariakoo"
+    // until the seed data lost its street names, and had failed ever since.
+    await search.fill("Mikocheni");
 
     // Same non-retrying-count caveat as everywhere else: wait for the URL
     // (which only updates once the filter has actually landed) before
     // reading a `count()`.
-    await expect(page).toHaveURL(/q=Kariakoo/);
+    await expect(page).toHaveURL(/q=Mikocheni/);
     await expect(page.getByRole("status")).toContainText(
       "1 branch across Tanzania"
     );
     await expect(branchCards(page)).toHaveCount(1);
-    await expect(branchCards(page).first()).toContainText("Oraimo");
+    await expect(branchCards(page).first()).toContainText("iStore");
 
     await page.getByRole("button", { name: "Clear search" }).click();
     await expect(page).not.toHaveURL(/q=/);

@@ -1,11 +1,13 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Branch, Brand, Product } from "@/data";
 import {
   MAX_QUANTITY,
   ORDER_STORAGE_KEY,
+  OTHER_DELIVERY_CITY,
   brandCarrierName,
   createOrderRequest,
   emptyOrderInput,
@@ -34,8 +36,43 @@ const FIELD_ORDER: OrderField[] = [
   "quantity",
   "fullName",
   "phone",
+  "deliveryCity",
   "address",
 ];
+
+/**
+ * Where a half-filled order waits while the customer signs in.
+ *
+ * Ordering needs an account (the payment is taken against it), and sign-in is
+ * a round trip through Google. Without this the customer came back to an empty
+ * form. Per product, in `sessionStorage`: it lives in this tab only, is gone
+ * when the tab closes, and is never sent anywhere -- the same rule the
+ * signed-out form has always kept.
+ */
+export function orderDraftKey(productId: string): string {
+  return `malfleks:order-draft:${productId}`;
+}
+
+function readDraft(productId: string): OrderRequestInput | null {
+  try {
+    const raw = sessionStorage.getItem(orderDraftKey(productId));
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    const draft = parsed as Record<string, unknown>;
+    const text = (value: unknown, fallback: string) => (typeof value === "string" ? value : fallback);
+    return {
+      quantity: text(draft.quantity, emptyOrderInput.quantity),
+      fullName: text(draft.fullName, ""),
+      phone: text(draft.phone, ""),
+      address: text(draft.address, ""),
+      agentId: typeof draft.agentId === "string" ? draft.agentId : null,
+      deliveryCity: text(draft.deliveryCity, ""),
+    };
+  } catch {
+    return null;
+  }
+}
 
 export default function OrderRequestForm({
   product,
@@ -63,11 +100,20 @@ export default function OrderRequestForm({
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // Back from signing in: put back what was typed before the detour. After
+  // mount, not as initial state -- the server render has no sessionStorage and
+  // the two must agree.
+  useEffect(() => {
+    const draft = readDraft(product.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reading browser storage once on mount is the documented exception
+    if (draft) setInput(draft);
+  }, [product.id]);
+
   function update(patch: Partial<OrderRequestInput>) {
     const next = { ...input, ...patch };
     setInput(next);
     if (attempted) {
-      const result = validateOrderRequest(next, route, product.priceTZS);
+      const result = validateOrderRequest(next, route, product.priceTZS, branch.city);
       setErrors(result.ok ? {} : result.errors);
     }
   }
@@ -87,7 +133,7 @@ export default function OrderRequestForm({
     event.preventDefault();
     setAttempted(true);
 
-    const result = validateOrderRequest(input, route, product.priceTZS);
+    const result = validateOrderRequest(input, route, product.priceTZS, branch.city);
     if (!result.ok) {
       setErrors(result.errors);
       // The inputs are already in the DOM — only their aria state changes — so
@@ -100,6 +146,27 @@ export default function OrderRequestForm({
     }
 
     setErrors({});
+
+    // Not signed in: nothing is sent and nothing is ordered. Until 4 Oct 2026
+    // this saved a "request" in the browser and showed a confirmation screen
+    // for it -- a reference that no shop ever received and that could not be
+    // paid for, behind a button that said "Confirm". Now the details are kept
+    // in this tab and the customer is taken to sign in, then straight back
+    // here with the form filled in.
+    //
+    // Still true, and still asserted by `e2e/auth.spec.ts`: a signed-out
+    // submission makes no request to the server at all.
+    if (!session?.signedIn) {
+      try {
+        sessionStorage.setItem(orderDraftKey(product.id), JSON.stringify(input));
+      } catch {
+        // Storage can be off (private mode). They will retype; nothing is lost
+        // that was ever stored.
+      }
+      router.push(`/sign-in?next=${encodeURIComponent(`/delivery/${product.id}`)}`);
+      return;
+    }
+
     const request = createOrderRequest({
       product,
       brand,
@@ -110,76 +177,65 @@ export default function OrderRequestForm({
     store(request);
     setSubmitting(true);
 
-    // Nothing leaves the device for a signed-out customer. Not the order, not
-    // the name, phone or address — no request of any kind.
-    //
-    // This was briefly unconditional: every submission POSTed to `submitOrder`
-    // so that every request got a queryable record, signed in or not. The
-    // confirmation screen was never updated to match, so the site went on
-    // telling people their details had been transmitted nowhere while the
-    // server wrote them to Postgres. `e2e/auth.spec.ts` caught it the first
-    // time CI ever ran (2026-08-29) by asserting there is no same-origin POST
-    // at all — which is why the guard is *here*, in the client, and not a
-    // `return` inside the action. An action that declines to write still
-    // receives the payload.
-    //
-    // The owner's call, 2026-08-29: a signed-out request stays in the tab.
-    // Nothing is dispatched to a branch anyway, so a stored row bought an
-    // admin view of orders nobody acts on, in exchange for holding a
-    // stranger's home address with no retention policy.
-    // Where the customer lands next. A signed-in order whose checkout opened
-    // goes straight to its pay page (the owner's call, 3 Oct 2026: order,
-    // pay, done -- no waiting for anyone to confirm). Everything else keeps
-    // the confirmation screen: a signed-out request, an order that could not
-    // be priced yet, or a moment when the server could not be reached.
+    // Where the customer lands next. An order whose checkout opened goes
+    // straight to its pay page (the owner's call, 3 Oct 2026: order, pay,
+    // done -- no waiting for anyone to confirm). The confirmation screen is
+    // kept for an order that could not be priced yet, or a moment when the
+    // server could not be reached.
     let payReference: string | null = null;
 
-    if (session?.signedIn) {
-      try {
-        const submitted = await submitOrder({
-          // Ids and the customer's own words only. Price, product name,
-          // carrier and total are re-derived on the server from the catalogue,
-          // so nothing here can misstate what was ordered.
-          productId: product.id,
-          quantity: input.quantity,
-          fullName: result.value.fullName,
-          phone: result.value.phone,
-          address: result.value.address,
-          agentId: result.value.agent?.id ?? null,
-          reference: request.reference,
-          requestedAt: request.requestedAt,
-        });
-        if (submitted.ok && submitted.payNow) payReference = submitted.reference;
-      } catch {
-        // A failed persist costs the customer nothing they had a moment ago:
-        // the browser copy is already written and the confirmation screen does
-        // not depend on the backend write having succeeded.
-      }
+    try {
+      const submitted = await submitOrder({
+        // Ids and the customer's own words only. Price, product name,
+        // carrier and total are re-derived on the server from the catalogue,
+        // so nothing here can misstate what was ordered.
+        productId: product.id,
+        quantity: input.quantity,
+        fullName: result.value.fullName,
+        phone: result.value.phone,
+        address: result.value.address,
+        agentId: result.value.agent?.id ?? null,
+        deliveryCity: input.deliveryCity,
+        reference: request.reference,
+        requestedAt: request.requestedAt,
+      });
+      if (submitted.ok && submitted.payNow) payReference = submitted.reference;
+    } catch {
+      // A failed persist costs the customer nothing they had a moment ago:
+      // the browser copy is already written and the confirmation screen does
+      // not depend on the backend write having succeeded.
+    }
 
-      // The customer's own deletable copy, separate from MalFleks's record above.
-      try {
-        const outcome = await saveOrderRequest({
-          // Ids and the customer's own words only. Price, product name,
-          // carrier and total are re-derived on the server from the catalogue,
-          // so nothing here can misstate what was ordered.
-          productId: product.id,
-          quantity: input.quantity,
-          fullName: result.value.fullName,
-          phone: result.value.phone,
-          address: result.value.address,
-          agentId: result.value.agent?.id ?? null,
-          reference: request.reference,
-          requestedAt: request.requestedAt,
-        });
+    // The customer's own deletable copy, separate from MalFleks's record above.
+    try {
+      const outcome = await saveOrderRequest({
+        // Ids and the customer's own words only. Price, product name,
+        // carrier and total are re-derived on the server from the catalogue,
+        // so nothing here can misstate what was ordered.
+        productId: product.id,
+        quantity: input.quantity,
+        fullName: result.value.fullName,
+        phone: result.value.phone,
+        address: result.value.address,
+        agentId: result.value.agent?.id ?? null,
+        deliveryCity: input.deliveryCity,
+        reference: request.reference,
+        requestedAt: request.requestedAt,
+      });
 
-        if (outcome.saved) {
-          store({ ...request, savedToAccount: true });
-        }
-      } catch {
-        // A failed save costs the customer nothing they had a moment ago: the
-        // browser copy is already written and the confirmation screen simply
-        // will not claim the request was kept.
+      if (outcome.saved) {
+        store({ ...request, savedToAccount: true });
       }
+    } catch {
+      // A failed save costs the customer nothing they had a moment ago: the
+      // browser copy is already written and the confirmation screen simply
+      // will not claim the request was kept.
+    }
+
+    try {
+      sessionStorage.removeItem(orderDraftKey(product.id));
+    } catch {
+      // Nothing to clear if storage is off.
     }
 
     router.push(payReference ? `/pay/${encodeURIComponent(payReference)}` : "/order/confirmation");
@@ -327,6 +383,39 @@ export default function OrderRequestForm({
             </Field>
 
             <Field
+              id={`${fieldId}-deliveryCity`}
+              label="Delivery city"
+              hint={`This shop delivers within ${branch.city}.`}
+              hintId={`${fieldId}-deliveryCity-hint`}
+              error={errors.deliveryCity}
+              errorId={`${fieldId}-deliveryCity-error`}
+            >
+              <select
+                id={`${fieldId}-deliveryCity`}
+                name="deliveryCity"
+                data-field="deliveryCity"
+                value={input.deliveryCity ?? ""}
+                onChange={(e) => update({ deliveryCity: e.target.value })}
+                aria-invalid={Boolean(errors.deliveryCity) || undefined}
+                aria-describedby={describe("deliveryCity", true)}
+                className={`${fieldClass(Boolean(errors.deliveryCity))} sm:max-w-xs`}
+              >
+                <option value="">Choose…</option>
+                <option value={branch.city}>{branch.city}</option>
+                <option value={OTHER_DELIVERY_CITY}>Somewhere else</option>
+              </select>
+              {input.deliveryCity === OTHER_DELIVERY_CITY && (
+                <p className="mt-2 text-sm text-muted">
+                  This shop can&apos;t deliver outside {branch.city}.{" "}
+                  <Link href="/locator" className="text-accent underline underline-offset-4">
+                    Find a shop in your city
+                  </Link>
+                  .
+                </p>
+              )}
+            </Field>
+
+            <Field
               id={`${fieldId}-address`}
               label="Delivery address"
               hint="Street, area and any landmark that helps the driver."
@@ -354,7 +443,7 @@ export default function OrderRequestForm({
             reached through aria-describedby as focus moves between them. */}
         <p role="alert" className="text-sm text-red-600">
           {attempted && errorCount > 0
-            ? `${errorCount} ${errorCount === 1 ? "detail needs" : "details need"} fixing before this request can be sent.`
+            ? `${errorCount} ${errorCount === 1 ? "detail needs" : "details need"} fixing before you can order.`
             : ""}
         </p>
       </div>
@@ -382,14 +471,10 @@ export default function OrderRequestForm({
           className="btn-pill btn-lime w-full px-8 py-3.5 text-sm disabled:opacity-60"
         >
           {submitting
-            ? session?.signedIn
-              ? "Opening payment…"
-              : "Sending request…"
+            ? "Opening payment…"
             : session?.signedIn
               ? "Continue to payment"
-              : route.kind === "brand"
-              ? "Confirm brand delivery"
-              : "Confirm agent delivery"}
+              : "Sign in to order"}
         </button>
 
         {/* Load-bearing honesty: say exactly what pressing the button does,
@@ -397,7 +482,7 @@ export default function OrderRequestForm({
         <p className="text-xs text-muted">
           {session?.signedIn
             ? "Next you pay by mobile money. MalFleks holds your payment until the order is delivered; if the branch can't supply it, you are refunded in full."
-            : "You are not signed in, so this only saves a request in this browser — nothing is sent or charged. Sign in first to order and pay on MalFleks."}
+            : "Ordering needs an account, so MalFleks can take your payment and hold it until delivery. Nothing is sent or charged yet — what you typed is kept in this tab and will be here when you come back from signing in."}
         </p>
       </div>
     </form>

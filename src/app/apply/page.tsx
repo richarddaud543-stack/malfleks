@@ -6,7 +6,7 @@ import { getAllBrands } from "@/server/repositories";
 export const metadata: Metadata = {
   title: "Become a partner",
   description:
-    "Apply to sell through MalFleks as a brand branch, or to carry deliveries as a local courier in Dar es Salaam, Arusha, Mwanza or Dodoma.",
+    "Apply to sell through MalFleks as a shop, or to carry deliveries as a local courier. MalFleks has shops in Dodoma today.",
 };
 
 /**
@@ -38,7 +38,7 @@ export default async function ApplyPage() {
         <div
           className="blob right-[8%] top-[-90px] h-[280px] w-[280px]"
           style={{
-            background: "var(--accent-2)",
+            background: "var(--lime)",
             opacity: 0.13,
             animationDelay: "-6s",
           }}
@@ -101,13 +101,14 @@ export default async function ApplyPage() {
           />
         </ScrollReveal>
 
-        {/* Said plainly, because the alternative is an applicant waiting for a
-            reply that no system is yet able to send. */}
+        {/* What actually happens next. Since 3 Oct 2026 an applicant is
+            emailed the decision (`notifyApplicationDecision`), so this no
+            longer has to warn that nothing will arrive. */}
         <ScrollReveal delay={0.24}>
           <p className="mt-8 text-xs text-muted">
-            MalFleks is still being built. Applications are recorded and reviewed by
-            a person — we are not yet able to approve partners the same day, and
-            there is no automatic email confirming this.
+            A person at MalFleks reads every application, and we email you as
+            soon as it has been decided. MalFleks has shops in Dodoma today;
+            you can also apply from Dar es Salaam, Arusha or Mwanza.
           </p>
         </ScrollReveal>
       </div>

@@ -76,12 +76,12 @@ export default async function LocatorPage() {
       >
         <div
           className="blob left-[14%] top-[-140px] h-[340px] w-[340px]"
-          style={{ background: "var(--accent-2)", opacity: 0.15 }}
+          style={{ background: "var(--accent)", opacity: 0.12 }}
         />
         <div
           className="blob right-[8%] top-[-80px] h-[300px] w-[300px]"
           style={{
-            background: "var(--accent-3)",
+            background: "var(--lime)",
             opacity: 0.12,
             animationDelay: "-8s",
           }}

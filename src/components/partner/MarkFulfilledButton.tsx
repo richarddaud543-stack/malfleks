@@ -10,6 +10,8 @@ function errorMessage(reason: string | undefined): string {
       return "This order already moved — reload to see its current state.";
     case "not-found":
       return "This order can't be marked from here.";
+    case "not-paid":
+      return "The customer hasn't paid for this order yet, so it can't be marked delivered. Don't hand anything over until it says “Paid through MalFleks”.";
     default:
       return "Couldn't record that. Nothing changed — try again.";
   }

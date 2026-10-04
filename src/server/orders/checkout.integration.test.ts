@@ -177,9 +177,13 @@ describe("checkoutForCustomer", () => {
 
   it("is ready to pay the moment the order is placed, and paid once the money arrives", async () => {
     const o = await order();
-    // A plain read (the account page, the poll) never creates a link...
-    expect(await checkoutForCustomer(ASHA, o.reference)).toMatchObject({ state: "waiting", checkoutLink: null });
+    // A plain read (the poll) never creates a link. The order has a price, so
+    // it is not "waiting for the branch" -- it simply has no link yet.
+    expect(await checkoutForCustomer(ASHA, o.reference)).toMatchObject({ state: "unavailable", checkoutLink: null });
     expect(generateCheckoutLink).not.toHaveBeenCalled();
+    // ...and on the account page it is already something the customer can
+    // pay: "Pay now" leads to the pay page, which makes the link.
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "ready" });
 
     // ...the pay page does, without anyone confirming anything first.
     const ready = await checkoutForCustomer(ASHA, o.reference, { createIfMissing: true });
@@ -196,10 +200,23 @@ describe("checkoutForCustomer", () => {
     expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "paid" });
   });
 
-  it("waits for the branch only when the order cannot be priced yet", async () => {
+  // Until 4 Oct 2026 both of these read "waiting for the branch". Only the
+  // second one is: the first is ClickPesa failing, and an order stuck in it
+  // sat on the live account page with no way to pay (ORA-DOD-NWHJ).
+  it("says payment could not be opened, not that the branch is being waited on, when ClickPesa refuses a priced order", async () => {
     generateCheckoutLink.mockResolvedValue({ ok: false, reason: "request-failed" });
     const o = await order();
+    expect(await checkoutForCustomer(ASHA, o.reference, { createIfMissing: true })).toMatchObject({ state: "unavailable", checkoutLink: null });
+    // Still payable from the account page: the next visit to the pay page tries again.
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "ready" });
+  });
+
+  it("waits for the branch only when the order cannot be priced yet", async () => {
+    const o = await order();
+    // What a courier route in a city with no delivery fee set looks like: no quote at all.
+    await getPrisma().order.update({ where: { id: o.id }, data: { quoteOrderTotalTZS: null } });
     expect(await checkoutForCustomer(ASHA, o.reference, { createIfMissing: true })).toMatchObject({ state: "waiting" });
+    expect((await checkoutStatesForCustomer(ASHA)).get(o.reference)).toMatchObject({ state: "waiting" });
   });
 
   it("stops asking ClickPesa for a link after three failures in a row", async () => {

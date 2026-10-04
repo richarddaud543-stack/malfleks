@@ -50,6 +50,44 @@ export const PRODUCT_CATEGORIES = [
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
 /**
+ * The kinds a partner picks from when listing a product, in the order the
+ * form shows them: most common first, "Other" last.
+ *
+ * A pick list, not a text box, since 4 Oct 2026. The box let anything through
+ * -- the first product listed on the live shop had the kind "wet" -- and a
+ * made-up kind becomes its own search filter. Every entry here is one of
+ * `PRODUCT_CATEGORIES`, so nothing a partner can pick is new to the shop.
+ * "Phones" and "Cars" are left out on purpose: "Smartphone" and the four
+ * vehicle kinds already cover them, and two filters for one thing is the
+ * problem this file exists to prevent.
+ */
+export const SELLER_CATEGORIES: readonly ProductCategory[] = [
+  "Smartphone",
+  "Tablet",
+  "Laptop",
+  "Earbuds",
+  "Speaker",
+  "Smartwatch",
+  "Power Bank",
+  "Router",
+  "SIM Card",
+  "TVs & Audio",
+  "Home appliances",
+  "Fashion",
+  "Shoes",
+  "Beauty",
+  "Furniture",
+  "Food & Groceries",
+  "Tools",
+  "Sedan",
+  "SUV",
+  "Pickup",
+  "Van",
+  "Motorcycles",
+  "Other",
+];
+
+/**
  * Other things people type for a category we already have. Keys are in the
  * folded form `foldCategory` produces (lower case, single spaces).
  */

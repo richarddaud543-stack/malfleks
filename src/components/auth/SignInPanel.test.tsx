@@ -106,9 +106,12 @@ describe("SignInPanel", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("tells a signed-out visitor they can order without an account", () => {
+  // It used to say "You don't need an account to order", which stopped being
+  // true when paying became part of ordering. Browsing is what needs nothing.
+  it("tells a visitor they can look around without an account, and not that they can order without one", () => {
     render(<SignInPanel configured />);
-    expect(screen.getByText(/don't need an account to order/i)).toBeVisible();
+    expect(screen.getByText(/don't need an account to look around/i)).toBeVisible();
+    expect(screen.queryByText(/don't need an account to order/i)).not.toBeInTheDocument();
   });
 
   it("sends an already-signed-in visitor on to their account", async () => {

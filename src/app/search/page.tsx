@@ -47,7 +47,7 @@ export default async function SearchPage() {
         <div
           className="blob right-[5%] top-[-60px] h-[280px] w-[280px]"
           style={{
-            background: "var(--accent-2)",
+            background: "var(--lime)",
             opacity: 0.14,
             animationDelay: "-6s",
           }}
@@ -77,9 +77,12 @@ export default async function SearchPage() {
             <EmptyCatalogue looking="products" />
           ) : (
             /* useSearchParams needs a Suspense boundary to keep this route static. */
-            <Suspense fallback={<SearchSkeleton />}>
-              <SearchExplorer catalogue={catalogue} />
-            </Suspense>
+            <>
+              <h2 className="sr-only">Products</h2>
+              <Suspense fallback={<SearchSkeleton />}>
+                <SearchExplorer catalogue={catalogue} />
+              </Suspense>
+            </>
           )}
         </div>
       </div>

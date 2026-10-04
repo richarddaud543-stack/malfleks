@@ -37,8 +37,11 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
+      // No entrance from invisible. The results are in the HTML the server
+      // sends; starting each card at `opacity: 0` meant a customer on a slow
+      // phone looked at an empty list until the script loaded. `layout` still
+      // slides the cards to their new places when a filter changes.
+      initial={false}
       transition={{ duration: 0.28, ease: "easeOut" }}
     >
       <Link

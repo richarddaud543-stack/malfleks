@@ -68,7 +68,7 @@ function productInput(overrides: Record<string, unknown> = {}) {
   productSeq += 1;
   return {
     name: `Test Product ${productSeq}`,
-    category: "electronics",
+    category: "Speaker",
     priceTZS: 65_000,
     // A real icon key. This fixture used to say "/images/products/test.svg",
     // which the server accepted only because it was not checking the picture
@@ -636,7 +636,7 @@ describe("a published product survives a re-seed", () => {
         branchId: "toyota-dar",
         brandId: "toyota",
         name: "Removed from src/data",
-        category: "electronics",
+        category: "Speaker",
         priceTZS: 1_000,
         image: "/x.svg",
         description: "Simulates a product deleted from the editorial arrays.",

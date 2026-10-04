@@ -855,3 +855,26 @@ export function refundDueAdminMessage(input: {
     ].join("\n"),
   };
 }
+
+/** To MalFleks's own inbox: a customer wants to cancel an order they have already paid for. */
+export function cancelRequestAdminMessage(input: {
+  reference: string;
+  productName: string;
+  quantity: number;
+  customerName: string;
+  customerPhone: string;
+  adminUrl: string;
+  orderId: string;
+}): { subject: string; body: string } {
+  return {
+    subject: `MalFleks: customer asks to cancel ${input.reference}`,
+    body: [
+      `${input.customerName} (${input.customerPhone}) has asked to cancel order ${input.reference}:`,
+      `${input.quantity} × ${input.productName}. It is paid for and not yet delivered.`,
+      "",
+      "Nothing has been cancelled. Check with the branch whether it has gone out,",
+      "then either cancel it and record the refund, or tell the customer why not:",
+      `${input.adminUrl}/admin/orders/${input.orderId}`,
+    ].join("\n"),
+  };
+}

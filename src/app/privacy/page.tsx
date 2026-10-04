@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 2 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 4 October 2026.</p>
       </ScrollReveal>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -96,7 +96,9 @@ export default function PrivacyPage() {
             The branch you send an order request to sees the name, phone number
             and address on that request — that is the point of sending it; they
             cannot deliver to somebody they cannot reach. They do not see your
-            other requests, and no other branch sees any of it.
+            other requests, and no other branch sees any of it. When a courier
+            carries the order instead of the branch, that courier sees the same
+            three things for that one order, for the same reason.
           </p>
           <p className="mt-2">
             When a checkout is opened for your order, ClickPesa receives your
@@ -109,9 +111,23 @@ export default function PrivacyPage() {
             their own listings and the requests sent to their own branch.
           </p>
           <p className="mt-2">
+            When we email you — a receipt, a pay link, news of your order — the
+            message goes out through Brevo, an email service, which therefore
+            handles your email address and the text of that message. Google
+            handles your sign-in; it tells us your name, email address and
+            profile picture and nothing else.
+          </p>
+          <p className="mt-2">
+            We count visits with Vercel Web Analytics, so we can see which pages
+            are used and from what kind of device. It records the page, the
+            time, the country and city, and the browser and device type. It sets
+            no cookies, does not record your name or email address, and does not
+            follow you to other websites. Order references are removed from the
+            page addresses before they are counted.
+          </p>
+          <p className="mt-2">
             We do not sell your details, and we do not pass them to advertisers.
-            There is no advertising on MalFleks and no analytics or tracking scripts
-            of any kind.
+            There is no advertising on MalFleks.
           </p>
         </section>
 
@@ -170,8 +186,9 @@ export default function PrivacyPage() {
           </h2>
           <p className="mt-2">
             MalFleks sets cookies for one purpose: keeping you signed in. There are
-            no advertising or tracking cookies, which is why this site has no
-            cookie banner asking you to accept any.
+            no advertising or tracking cookies — the visit counting described
+            above uses none — which is why this site has no cookie banner asking
+            you to accept any.
           </p>
         </section>
       </div>

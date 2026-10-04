@@ -7,7 +7,7 @@ import { createOrder, type CreateOrderFailure } from "@/server/orders/create-ord
 import { checkRateLimit, clientIp } from "@/server/rate-limit";
 import { logServerError } from "@/server/error-log";
 import type { TransitionBlocker } from "@/server/orders/status";
-import type { SaveOrderRequestInput } from "@/server/orders/build-order-request";
+import { hasDeliveryCity, type SaveOrderRequestInput } from "@/server/orders/build-order-request";
 import {
   requestPaymentForOrder,
   type RequestPaymentFailure,
@@ -43,7 +43,7 @@ import {
 export type SubmitOrderResult =
   /** `payNow`: a checkout is open for this order, so the form goes straight to `/pay/[reference]`. */
   | { ok: true; reference: string; payNow: boolean }
-  | { ok: false; reason: CreateOrderFailure | "unavailable" | "rate-limited" };
+  | { ok: false; reason: CreateOrderFailure | "unavailable" | "rate-limited" | "signed-out" };
 
 // This is the one write action in this file with no session requirement at
 // all (see the doc comment above), so it is the one place in the app that
@@ -58,6 +58,19 @@ export async function submitOrder(
 ): Promise<SubmitOrderResult> {
   try {
     const session = await verifySession();
+
+    // An order needs an account: the payment is taken against it, and nothing
+    // else can be confirmed, paid for or tracked. The form never calls this
+    // signed out (it sends the customer to sign in instead), so a call with no
+    // session is either a session that expired on the way or a hand-made
+    // request -- and either way nothing is written. Until 4 Oct 2026 this
+    // stored the name, phone and address with no owner, which is exactly what
+    // the Terms say MalFleks does not do.
+    if (!session?.uid) return { ok: false, reason: "signed-out" };
+
+    // Where it is going has to be said; `createOrder` then holds the answer
+    // to the branch's own city.
+    if (!hasDeliveryCity(input)) return { ok: false, reason: "invalid" };
 
     const identity = session?.uid ? `uid:${session.uid}` : `ip:${await clientIp()}`;
     const limit = await checkRateLimit(identity, ORDER_RATE_LIMIT);

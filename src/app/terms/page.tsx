@@ -37,7 +37,7 @@ export default function TermsPage() {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 3 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 4 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -91,15 +91,25 @@ export default function TermsPage() {
           <p className="mt-2">
             If the branch or MalFleks cancels an order you have paid for — for
             example because the branch turns out not to have the item — you are
-            refunded the full amount. If you
-            want to cancel an order you have paid for, contact us as soon as you
-            can, before it is dispatched, and we will tell you what can be
-            refunded.
+            refunded the full amount.
           </p>
           <p className="mt-2">
-            A request sent without signing in is not recorded by MalFleks and
-            cannot be paid for here; any payment for it is between you and the
-            branch.
+            You can cancel an order you have not paid for yourself, on{" "}
+            <Link
+              href="/account"
+              className="text-accent underline underline-offset-4"
+            >
+              Your orders
+            </Link>
+            ; nothing is charged. If you want to cancel an order you have
+            already paid for, press &ldquo;Ask to cancel&rdquo; there as soon as
+            you can, before it is sent out. A person at MalFleks checks with the
+            branch and emails you what happens to the order and your payment.
+          </p>
+          <p className="mt-2">
+            Ordering needs an account. Nothing you type into an order form is
+            sent to MalFleks or to a branch until you have signed in and
+            continued to payment.
           </p>
         </section>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { sharePreview } from "@/lib/share-metadata";
 import { notFound } from "next/navigation";
 import {
   getAllBranches,
@@ -10,6 +11,7 @@ import {
 } from "@/server/repositories";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
+import { displayPhone } from "@/lib/order";
 import { resolveSiteUrl } from "@/lib/site-url";
 import ProductGrid from "@/components/product/ProductGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
@@ -49,7 +51,7 @@ export async function generateMetadata({
   return {
     title: branch.name,
     description,
-    openGraph: { title: branch.name, description },
+    ...sharePreview({ title: branch.name, description, path: `/brands/${brand.slug}/branches/${branch.id}` }),
   };
 }
 
@@ -103,7 +105,7 @@ export default async function BranchPage({
                 href={`tel:${branch.phone}`}
                 className="mt-1 block text-sm text-accent hover:underline"
               >
-                {branch.phone}
+                {displayPhone(branch.phone)}
               </a>
             )}
           </div>

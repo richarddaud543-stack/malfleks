@@ -16,7 +16,7 @@ describe("SafePay", () => {
       expect(screen.getByText(`${point.title}.`)).toBeInTheDocument();
     }
 
-    expect(screen.getByRole("link", { name: PROMISE.link.label })).toHaveAttribute("href", "/terms#paying");
+    expect(screen.getByRole("link", { name: PROMISE.link.label })).toHaveAttribute("href", "/how-it-works");
   });
 
   it("keeps the headline and the link when compact, and drops the points", () => {

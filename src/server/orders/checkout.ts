@@ -189,11 +189,12 @@ export async function checkoutForCustomer(
       ? "cancelled"
       : link
         ? "ready"
-        : // No link could be made. For an order nobody has confirmed that is
-          // the old path -- a route with no delivery fee set, which the branch
-          // has to price first -- so it waits; for a confirmed one it is a
-          // fault worth saying out loud.
-          order.status === "pending"
+        : // No link could be made. An order with no price yet is the old path
+          // -- a route with no delivery fee set, which the shop has to price
+          // first -- so it waits. One that has a price and still no link is a
+          // fault (ClickPesa refused or could not be reached), and saying
+          // "waiting for the shop" about it would be untrue.
+          order.status === "pending" && order.quoteOrderTotalTZS == null
           ? "waiting"
           : "unavailable";
 
@@ -284,7 +285,12 @@ export interface AccountOrderStatus {
   keepSavedCopy: boolean;
 }
 
-function accountStatus(order: { status: string; decisionNote: string | null; payments: { status: string; checkoutLink: string | null }[] }): AccountOrderStatus {
+function accountStatus(order: {
+  status: string;
+  decisionNote: string | null;
+  quoteOrderTotalTZS?: number | null;
+  payments: { status: string; checkoutLink: string | null }[];
+}): AccountOrderStatus {
   const paid = order.payments.some((p) => p.status === "captured");
   const state: AccountOrderState =
     order.status === "cancelled"
@@ -296,7 +302,13 @@ function accountStatus(order: { status: string; decisionNote: string | null; pay
           : // Payable: confirmed, or still pending with a checkout already
             // open (since 3 Oct 2026 that is the normal case -- the order is
             // waiting on the customer, not on the branch).
-            order.status === "confirmed" || order.payments.some((p) => p.checkoutLink)
+            // An order with a price is payable even when no link exists yet:
+            // the pay page makes one on arrival. Until 4 Oct 2026 such an
+            // order (its link had failed to open) sat on the account page as
+            // "waiting for the branch" with no way to pay it.
+            order.status === "confirmed" ||
+              order.payments.some((p) => p.checkoutLink) ||
+              order.quoteOrderTotalTZS != null
             ? "ready"
             : "waiting";
   return {
@@ -319,7 +331,7 @@ function accountStatus(order: { status: string; decisionNote: string | null; pay
 export async function checkoutStatesForCustomer(customerId: string): Promise<Map<string, AccountOrderStatus>> {
   const orders = await getPrisma().order.findMany({
     where: { customerId },
-    select: { reference: true, status: true, decisionNote: true, payments: { select: { status: true, checkoutLink: true } } },
+    select: { reference: true, status: true, decisionNote: true, quoteOrderTotalTZS: true, payments: { select: { status: true, checkoutLink: true } } },
   });
   return new Map(orders.map((o) => [o.reference, accountStatus(o)]));
 }

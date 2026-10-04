@@ -69,7 +69,7 @@ async function submit(partnerId: string, name?: string) {
   productSeq += 1;
   const outcome = await submitProduct(partnerId, {
     name: name ?? `Portal Product ${productSeq}`,
-    category: "electronics",
+    category: "Speaker",
     priceTZS: 120_000,
     image: "smartphone",
     description: "A product submitted by a branch partner.",

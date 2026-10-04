@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { SELLER_CATEGORIES } from "./product-categories";
+
 import {
   MAX_DESCRIPTION,
   MAX_PRICE_TZS,
@@ -157,9 +159,18 @@ describe("validateProductListing", () => {
       expect(shouting.ok && shouting.value.category).toBe("Home appliances");
     });
 
-    it("keeps a category it does not know, only trimmed and single-spaced", () => {
-      const result = validateProductListing({ ...good, category: "  Solar   Panels " });
-      expect(result.ok && result.value.category).toBe("Solar Panels");
+    // The first product on the live shop was listed with the kind "wet". A
+    // made-up kind becomes its own search filter, so it is refused -- here,
+    // for a request that did not come from the pick list.
+    it("refuses a kind that is not one of the shop's own", () => {
+      expect(errorsFor({ category: "wet" }).category).toMatch(/Choose one of the kinds/);
+      expect(errorsFor({ category: "  Solar   Panels " }).category).toBeDefined();
+    });
+
+    it("accepts every kind the form offers", () => {
+      for (const category of SELLER_CATEGORIES) {
+        expect(validateProductListing({ ...good, category }).ok, category).toBe(true);
+      }
     });
   });
 

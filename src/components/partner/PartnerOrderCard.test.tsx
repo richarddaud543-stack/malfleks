@@ -46,9 +46,10 @@ describe("PartnerOrderCard", () => {
   it("makes the customer's number a link you can press", () => {
     render(<PartnerOrderCard order={base} />);
 
-    // On a phone, this is the whole feature.
+    // On a phone, this is the whole feature. Grouped for reading; the link
+    // itself still dials the number exactly as stored.
     expect(
-      screen.getByRole("link", { name: "+255754123456" }),
+      screen.getByRole("link", { name: "+255 754 123 456" }),
     ).toHaveAttribute("href", "tel:+255754123456");
   });
 
@@ -149,5 +150,39 @@ describe("PartnerOrderCard", () => {
     expect(screen.getByText(/Paid through MalFleks/)).toBeVisible();
     expect(screen.getByRole("button", { name: /can't fulfil MALFLEKS-4F2A/i })).toBeVisible();
     expect(screen.queryByRole("button", { name: /^confirm MALFLEKS-4F2A/i })).not.toBeInTheDocument();
+  });
+
+  // "The shop is paid after delivery" is only true if nothing is delivered
+  // before it is paid for. Until 4 Oct 2026 a confirmed order that had not
+  // been paid drew "Mark delivered" and the location button under a sentence
+  // telling the branch not to hand anything over.
+  describe("delivery controls", () => {
+    const delivered = () => screen.queryByRole("button", { name: "Mark delivered" });
+
+    it("offers “Mark delivered” on a confirmed order that has been paid for", () => {
+      render(<PartnerOrderCard order={{ ...base, status: "confirmed", payment: { status: "captured", checkoutLink: null } } as ListedOrder} />);
+      expect(delivered()).toBeVisible();
+    });
+
+    it("offers nothing on a confirmed order whose payment is still open, and says it is not paid", () => {
+      render(
+        <PartnerOrderCard
+          order={{ ...base, status: "confirmed", payment: { status: "pending", checkoutLink: "https://checkout.clickpesa.com/X" } } as ListedOrder}
+          canDecide
+        />,
+      );
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      expect(screen.getByText("Not paid yet")).toBeVisible();
+      expect(screen.getByText(/hasn't paid yet/)).toBeVisible();
+    });
+
+    // The live case (ORA-DOD-UE6F): confirmed before paying was required, so
+    // it has no payment at all -- and used to show no payment line either.
+    it("treats a confirmed order with no payment on record the same way", () => {
+      render(<PartnerOrderCard order={{ ...base, status: "confirmed", payment: null } as ListedOrder} canDecide />);
+      expect(screen.queryByRole("button")).not.toBeInTheDocument();
+      expect(screen.getByText("Not paid yet")).toBeVisible();
+      expect(screen.getByText(/don't hand anything\s+over before then/)).toBeVisible();
+    });
   });
 });

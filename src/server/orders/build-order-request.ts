@@ -48,6 +48,16 @@ export interface SaveOrderRequestInput {
   phone: string;
   address: string;
   agentId: string | null;
+  /**
+   * The city the customer says the order is going to. Checked against the
+   * branch's own city in `buildOrderRequest`; see `validateOrderRequest`.
+   *
+   * Optional in the type because server code that builds an order itself
+   * (and every test fixture) has no customer to ask. The two public
+   * endpoints do not have that excuse: `submitOrder` and `saveOrderRequest`
+   * refuse a request that leaves it out -- see `hasDeliveryCity`.
+   */
+  deliveryCity?: string;
   /** The reference the customer already has on screen, so both copies match. */
   reference: string;
   requestedAt: string;
@@ -67,6 +77,17 @@ export type SaveOrderRequestFailure =
   | "not-orderable"
   | "invalid"
   | "quota";
+
+/**
+ * Whether a request from outside says where the order is going at all.
+ *
+ * Asked by the Server Actions before anything else. A Server Action is a
+ * public endpoint and can be called without the form, so "the form always
+ * sends it" is not a guarantee; this is.
+ */
+export function hasDeliveryCity(input: { deliveryCity?: unknown }): boolean {
+  return typeof input.deliveryCity === "string" && input.deliveryCity.trim() !== "";
+}
 
 export type BuildResult =
   | { ok: true; value: OrderRequest }
@@ -175,9 +196,14 @@ export function buildOrderRequest(
       phone: input.phone,
       address: input.address,
       agentId: input.agentId,
+      deliveryCity: input.deliveryCity,
     },
     route,
-    product.priceTZS
+    product.priceTZS,
+    // Every delivery is within the branch's own city. Whenever the request
+    // says where it is going, that answer is held to the branch's city here
+    // as well as in the form. The public actions make saying so compulsory.
+    typeof input.deliveryCity === "string" ? branch.city : undefined
   );
   if (!validated.ok) return { ok: false, reason: "invalid" };
 

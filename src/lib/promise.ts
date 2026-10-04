@@ -31,5 +31,6 @@ export const PROMISE = {
       body: "If the branch or MalFleks cancels an order you have paid for, you get the full amount back.",
     },
   ],
-  link: { href: "/terms#paying", label: "How paying and refunds work" },
+  /** The plain-language page; the Terms' "Paying" section is linked from there. */
+  link: { href: "/how-it-works", label: "How paying and refunds work" },
 } as const;

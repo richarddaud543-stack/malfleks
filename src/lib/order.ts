@@ -253,6 +253,17 @@ export function formatPhone(normalized: string): string {
   return match ? `+255 ${match[1]} ${match[2]} ${match[3]}` : normalized;
 }
 
+/**
+ * Any stored number, grouped for reading when it is a Tanzanian mobile and
+ * left exactly as stored when it is not. `formatPhone` only understands the
+ * canonical form; branch and courier numbers arrive however a partner typed
+ * them, and until 4 Oct 2026 they were printed that way ("+255629264383").
+ */
+export function displayPhone(raw: string): string {
+  const normalized = normalizePhone(raw);
+  return normalized ? formatPhone(normalized) : raw;
+}
+
 // ---------------------------------------------------------------------------
 // Validation
 // ---------------------------------------------------------------------------
@@ -265,7 +276,18 @@ export interface OrderRequestInput {
   address: string;
   /** Stays `null` on a brand route, where there is nothing to choose. */
   agentId: string | null;
+  /**
+   * The city the order is going to, as the customer picked it: the branch's
+   * own city, or `OTHER_DELIVERY_CITY`. See `validateOrderRequest` for why it
+   * is asked at all. Optional so a caller written before 4 Oct 2026 (and a
+   * draft saved by an older tab) still type-checks; a missing value is
+   * treated as "not answered" wherever the branch's city is known.
+   */
+  deliveryCity?: string;
 }
+
+/** What the form sends when the customer says they are somewhere else. */
+export const OTHER_DELIVERY_CITY = "elsewhere";
 
 export const emptyOrderInput: OrderRequestInput = {
   quantity: "1",
@@ -273,6 +295,7 @@ export const emptyOrderInput: OrderRequestInput = {
   phone: "",
   address: "",
   agentId: null,
+  deliveryCity: "",
 };
 
 export type OrderField = keyof OrderRequestInput;
@@ -297,12 +320,37 @@ export type OrderValidation =
 const MIN_NAME_LENGTH = 2;
 const MIN_ADDRESS_LENGTH = 6;
 
+/**
+ * `deliveryCity` is the city the branch delivers in — its own. Pass it and the
+ * customer has to say their address is there.
+ *
+ * Why it is asked (4 Oct 2026): every delivery on MalFleks is priced and
+ * carried within the branch's city — `quoteForOrder` quotes on `branch.city`
+ * and a courier is offered because they serve it. Nothing checked the address,
+ * so an order for a Dodoma shop with the address "Kigoma" was accepted and
+ * could be paid for. The address is free text and cannot be parsed reliably,
+ * so the customer is asked the one question that matters and the order is
+ * refused when the answer is "somewhere else".
+ *
+ * Optional only for the pure tests of the other rules. The form and the
+ * server (`buildOrderRequest`) both pass it.
+ */
 export function validateOrderRequest(
   input: OrderRequestInput,
   route: DeliveryRoute,
-  unitPriceTZS: number
+  unitPriceTZS: number,
+  deliveryCity?: string
 ): OrderValidation {
   const errors: OrderErrors = {};
+
+  if (deliveryCity !== undefined) {
+    const chosen = (input.deliveryCity ?? "").trim();
+    if (chosen === "") {
+      errors.deliveryCity = "Say which city this is going to.";
+    } else if (chosen !== deliveryCity) {
+      errors.deliveryCity = `This shop only delivers within ${deliveryCity}.`;
+    }
+  }
 
   const quantityText = input.quantity.trim();
   const rawQuantity = Number(quantityText);

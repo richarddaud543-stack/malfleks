@@ -160,7 +160,7 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
           <>
             <StateHeading tone="wait">Payment isn&apos;t open for this order yet</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              The order is confirmed, but we couldn&apos;t open the payment page just now. Nothing has been charged. Try again in a few
+              Your order is saved, but we couldn&apos;t open the payment page just now. Nothing has been charged. Try again in a few
               minutes, or{" "}
               <Link href="/contact" className="underline underline-offset-2 hover:text-foreground">
                 contact us

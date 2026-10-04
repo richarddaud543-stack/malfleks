@@ -105,7 +105,7 @@ export function Card({ children, className = "" }: { children: ReactNode; classN
 /** A horizontally scrolling table frame. Columns stay readable on a phone instead of crushing. */
 export function TableFrame({ children, minWidth = 720 }: { children: ReactNode; minWidth?: number }) {
   return (
-    <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-white">
+    <div className="relative mt-3 overflow-x-auto rounded-xl border border-border bg-white">
       <table className="w-full text-left text-sm" style={{ minWidth }}>
         {children}
       </table>

@@ -9,7 +9,9 @@ import {
   deliveryRouteLabel,
   emptyOrderInput,
   fastestAgent,
+  displayPhone,
   formatPhone,
+  OTHER_DELIVERY_CITY,
   generateOrderReference,
   normalizePhone,
   orderBlockReason,
@@ -319,6 +321,19 @@ describe("formatPhone", () => {
   });
 });
 
+describe("displayPhone", () => {
+  it("groups a Tanzanian mobile however it was stored", () => {
+    expect(displayPhone("+255629264383")).toBe("+255 629 264 383");
+    expect(displayPhone("0754123456")).toBe("+255 754 123 456");
+    expect(displayPhone("255754 123 456")).toBe("+255 754 123 456");
+  });
+
+  it("leaves anything else exactly as stored rather than guessing", () => {
+    expect(displayPhone("+44 20 7946 0000")).toBe("+44 20 7946 0000");
+    expect(displayPhone("022 211 0000")).toBe("022 211 0000");
+  });
+});
+
 // Toyota-range price, comfortably above MINIMUM_ORDER_VALUE_TZS, so these
 // cases exercise the rest of validation without tripping the minimum-order
 // check by accident.
@@ -460,6 +475,39 @@ describe("validateOrderRequest", () => {
   it("allows an order right at the minimum order value", () => {
     const result = validateOrderRequest(input({ quantity: "1" }), brandRoute, 5_000);
     expect(result.ok).toBe(true);
+  });
+});
+
+// Every delivery is priced and carried within the branch's own city. Until
+// 4 Oct 2026 nothing asked where the order was going: a Dodoma shop's order
+// with the address "Kigoma" was accepted on the live site.
+describe("validateOrderRequest — the delivery city", () => {
+  const CITY = "Dodoma";
+  const errorFor = (deliveryCity: string | undefined) => {
+    const result = validateOrderRequest(input({ deliveryCity }), brandRoute, UNIT_PRICE_TZS, CITY);
+    return result.ok ? null : (result.errors.deliveryCity ?? null);
+  };
+
+  it("accepts the branch's own city", () => {
+    expect(validateOrderRequest(input({ deliveryCity: CITY }), brandRoute, UNIT_PRICE_TZS, CITY).ok).toBe(true);
+  });
+
+  it("asks for an answer when none is given", () => {
+    expect(errorFor("")).toMatch(/Say which city/);
+    expect(errorFor("   ")).toMatch(/Say which city/);
+    expect(errorFor(undefined)).toMatch(/Say which city/);
+  });
+
+  it("refuses anywhere else, and names the city the shop does deliver in", () => {
+    for (const elsewhere of [OTHER_DELIVERY_CITY, "Kigoma", "dodoma", "Dar es Salaam"]) {
+      expect(errorFor(elsewhere), elsewhere).toMatch(/only delivers within Dodoma/);
+    }
+  });
+
+  it("is not asked at all where no branch city is passed", () => {
+    // The pure tests of the other rules above, and server code that builds an
+    // order with no customer to ask.
+    expect(validateOrderRequest(input({ deliveryCity: "Kigoma" }), brandRoute, UNIT_PRICE_TZS).ok).toBe(true);
   });
 });
 

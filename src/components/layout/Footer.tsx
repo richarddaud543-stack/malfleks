@@ -7,8 +7,8 @@ export default function Footer() {
         <div className="grid gap-10 sm:grid-cols-3">
           <div>
             <div className="flex items-center gap-2 font-display text-lg font-medium">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-accent-2" />
-              MalFleks<span className="text-accent-2">.</span>
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-lime" />
+              MalFleks<span className="text-accent">.</span>
             </div>
             <p className="mt-3 max-w-xs text-sm text-muted">
               Shop from brand branches across Tanzania and pay safely:
@@ -20,13 +20,13 @@ export default function Footer() {
           </div>
 
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Explore</h3>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li><Link href="/search" className="transition-colors hover:text-foreground">Search products</Link></li>
-              <li><Link href="/brands" className="transition-colors hover:text-foreground">All brands</Link></li>
-              <li><Link href="/agents" className="transition-colors hover:text-foreground">Delivery agents</Link></li>
-              <li><Link href="/locator" className="transition-colors hover:text-foreground">Branch locator</Link></li>
-              <li><Link href="/apply" className="transition-colors hover:text-foreground">Become a partner</Link></li>
+            <h2 className="text-sm font-semibold text-foreground">Explore</h2>
+            <ul className="mt-2 text-sm text-muted">
+              <li><Link href="/search" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Search products</Link></li>
+              <li><Link href="/brands" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">All brands</Link></li>
+              <li><Link href="/agents" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Delivery agents</Link></li>
+              <li><Link href="/locator" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Branch locator</Link></li>
+              <li><Link href="/apply" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Become a partner</Link></li>
             </ul>
           </div>
 
@@ -40,13 +40,16 @@ export default function Footer() {
             visitors and this one did not have.
           */}
           <div>
-            <h3 className="text-sm font-semibold text-foreground">MalFleks</h3>
-            <ul className="mt-3 space-y-2 text-sm text-muted">
-              <li><Link href="/account" className="transition-colors hover:text-foreground">Your orders</Link></li>
-              <li><Link href="/terms#paying" className="transition-colors hover:text-foreground">Paying, delivery and refunds</Link></li>
-              <li><Link href="/contact" className="transition-colors hover:text-foreground">Contact</Link></li>
-              <li><Link href="/terms" className="transition-colors hover:text-foreground">Terms of use</Link></li>
-              <li><Link href="/privacy" className="transition-colors hover:text-foreground">Privacy</Link></li>
+            <h2 className="text-sm font-semibold text-foreground">MalFleks</h2>
+            <ul className="mt-2 text-sm text-muted">
+              <li><Link href="/account" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Your orders</Link></li>
+              <li><Link href="/how-it-works" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">How MalFleks works</Link></li>
+              {/* The two pages that exist in Swahili start here; named in Swahili, for the reader it is for. */}
+              <li><Link href="/sw" hrefLang="sw" lang="sw" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">MalFleks kwa Kiswahili</Link></li>
+              <li><Link href="/terms#paying" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Paying, delivery and refunds</Link></li>
+              <li><Link href="/contact" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Contact</Link></li>
+              <li><Link href="/terms" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Terms of use</Link></li>
+              <li><Link href="/privacy" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Privacy</Link></li>
             </ul>
           </div>
         </div>

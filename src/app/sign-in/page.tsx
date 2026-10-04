@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: "Sign in",
   description:
     "Sign in to MalFleks to order, pay by mobile money, and track your delivery.",
+  // A sign-in button has nothing for a search result to show. Still crawlable,
+  // so links from it count; just not listed.
+  robots: { index: false, follow: true },
 };
 
 export default function SignInPage() {
@@ -24,7 +27,7 @@ export default function SignInPage() {
         <div
           className="blob right-[10%] top-[-80px] h-[260px] w-[260px]"
           style={{
-            background: "var(--accent-2)",
+            background: "var(--lime)",
             opacity: 0.14,
             animationDelay: "-6s",
           }}
@@ -34,15 +37,15 @@ export default function SignInPage() {
       <div className="relative mx-auto max-w-lg px-5 py-16">
         <ScrollReveal>
           <p className="font-accent-serif text-xl italic text-accent">
-            Keep your requests
+            Order and pay safely
           </p>
           <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
             Sign in to MalFleks
           </h1>
           <p className="mt-3 text-muted">
-            An order request lives in this browser tab and disappears when you
-            close it. Sign in and it is kept, so you can find the reference days
-            later and quote it to the branch.
+            Sign in to order. You pay MalFleks by mobile money, we hold your
+            payment until the order reaches you, and you can follow the
+            delivery from your account.
           </p>
         </ScrollReveal>
 

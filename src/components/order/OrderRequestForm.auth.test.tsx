@@ -4,7 +4,7 @@ import { getBranchById, getBrandById, getProductById } from "@/data";
 import type { Branch, Brand, Product } from "@/data";
 import { ORDER_STORAGE_KEY, parseOrderRequest, resolveDeliveryRoute } from "@/lib/order";
 import { invalidateSessionState } from "@/components/auth/session-state";
-import OrderRequestForm from "./OrderRequestForm";
+import OrderRequestForm, { orderDraftKey } from "./OrderRequestForm";
 
 /**
  * One rule, and it has now been reversed twice.
@@ -28,6 +28,14 @@ import OrderRequestForm from "./OrderRequestForm";
  * branch either way, so the stored row bought an admin view of orders nobody
  * acts on, in exchange for holding a stranger's home address with no retention
  * policy.
+ *
+ * **4 Oct 2026 -- what a signed-out submit does instead.** It used to save a
+ * "request" in the browser and show a confirmation screen with a reference no
+ * shop had ever received and that could not be paid for. Since paying became
+ * part of ordering, that was a dead end behind a button that said "Confirm".
+ * Now the button says "Sign in to order", the typed details are kept in the
+ * tab, and the customer is sent to sign in and straight back. The rule at the
+ * top is untouched: nothing is transmitted.
  */
 
 const push = vi.fn();
@@ -75,10 +83,15 @@ function fill() {
   fireEvent.change(screen.getByLabelText(/Phone number/), {
     target: { value: "0754123456" },
   });
+  fireEvent.change(screen.getByLabelText("Delivery city"), {
+    target: { value: "Dar es Salaam" },
+  });
   fireEvent.change(screen.getByLabelText(/Delivery address/), {
     target: { value: "12 Sokoine Road, Arusha" },
   });
 }
+
+const SIGN_IN_FIRST = "/sign-in?next=%2Fdelivery%2Ftoyota-corolla";
 
 describe("OrderRequestForm and the customer's session", () => {
   beforeEach(() => {
@@ -105,20 +118,62 @@ describe("OrderRequestForm and the customer's session", () => {
     await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in to order" }));
 
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/order/confirmation"));
+    // To sign in, and back to this same form afterwards.
+    await waitFor(() => expect(push).toHaveBeenCalledWith(SIGN_IN_FIRST));
 
     // Neither server action. Not MalFleks's record, not the customer's copy.
     expect(submitOrder).not.toHaveBeenCalled();
     expect(saveOrderRequest).not.toHaveBeenCalled();
 
-    // And the request still exists where the confirmation screen says it does:
-    // in this tab, and nowhere else.
-    const stored = parseOrderRequest(sessionStorage.getItem(ORDER_STORAGE_KEY));
-    expect(stored?.customer.fullName).toBe("Neema Mushi");
-    expect(stored?.customer.phone).toBe("+255754123456");
-    expect(stored?.savedToAccount).toBeUndefined();
+    // No order exists, so there is no request for a confirmation screen to
+    // show -- only what was typed, kept in this tab for the trip back.
+    expect(sessionStorage.getItem(ORDER_STORAGE_KEY)).toBeNull();
+    const draft = JSON.parse(sessionStorage.getItem(orderDraftKey("toyota-corolla")) ?? "null");
+    expect(draft).toMatchObject({ fullName: "Neema Mushi", phone: "0754123456", deliveryCity: "Dar es Salaam" });
+  });
+
+  it("does not send a signed-out customer to sign in with a form that is still wrong", async () => {
+    mockSession(false);
+    render(<OrderRequestForm {...brandDelivered} />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByRole("button", { name: "Sign in to order" }));
+
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/details need fixing/);
+  });
+
+  it("puts back what was typed when the customer returns from signing in, and clears it once ordered", async () => {
+    sessionStorage.setItem(
+      orderDraftKey("toyota-corolla"),
+      JSON.stringify({ quantity: "3", fullName: "Neema Mushi", phone: "0754123456", address: "12 Sokoine Road", agentId: null, deliveryCity: "Dar es Salaam" }),
+    );
+    mockSession(true);
+    submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-PAY1", payNow: true });
+    saveOrderRequest.mockResolvedValue({ saved: true });
+    render(<OrderRequestForm {...brandDelivered} />);
+
+    await waitFor(() => expect(screen.getByLabelText("Full name")).toHaveValue("Neema Mushi"));
+    expect(screen.getByLabelText("Quantity")).toHaveValue(3);
+    expect(screen.getByLabelText("Delivery city")).toHaveValue("Dar es Salaam");
+
+    // Nothing to retype: straight on to payment.
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to payment" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/pay/TOY-DAR-PAY1"));
+    expect(submitOrder.mock.calls[0][0]).toMatchObject({ quantity: "3", deliveryCity: "Dar es Salaam" });
+    expect(sessionStorage.getItem(orderDraftKey("toyota-corolla"))).toBeNull();
+  });
+
+  it("ignores a kept draft that is not what the form wrote", async () => {
+    sessionStorage.setItem(orderDraftKey("toyota-corolla"), "{not json");
+    mockSession(true);
+    render(<OrderRequestForm {...brandDelivered} />);
+    await screen.findByRole("button", { name: "Continue to payment" });
+
+    expect(screen.getByLabelText("Full name")).toHaveValue("");
+    expect(screen.getByLabelText("Quantity")).toHaveValue(1);
   });
 
   it("sends nothing while the session answer is still outstanding", async () => {
@@ -129,9 +184,9 @@ describe("OrderRequestForm and the customer's session", () => {
     render(<OrderRequestForm {...brandDelivered} />);
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sign in to order" }));
 
-    await waitFor(() => expect(push).toHaveBeenCalled());
+    await waitFor(() => expect(push).toHaveBeenCalledWith(SIGN_IN_FIRST));
     expect(submitOrder).not.toHaveBeenCalled();
     expect(saveOrderRequest).not.toHaveBeenCalled();
   });
@@ -150,6 +205,9 @@ describe("OrderRequestForm and the customer's session", () => {
     expect(payload.productId).toBe("toyota-corolla");
     // Normalised by the shared validator before it leaves the browser.
     expect(payload.phone).toBe("+255754123456");
+    // Where it is going, as the customer picked it: the server refuses a
+    // request without it and holds it to the branch's own city.
+    expect(payload.deliveryCity).toBe("Dar es Salaam");
     // Nothing with a price on it: the server re-derives all of that, so a
     // hand-crafted payload cannot misstate what was ordered.
     expect(payload).not.toHaveProperty("lineTotalTZS");
@@ -212,14 +270,14 @@ describe("OrderRequestForm and the customer's session", () => {
   });
 
   it("still completes the order when persistence itself fails", async () => {
-    mockSession(false);
+    mockSession(true);
     submitOrder.mockRejectedValue(new Error("Prisma unavailable"));
+    saveOrderRequest.mockResolvedValue({ saved: false, reason: "unavailable" });
 
     render(<OrderRequestForm {...brandDelivered} />);
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
 
     fill();
-    fireEvent.click(screen.getByRole("button", { name: "Confirm brand delivery" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Continue to payment" }));
 
     // A failed write costs the customer nothing they had a moment ago: the
     // browser copy is already there, and they still reach the confirmation

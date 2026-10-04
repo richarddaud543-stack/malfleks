@@ -376,17 +376,19 @@ export function searchProducts(
     listings: sorted.map((entry) => entry.listing),
     queryMatchCount: queryMatched.length,
     facets: {
-      brands: toOptions(
-        brandCounts,
-        brands.map((b) => ({ value: b.id, label: b.name }))
-      ),
+      // Every filter choice comes from the catalogue being searched, never
+      // from the static seed. Until 4 Oct 2026 these three lists were read
+      // from `src/data` whatever `listings` held, so the live shop -- two
+      // real brands in the database -- offered "Toyota 0", "BMW 0", "Apple 0"
+      // and a dozen empty categories, and did not offer the real ones.
+      brands: toOptions(brandCounts, brandChoices(listings)),
       categories: toOptions(
         categoryCounts,
-        allCategories().map((c) => ({ value: c, label: c }))
+        distinct(listings.map((l) => l.product.category)).map((c) => ({ value: c, label: c }))
       ),
       cities: toOptions(
         cityCounts,
-        allCities().map((c) => ({ value: c, label: c }))
+        distinct(listings.map((l) => l.branch.city)).map((c) => ({ value: c, label: c }))
       ),
       priceBands: toOptions(
         priceCounts,
@@ -394,6 +396,18 @@ export function searchProducts(
       ),
     },
   };
+}
+
+/** Distinct values, alphabetical. */
+function distinct(values: string[]): string[] {
+  return [...new Set(values)].sort((a, b) => a.localeCompare(b));
+}
+
+/** One choice per brand that has something listed, by name. */
+function brandChoices(listings: Listing[]): { value: string; label: string }[] {
+  const byId = new Map<string, string>();
+  for (const { brand } of listings) byId.set(brand.id, brand.name);
+  return [...byId].map(([value, label]) => ({ value, label })).sort((a, b) => a.label.localeCompare(b.label));
 }
 
 export function allCategories(): string[] {

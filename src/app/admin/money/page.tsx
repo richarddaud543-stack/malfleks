@@ -2,14 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import AutoCheckPayments from "@/components/admin/AutoCheckPayments";
 import { CheckAllPaymentsButton, CheckPaymentButton } from "@/components/admin/CheckPaymentButtons";
 import ChartCard from "@/components/admin/charts/ChartCard";
 import ColumnChart from "@/components/admin/charts/ColumnChart";
 import { ageLabel, dayLabel, formatTZS } from "@/lib/charts";
 import { getMoneyOverview, MONEY_SERIES_DAYS } from "@/server/admin/money";
 import { requireAdmin } from "@/server/auth/dal";
-import { logServerError } from "@/server/error-log";
-import { reconcileDue } from "@/server/payments/reconcile";
 
 export const metadata: Metadata = {
   title: "Money",
@@ -22,21 +21,21 @@ export const dynamic = "force-dynamic";
  * Where every shilling is: collected, held in escrow, paid out, and the
  * payments still waiting.
  *
- * Opening this page asks ClickPesa about up to three open payments that have
- * not been checked in half an hour -- so if a customer has just paid, looking
- * here is enough to see it recorded, whether or not the webhook got through.
- * The cap and the half-hour keep that from spending the account's 100 API
- * calls a day on someone refreshing the page.
+ * Looking at this page asks ClickPesa about up to three open payments that
+ * have not been checked in half an hour -- so if a customer has just paid,
+ * looking here is enough to see it recorded, whether or not the webhook got
+ * through. The cap and the half-hour keep that from spending the account's
+ * 100 API calls a day on someone refreshing the page.
+ *
+ * That check is started by the browser once the page is on screen
+ * (`AutoCheckPayments`), not while the page is being rendered. It used to run
+ * during rendering, and Next.js renders a page ahead of time whenever a link
+ * to it scrolls into view -- so merely opening *any* admin page, with "Money"
+ * in the sidebar, spent ClickPesa calls (seen on the live console, 4 Oct
+ * 2026). Rendering a page must not have side effects.
  */
 export default async function AdminMoneyPage() {
   await requireAdmin("/admin/money");
-
-  const ready = Boolean(process.env.CLICKPESA_CLIENT_ID?.trim() && process.env.CLICKPESA_API_KEY?.trim());
-  if (ready) {
-    await reconcileDue({ staleAfterMinutes: 30, limit: 3 }).catch((error) =>
-      logServerError("clickpesa-reconcile-pageload", error),
-    );
-  }
 
   const money = await getMoneyOverview();
   const now = new Date();
@@ -44,6 +43,7 @@ export default async function AdminMoneyPage() {
 
   return (
     <div className="mx-auto max-w-6xl">
+      {money.reconcilerReady && totals.awaitingCount > 0 && <AutoCheckPayments />}
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="font-display text-2xl font-medium tracking-tight sm:text-3xl">Money</h1>
@@ -99,7 +99,7 @@ export default async function AdminMoneyPage() {
         {money.payments.length === 0 ? (
           <Empty>No payment links have been sent yet. &ldquo;Send payment link&rdquo; on a confirmed order creates one.</Empty>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-white">
+          <div className="relative mt-3 overflow-x-auto rounded-xl border border-border bg-white">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted">
@@ -160,7 +160,7 @@ export default async function AdminMoneyPage() {
         {money.ledger.length === 0 ? (
           <Empty>No ledger entries yet. One is written the moment a payment is captured.</Empty>
         ) : (
-          <div className="mt-3 overflow-x-auto rounded-xl border border-border bg-white">
+          <div className="relative mt-3 overflow-x-auto rounded-xl border border-border bg-white">
             <table className="w-full min-w-[560px] text-left text-sm">
               <thead>
                 <tr className="border-b border-border text-xs text-muted">

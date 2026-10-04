@@ -61,14 +61,14 @@ export default async function PartnerOrdersPage() {
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
       <Link href="/partner" className="text-sm text-muted hover:text-foreground">
-        ← Your listings
+        ← {isCourier ? "Your account" : "Your listings"}
       </Link>
       <h1 className="mt-4 font-display text-4xl font-medium tracking-tight">
         Orders for {partner.displayName}
       </h1>
       <p className="mt-3 max-w-prose text-muted">
         {isCourier
-          ? "Deliveries a customer routed to you. Call them, and quote the reference. If an order is marked “Paid through MalFleks”, collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. If it isn't, arrange the fee with the branch and the customer directly."
+          ? "Deliveries a customer routed to you. Act on an order once it says “Paid through MalFleks”: collect it from the branch, call the customer and quote the reference, and collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. An order that is not paid yet is not ready to collect."
           : "Orders for your branch. Customers pay MalFleks when they order, so act on an order once it says “Paid through MalFleks”: deliver it, collect nothing at the door, and MalFleks pays your share after delivery. If you can't supply a paid order, say so here and the customer is refunded. Keep your stock switches up to date so that rarely happens."}
       </p>
 

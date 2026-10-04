@@ -3,7 +3,7 @@
 import { useId, useRef, useState } from "react";
 
 import {
-  PRODUCT_CATEGORIES,
+  SELLER_CATEGORIES,
   specSuggestionsFor,
 } from "@/lib/product-categories";
 import Link from "next/link";
@@ -12,6 +12,7 @@ import { listProductForPartner } from "@/app/actions/partner-products";
 import DescriptionHelper from "@/components/partner/DescriptionHelper";
 import ProductIcon from "@/components/product/ProductIcon";
 import ProductPhotoUpload from "@/components/partner/ProductPhotoUpload";
+import { MINIMUM_ORDER_VALUE_TZS } from "@/lib/fees";
 import { formatTZS } from "@/lib/format";
 import {
   PRODUCT_ICON_KEYS,
@@ -221,6 +222,16 @@ export default function ListProductForm({
     ? formatTZS(Number(input.price.replace(/[,\s]/g, "")))
     : null;
 
+  // How many a customer must buy at once for the order to reach the minimum,
+  // or `null` when one is enough (or there is no price yet).
+  const typedPrice = /^\d+$/.test(input.price.replace(/[,\s]/g, ""))
+    ? Number(input.price.replace(/[,\s]/g, ""))
+    : null;
+  const belowMinimum =
+    typedPrice && MINIMUM_ORDER_VALUE_TZS !== null && typedPrice < MINIMUM_ORDER_VALUE_TZS
+      ? Math.ceil(MINIMUM_ORDER_VALUE_TZS / typedPrice)
+      : null;
+
   // Ranked as they type the name and category — see `matchProductIcons` for
   // the scoring. Empty until either field has something worth matching
   // against, so a blank form shows the full grid rather than an empty
@@ -274,32 +285,29 @@ export default function ListProductForm({
         <Field
           id={`${fieldId}-category`}
           label="What kind of product is it?"
-          hint="A word or two customers would search for. Pick one from the list, or type your own."
+          hint="Pick the closest one. Customers filter the shop by these."
           hintId={`${fieldId}-category-hint`}
           error={errors.category}
           errorId={`${fieldId}-category-error`}
         >
-          <input
+          {/* A pick list since 4 Oct 2026. It was a text box with suggestions,
+              and the first live listing came through with the kind "wet". */}
+          <select
             id={`${fieldId}-category`}
             data-field="category"
-            type="text"
             value={input.category}
             onChange={(e) => update({ category: e.target.value })}
             aria-invalid={Boolean(errors.category) || undefined}
             aria-describedby={describe("category", true)}
             className={fieldClass(Boolean(errors.category))}
-            // Still a free text box — a shop can sell something we did not
-            // think of — with the known categories offered as it is typed.
-            // The server folds "phones " and "PHONES" onto "Phones" either
-            // way; see `product-categories.ts`.
-            list={`${fieldId}-category-list`}
-            autoComplete="off"
-          />
-          <datalist id={`${fieldId}-category-list`}>
-            {PRODUCT_CATEGORIES.map((category) => (
-              <option key={category} value={category} />
+          >
+            <option value="">Choose…</option>
+            {SELLER_CATEGORIES.map((category) => (
+              <option key={category} value={category}>
+                {category}
+              </option>
             ))}
-          </datalist>
+          </select>
         </Field>
 
         <Field
@@ -323,6 +331,14 @@ export default function ListProductForm({
           />
           {pricePreview && (
             <p className="mt-1.5 text-xs text-muted">Reads as {pricePreview}</p>
+          )}
+          {/* Not an error: a shop may well sell a TSh 2,000 cable. But the
+              partner should know one of them alone cannot be ordered. */}
+          {belowMinimum && (
+            <p className="mt-1.5 text-xs text-muted" data-testid="below-minimum-note">
+              Orders on MalFleks start at {formatTZS(MINIMUM_ORDER_VALUE_TZS as number)}, so a
+              customer would have to buy at least {belowMinimum} of these in one order.
+            </p>
           )}
         </Field>
 

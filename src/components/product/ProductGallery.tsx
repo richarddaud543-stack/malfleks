@@ -185,7 +185,7 @@ export default function ProductGallery({
       </button>
 
       {many && (
-        <ul className="mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={`Photos of ${name}`}>
+        <ul className="relative mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={`Photos of ${name}`}>
           {photos.map((photo, i) => {
             const selected = i === current;
             return (
@@ -225,9 +225,6 @@ export default function ProductGallery({
             aria-modal="true"
             aria-label={`${name}${position}`}
             data-testid="gallery-lightbox"
-            // `data-lenis-prevent`: the site's smooth-scroll would otherwise
-            // take the wheel and touch events meant for this view.
-            data-lenis-prevent=""
             className="fixed inset-0 z-[100] flex flex-col bg-black"
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">

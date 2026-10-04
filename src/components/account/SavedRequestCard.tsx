@@ -3,6 +3,7 @@ import { formatTZS } from "@/lib/format";
 import { deliveryRouteLabel, formatPhone } from "@/lib/order";
 import type { AccountOrderStatus } from "@/server/orders/checkout";
 import type { SavedOrderRequest } from "@/server/orders/saved-requests";
+import CancelOrderButton from "./CancelOrderButton";
 import DeleteSavedRequest from "./DeleteSavedRequest";
 
 /**
@@ -123,7 +124,7 @@ export default function SavedRequestCard({
           )}
           {state === "waiting" && (
             <>
-              <span className="font-medium">Waiting for the branch to confirm the price and delivery.</span> Nothing is due yet —
+              <span className="font-medium">Waiting for the shop to confirm the delivery cost.</span> Nothing is due yet —
               you&apos;ll pay here once they do.
             </>
           )}
@@ -166,6 +167,11 @@ export default function SavedRequestCard({
           >
             {trackLabel}
           </Link>
+        )}
+        {/* Their own way out: cancel outright while unpaid, ask once paid.
+            Nothing to offer on an order that is delivered or cancelled. */}
+        {(state === "ready" || state === "waiting" || state === "paid") && (
+          <CancelOrderButton reference={request.reference} paid={state === "paid"} />
         )}
         {/* The only other interactive part of an otherwise static card, so it
             is the only other part that is a client component. While the order

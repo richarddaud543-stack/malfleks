@@ -68,3 +68,27 @@ export async function checkAllPaymentsAction(): Promise<CheckAllState> {
     return { status: "error", message: "The check failed. It has been logged." };
   }
 }
+
+/**
+ * The quiet check the Money page makes once it is on screen.
+ *
+ * Throttled hard -- three payments, none checked in the last half hour -- so a
+ * page left open, or reloaded, cannot spend the account's daily API allowance.
+ * Reports only whether anything changed, which is all the page needs to know
+ * to decide whether to redraw.
+ */
+export async function autoCheckPaymentsAction(): Promise<{ changed: boolean }> {
+  const session = await adminSession();
+  if (!session) return { changed: false };
+
+  try {
+    const results = await reconcileDue({ staleAfterMinutes: 30, limit: 3 });
+    if (results.length === 0) return { changed: false };
+    revalidatePath("/admin/money");
+    revalidatePath("/admin");
+    return { changed: true };
+  } catch (error) {
+    await logServerError("clickpesa-reconcile-pageload", error, session.uid);
+    return { changed: false };
+  }
+}
