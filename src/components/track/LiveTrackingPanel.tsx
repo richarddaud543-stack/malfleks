@@ -7,26 +7,24 @@ import {
   type TrackedOrderSummary,
 } from "@/app/actions/tracking";
 import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
+import { useLocale } from "@/i18n/client";
+import { ACCOUNT } from "@/i18n/copy/account";
+import { pingNoteLabel } from "@/i18n/copy/partner";
+
+type TrackCopy = (typeof ACCOUNT)["en"]["track"];
 
 /** How often the panel re-asks the server for the newest ping. Cheap enough
  *  at this table's real volume (see the note on `latestPingsForOrders`) and
  *  frequent enough that "live" isn't a stretch for a manual-ping system. */
 const POLL_MS = 20_000;
 
-const STATUS_COPY: Record<string, string> = {
-  pending: "This order has not been paid for yet. Tracking starts once it is.",
-  confirmed: "Order placed — tracking below updates as the delivery reports in.",
-  cancelled: "This order was cancelled. Tracking has stopped.",
-  fulfilled: "Delivered. This is the last position that was reported.",
-};
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, copy: TrackCopy): string {
   const ms = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(ms / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (minutes < 1) return copy.justNow;
+  if (minutes < 60) return copy.minutesAgo(minutes);
+  return copy.hoursAgo(Math.round(minutes / 60));
 }
 
 /**
@@ -48,6 +46,8 @@ export default function LiveTrackingPanel({
   reference: string;
   initialOrder: TrackedOrderSummary;
 }) {
+  const locale = useLocale();
+  const copy = ACCOUNT[locale].track;
   const [order, setOrder] = useState(initialOrder);
   const [stalled, setStalled] = useState(false);
 
@@ -85,7 +85,7 @@ export default function LiveTrackingPanel({
   return (
     <div className="glass-card mt-8 rounded-2xl px-6 py-6">
       <p className="text-sm text-muted">
-        {STATUS_COPY[order.status] ?? "Status: " + order.status}
+        {(copy.status as Record<string, string>)[order.status] ?? copy.statusOther(order.status)}
       </p>
 
       <div className="mt-5 overflow-hidden rounded-xl border border-border">
@@ -98,16 +98,15 @@ export default function LiveTrackingPanel({
 
       <p className="mt-3 text-xs text-muted">
         {latest
-          ? `Last reported ${timeAgo(latest.createdAt)}${latest.note ? ` · ${latest.note}` : ""}`
+          ? `${copy.lastReported(timeAgo(latest.createdAt, copy))}${latest.note ? ` · ${pingNoteLabel(latest.note, locale)}` : ""}`
           : order.status === "confirmed"
-            ? "Waiting for the first location report."
-            : "No location has been reported for this order."}
+            ? copy.waitingFirst
+            : copy.noLocation}
       </p>
 
       {stalled && (
         <p className="mt-3 text-xs text-red-700 dark:text-red-400">
-          Couldn&apos;t refresh tracking just now. Reload the page to try
-          again.
+          {copy.stalled}
         </p>
       )}
     </div>

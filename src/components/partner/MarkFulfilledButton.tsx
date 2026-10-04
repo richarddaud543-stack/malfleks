@@ -3,17 +3,21 @@
 import { useState, useTransition } from "react";
 
 import { markOrderFulfilledByPartnerAction } from "@/app/actions/partner-orders";
+import { useLocale } from "@/i18n/client";
+import { PARTNER } from "@/i18n/copy/partner";
 
-function errorMessage(reason: string | undefined): string {
+type FulfilCopy = (typeof PARTNER)["en"]["fulfil"];
+
+function errorMessage(reason: string | undefined, copy: FulfilCopy): string {
   switch (reason) {
     case "invalid-transition":
-      return "This order already moved — reload to see its current state.";
+      return copy.already;
     case "not-found":
-      return "This order can't be marked from here.";
+      return copy.notFound;
     case "not-paid":
-      return "The customer hasn't paid for this order yet, so it can't be marked delivered. Don't hand anything over until it says “Paid through MalFleks”.";
+      return copy.notPaid;
     default:
-      return "Couldn't record that. Nothing changed — try again.";
+      return copy.failed;
   }
 }
 
@@ -27,6 +31,7 @@ function errorMessage(reason: string | undefined): string {
  * none server-side either — `fulfilled` is terminal.
  */
 export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
+  const copy = PARTNER[useLocale()].fulfil;
   const [armed, setArmed] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -35,7 +40,7 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
   if (done) {
     return (
       <p className="mt-4 text-xs font-medium text-accent">
-        Marked delivered.
+        {copy.done}
       </p>
     );
   }
@@ -48,18 +53,18 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
           onClick={() => setArmed(true)}
           className="min-h-11 rounded-full border border-accent px-5 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent hover:text-background"
         >
-          Mark delivered
+          {copy.mark}
         </button>
       ) : (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs text-muted">Confirm this arrived?</span>
+          <span className="text-xs text-muted">{copy.confirm}</span>
           <button
             type="button"
             disabled={pending}
             onClick={() => setArmed(false)}
             className="min-h-11 rounded-full border border-border px-4 py-2 text-sm text-muted disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Back
+            {copy.back}
           </button>
           <button
             type="button"
@@ -71,13 +76,13 @@ export default function MarkFulfilledButton({ orderId }: { orderId: string }) {
                   setDone(true);
                 } else {
                   setArmed(false);
-                  setError(errorMessage(result.reason));
+                  setError(errorMessage(result.reason, copy));
                 }
               })
             }
             className="min-h-11 rounded-full border border-accent bg-accent px-4 py-2 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "Marking…" : "Yes, delivered"}
+            {pending ? copy.marking : copy.yes}
           </button>
         </div>
       )}

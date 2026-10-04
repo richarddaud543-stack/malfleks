@@ -12,6 +12,9 @@ import { listProductForPartner } from "@/app/actions/partner-products";
 import DescriptionHelper from "@/components/partner/DescriptionHelper";
 import ProductIcon from "@/components/product/ProductIcon";
 import ProductPhotoUpload from "@/components/partner/ProductPhotoUpload";
+import { useLocale } from "@/i18n/client";
+import { iconLabel, PARTNER, specLabel } from "@/i18n/copy/partner";
+import { categoryLabel } from "@/i18n/copy/shop";
 import { MINIMUM_ORDER_VALUE_TZS } from "@/lib/fees";
 import { formatTZS } from "@/lib/format";
 import {
@@ -53,27 +56,6 @@ const FIELD_ORDER: ProductListingField[] = [
   "specs",
 ];
 
-const FAILURE_TEXT: Record<string, string> = {
-  "signed-out": "Your session expired. Sign in again and resend this.",
-  unavailable: "Sign-in isn't available right now, so we can't record this.",
-  "not-a-partner":
-    "This account isn't linked to a partner any more. Contact MalFleks if that's wrong.",
-  "not-a-branch-partner": "Only brand branches can list products.",
-  "partner-suspended":
-    "This account is suspended, so new listings can't be submitted.",
-  "missing-field": "Something in the form came through empty. Check it over.",
-  "invalid-price": "The price has to be a whole number of shillings.",
-  "invalid-photo":
-    "One of the photos didn't come through properly. Remove it and try uploading again.",
-  "invalid-name": "Give the product a name customers would recognise.",
-  "invalid-description": `The description should be a sentence or two, and no more than ${MAX_DESCRIPTION} characters.`,
-  "invalid-image": "Choose one of the pictures from the list.",
-  "invalid-specs": `Every detail needs both a label and a value, and there can be at most ${MAX_SPECS}.`,
-  "rate-limited":
-    "You've submitted a few of these in quick succession. Wait a bit and try again.",
-  failed:
-    "We couldn't save this right now. Nothing was recorded — your answers are still here, so try again in a moment.",
-};
 
 export default function ListProductForm({
   ai = { describe: false, cleanPhoto: false },
@@ -85,6 +67,8 @@ export default function ListProductForm({
    */
   ai?: { describe: boolean; cleanPhoto: boolean };
 } = {}) {
+  const locale = useLocale();
+  const copy = PARTNER[locale].listing;
   const fieldId = useId();
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -101,11 +85,18 @@ export default function ListProductForm({
   // it keeps its own per-photo state, which resetting `input` cannot reach.
   const [formRound, setFormRound] = useState(0);
 
+  /** Why the server refused, in words. An unknown reason gets the general one. */
+  function failureText(reason: string): string {
+    const text = (copy.failure as Record<string, string | ((max: number) => string)>)[reason] ?? copy.failure.failed;
+    if (typeof text === "string") return text;
+    return text(reason === "invalid-specs" ? MAX_SPECS : MAX_DESCRIPTION);
+  }
+
   function update(patch: Partial<ProductListingInput>) {
     const next = { ...input, ...patch };
     setInput(next);
     if (attempted) {
-      const result = validateProductListing(next);
+      const result = validateProductListing(next, { locale });
       setErrors(result.ok ? {} : result.errors);
     }
   }
@@ -136,7 +127,7 @@ export default function ListProductForm({
     setAttempted(true);
     setFailure(null);
 
-    const result = validateProductListing(input);
+    const result = validateProductListing(input, { locale });
     if (!result.ok) {
       setErrors(result.errors);
       const firstBroken = FIELD_ORDER.find((field) => result.errors[field]);
@@ -164,25 +155,24 @@ export default function ListProductForm({
       setDone(true);
       return;
     }
-    setFailure(FAILURE_TEXT[outcome.reason] ?? FAILURE_TEXT.failed);
+    setFailure(failureText(outcome.reason));
   }
 
   if (done) {
     return (
       <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
-        <h2 className="font-display text-2xl font-medium">Sent for review</h2>
+        <h2 className="font-display text-2xl font-medium">{copy.doneHeading}</h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          It is saved against your branch and waiting on MalFleks.{" "}
-          <strong>Customers cannot see it yet</strong> — a person reads every
-          listing before it goes live, and you&apos;ll see the outcome on your
-          listings page either way.
+          {copy.doneBody.before}
+          <strong>{copy.doneBody.strong}</strong>
+          {copy.doneBody.after}
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link
             href="/partner"
             className="btn-pill btn-ink px-6 py-2.5 text-sm"
           >
-            Your listings
+            {copy.yourListings}
           </Link>
           <button
             type="button"
@@ -196,7 +186,7 @@ export default function ListProductForm({
             }}
             className="btn-pill btn-lime px-6 py-2.5 text-sm"
           >
-            List another
+            {copy.another}
           </button>
         </div>
       </div>
@@ -266,7 +256,7 @@ export default function ListProductForm({
       <div className="grid gap-5">
         <Field
           id={`${fieldId}-name`}
-          label="What is it called?"
+          label={copy.name}
           error={errors.name}
           errorId={`${fieldId}-name-error`}
         >
@@ -284,8 +274,8 @@ export default function ListProductForm({
 
         <Field
           id={`${fieldId}-category`}
-          label="What kind of product is it?"
-          hint="Pick the closest one. Customers filter the shop by these."
+          label={copy.category}
+          hint={copy.categoryHint}
           hintId={`${fieldId}-category-hint`}
           error={errors.category}
           errorId={`${fieldId}-category-error`}
@@ -301,10 +291,10 @@ export default function ListProductForm({
             aria-describedby={describe("category", true)}
             className={fieldClass(Boolean(errors.category))}
           >
-            <option value="">Choose…</option>
+            <option value="">{copy.choose}</option>
             {SELLER_CATEGORIES.map((category) => (
               <option key={category} value={category}>
-                {category}
+                {categoryLabel(category, locale)}
               </option>
             ))}
           </select>
@@ -312,8 +302,8 @@ export default function ListProductForm({
 
         <Field
           id={`${fieldId}-price`}
-          label="Price in shillings"
-          hint="Whole shillings, no decimals. Separators are fine — 1,250,000."
+          label={copy.price}
+          hint={copy.priceHint}
           hintId={`${fieldId}-price-hint`}
           error={errors.price}
           errorId={`${fieldId}-price-error`}
@@ -330,22 +320,21 @@ export default function ListProductForm({
             className={fieldClass(Boolean(errors.price))}
           />
           {pricePreview && (
-            <p className="mt-1.5 text-xs text-muted">Reads as {pricePreview}</p>
+            <p className="mt-1.5 text-xs text-muted">{copy.readsAs(pricePreview)}</p>
           )}
           {/* Not an error: a shop may well sell a TSh 2,000 cable. But the
               partner should know one of them alone cannot be ordered. */}
           {belowMinimum && (
             <p className="mt-1.5 text-xs text-muted" data-testid="below-minimum-note">
-              Orders on MalFleks start at {formatTZS(MINIMUM_ORDER_VALUE_TZS as number)}, so a
-              customer would have to buy at least {belowMinimum} of these in one order.
+              {copy.belowMinimum(formatTZS(MINIMUM_ORDER_VALUE_TZS as number), belowMinimum)}
             </p>
           )}
         </Field>
 
         <Field
           id={`${fieldId}-description`}
-          label="Describe it"
-          hint="What a customer reads before ordering. Say what it is, whether it is new or used, what comes in the box, any warranty, and anything else a buyer should know."
+          label={copy.description}
+          hint={copy.descriptionHint}
           hintId={`${fieldId}-description-hint`}
           error={errors.description}
           errorId={`${fieldId}-description-error`}
@@ -393,18 +382,17 @@ export default function ListProductForm({
         </Field>
 
         <fieldset className="border-0 p-0" data-field="image">
-          <legend className="text-sm font-medium">Pick a picture</legend>
+          <legend className="text-sm font-medium">{copy.picture}</legend>
           <p
             id={`${fieldId}-image-hint`}
             className="mt-1 text-xs text-muted"
           >
-            Shown until — or unless — you add a real photo below. Choose the
-            closest one either way.
+            {copy.pictureHint}
           </p>
           {suggestedIcons.length > 0 && (
             <div className="mt-3">
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                Suggested for &ldquo;{input.name || input.category}&rdquo;
+                {copy.suggestedFor(input.name || categoryLabel(input.category, locale))}
               </p>
               <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
                 {suggestedIcons.map((key) => {
@@ -431,7 +419,7 @@ export default function ListProductForm({
                         className={`h-8 w-8 ${selected ? "text-accent" : "text-foreground/70"}`}
                       />
                       <span className="text-[11px] leading-tight text-muted">
-                        {PRODUCT_ICON_LABELS[key]}
+                        {iconLabel(key, PRODUCT_ICON_LABELS[key], locale)}
                       </span>
                     </label>
                   );
@@ -440,7 +428,7 @@ export default function ListProductForm({
             </div>
           )}
           <p className="mt-4 text-[11px] font-medium uppercase tracking-wide text-muted">
-            {suggestedIcons.length > 0 ? "All pictures" : "Choose one"}
+            {suggestedIcons.length > 0 ? copy.allPictures : copy.chooseOne}
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-5">
             {PRODUCT_ICON_KEYS.map((key) => {
@@ -467,7 +455,7 @@ export default function ListProductForm({
                     className={`h-8 w-8 ${selected ? "text-accent" : "text-muted"}`}
                   />
                   <span className="text-[11px] leading-tight text-muted">
-                    {PRODUCT_ICON_LABELS[key]}
+                    {iconLabel(key, PRODUCT_ICON_LABELS[key], locale)}
                   </span>
                 </label>
               );
@@ -494,26 +482,26 @@ export default function ListProductForm({
 
         <fieldset className="border-0 p-0">
           <legend className="text-sm font-medium">
-            Details <span className="font-normal text-muted">(optional)</span>
+            {copy.details} <span className="font-normal text-muted">{copy.optional}</span>
           </legend>
           <p className="mt-1 text-xs text-muted">
-            Year, colour, storage, engine — whatever a buyer asks about.
+            {copy.detailsHint}
           </p>
           {specChips.length > 0 && (
             <div className="mt-3">
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
-                Buyers usually ask about
+                {copy.buyersAsk}
               </p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {specChips.map((label) => (
                   <button
                     key={label}
                     type="button"
-                    onClick={() => addSuggestedSpec(label)}
-                    aria-label={`Add a detail for ${label}`}
+                    onClick={() => addSuggestedSpec(specLabel(label, locale))}
+                    aria-label={copy.addDetailFor(specLabel(label, locale))}
                     className="min-h-11 rounded-full border border-accent/40 bg-accent/[0.03] px-4 text-sm text-foreground transition-colors hover:border-accent/70"
                   >
-                    + {label}
+                    + {specLabel(label, locale)}
                   </button>
                 ))}
               </div>
@@ -524,8 +512,8 @@ export default function ListProductForm({
               <div key={index} className="grid gap-2 sm:grid-cols-2">
                 <input
                   type="text"
-                  aria-label={`Detail ${index + 1} label`}
-                  placeholder="Label"
+                  aria-label={copy.detailLabel(index + 1)}
+                  placeholder={copy.label}
                   value={spec.key}
                   onChange={(e) => updateSpec(index, { key: e.target.value })}
                   className={fieldClass(false)}
@@ -533,8 +521,8 @@ export default function ListProductForm({
                 />
                 <input
                   type="text"
-                  aria-label={`Detail ${index + 1} value`}
-                  placeholder="Value"
+                  aria-label={copy.detailValue(index + 1)}
+                  placeholder={copy.value}
                   value={spec.value}
                   onChange={(e) => updateSpec(index, { value: e.target.value })}
                   className={fieldClass(false)}
@@ -549,7 +537,7 @@ export default function ListProductForm({
             }
             className="mt-3 text-sm text-accent underline decoration-border underline-offset-4"
           >
-            Add another detail
+            {copy.addDetail}
           </button>
           {errors.specs && (
             <p className="mt-2 text-xs text-red-600">{errors.specs}</p>
@@ -563,7 +551,7 @@ export default function ListProductForm({
             onChange={(e) => update({ inStock: e.target.checked })}
             className="accent-[var(--accent)]"
           />
-          It is in stock at your branch now
+          {copy.inStock}
         </label>
       </div>
 
@@ -582,13 +570,13 @@ export default function ListProductForm({
         className="btn-pill btn-lime mt-8 w-full px-6 py-3 text-sm disabled:opacity-60"
       >
         {submitting
-          ? "Sending…"
+          ? copy.sending
           : photosBusy
-            ? "Waiting for photos to upload…"
-            : "Send for review"}
+            ? copy.waitingPhotos
+            : copy.send}
       </button>
       <p className="mt-3 text-center text-xs text-muted">
-        Nothing here reaches customers until MalFleks publishes it.
+        {copy.footnote}
       </p>
     </form>
   );

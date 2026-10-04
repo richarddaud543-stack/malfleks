@@ -17,6 +17,11 @@ import {
 } from "@/lib/product-photo";
 import { cleanPhotoBackgroundAction, type CleanPhotoResult } from "@/app/actions/partner-ai";
 import { createBrowserSupabase } from "@/lib/supabase-browser";
+import { useLocale } from "@/i18n/client";
+import { PARTNER } from "@/i18n/copy/partner";
+
+/** Set as a notice when there is no room for the cleaned copy; shown in the reader's language. */
+const REMOVE_FIRST = "Remove a photo first — the cleaned copy is added beside the original, and a listing can have 6.";
 
 const CLEAN_MESSAGES: Record<Exclude<CleanPhotoResult, { ok: true }>["reason"], string> = {
   "signed-out": "Your session expired. Sign in again and retry.",
@@ -130,6 +135,7 @@ export default function ProductPhotoUpload({
   error?: string;
 }) {
   const inputId = useId();
+  const copy = PARTNER[useLocale()].photos;
   const hintId = useId();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -311,7 +317,7 @@ export default function ProductPhotoUpload({
     const item = itemsRef.current.find((entry) => entry.id === id);
     if (!item?.url || cleaningId) return;
     if (activeCount(itemsRef.current) >= MAX_PRODUCT_PHOTOS) {
-      setNotice("Remove a photo first — the cleaned copy is added beside the original, and a listing can have 6.");
+      setNotice(REMOVE_FIRST);
       return;
     }
 
@@ -375,7 +381,23 @@ export default function ProductPhotoUpload({
     });
   }
 
-  const shownError = error ?? notice ?? undefined;
+  /**
+   * The messages are set in English where things go wrong (some of them in
+   * code shared with the server); this finds the same message in the
+   * reader's language. Anything it does not recognise is shown as it is.
+   */
+  function inLanguage(message: string | undefined): string | undefined {
+    if (!message) return message;
+    for (const key of Object.keys(PHOTO_MESSAGES) as (keyof typeof PHOTO_MESSAGES)[]) {
+      if (PHOTO_MESSAGES[key] === message) return copy.messages[key];
+    }
+    for (const key of Object.keys(CLEAN_MESSAGES) as (keyof typeof CLEAN_MESSAGES)[]) {
+      if (CLEAN_MESSAGES[key] === message) return copy.clean[key];
+    }
+    return message === REMOVE_FIRST ? copy.removeFirst : message;
+  }
+
+  const shownError = error ?? inLanguage(notice ?? undefined);
   const full = activeCount(items) >= MAX_PRODUCT_PHOTOS;
   const busy = isBusy(items);
   const mainId = items.find((item) => item.status === "done")?.id;
@@ -387,17 +409,16 @@ export default function ProductPhotoUpload({
   return (
     <fieldset className="border-0 p-0">
       <legend className="text-sm font-medium">
-        Add real photos <span className="font-normal text-muted">(optional)</span>
+        {copy.legend} <span className="font-normal text-muted">{copy.optional}</span>
       </legend>
       <p id={hintId} className="mt-1 text-xs text-muted">
-        Up to {MAX_PRODUCT_PHOTOS} photos of this exact item. The first one is
-        the main photo — the one shoppers see in search.
+        {copy.hint(MAX_PRODUCT_PHOTOS)}
       </p>
 
       {items.length > 0 && (
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           {items.map((item, index) => {
-            const label = `photo ${index + 1}`;
+            const label = copy.photoN(index + 1);
             const isMain = item.id === mainId;
             const preview = item.previewUrl ?? item.url ?? null;
 
@@ -419,19 +440,19 @@ export default function ProductPhotoUpload({
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={preview}
-                      alt={`Your ${label}${item.name ? ` (${item.name})` : ""}`}
+                      alt={copy.yours(label, item.name ?? "")}
                       className={`h-full w-full object-contain ${
                         item.status === "done" ? "" : "opacity-60"
                       }`}
                     />
                   ) : (
                     <span className="flex h-full w-full items-center justify-center px-2 text-center text-xs text-muted">
-                      {item.name || "Photo"}
+                      {item.name || copy.photo}
                     </span>
                   )}
                   {isMain && (
                     <span className="absolute left-1.5 top-1.5 rounded-full bg-foreground px-2 py-0.5 text-[11px] font-medium text-background">
-                      Main photo
+                      {copy.main}
                     </span>
                   )}
                 </div>
@@ -439,13 +460,13 @@ export default function ProductPhotoUpload({
                 {/* `role="status"` so a screen reader hears each photo's
                     progress without the partner having to go looking. */}
                 <p role="status" className="min-h-4 text-xs text-muted">
-                  {item.status === "preparing" && "Getting it ready…"}
-                  {item.status === "uploading" && "Uploading…"}
-                  {item.status === "done" && "Uploaded"}
+                  {item.status === "preparing" && copy.preparing}
+                  {item.status === "uploading" && copy.uploading}
+                  {item.status === "done" && copy.uploaded}
                 </p>
                 {item.status === "failed" && item.error && (
                   <p role="alert" className="text-xs text-red-600">
-                    {item.error}
+                    {inLanguage(item.error)}
                   </p>
                 )}
 
@@ -454,20 +475,20 @@ export default function ProductPhotoUpload({
                     <button
                       type="button"
                       onClick={() => void upload(item.id)}
-                      aria-label={`Try uploading ${label} again`}
+                      aria-label={copy.retryLabel(label)}
                       className={`${tileButton} border-accent text-accent`}
                     >
-                      Try again
+                      {copy.retry}
                     </button>
                   )}
                   {item.status === "done" && !isMain && (
                     <button
                       type="button"
                       onClick={() => makeMain(item.id)}
-                      aria-label={`Make ${label} the main photo`}
+                      aria-label={copy.makeMainLabel(label)}
                       className={tileButton}
                     >
-                      Make main
+                      {copy.makeMain}
                     </button>
                   )}
                   {cleanBackground && item.status === "done" && (
@@ -475,19 +496,19 @@ export default function ProductPhotoUpload({
                       type="button"
                       onClick={() => void clean(item.id)}
                       disabled={cleaningId !== null || full}
-                      aria-label={`Clean the background of ${label}`}
+                      aria-label={copy.cleanLabel(label)}
                       className={`${tileButton} disabled:cursor-not-allowed disabled:opacity-55`}
                     >
-                      {cleaningId === item.id ? "Cleaning…" : "Clean background"}
+                      {cleaningId === item.id ? copy.cleaning : copy.cleanAction}
                     </button>
                   )}
                   <button
                     type="button"
                     onClick={() => remove(item.id)}
-                    aria-label={`Remove ${label}`}
+                    aria-label={copy.removeLabel(label)}
                     className={`${tileButton} text-muted`}
                   >
-                    Remove
+                    {copy.remove}
                   </button>
                 </div>
               </li>
@@ -505,7 +526,7 @@ export default function ProductPhotoUpload({
             // tabs onto something with no visible focus at all.
             className="flex min-h-11 cursor-pointer items-center justify-center rounded-xl border border-dashed border-foreground/20 px-4 py-6 text-center text-sm text-muted transition-colors focus-within:border-accent hover:border-foreground/40"
           >
-            {items.length === 0 ? "Choose photos to upload" : "Add more photos"}
+            {items.length === 0 ? copy.chooseFirst : copy.addMore}
             <input
               ref={fileInputRef}
               id={inputId}
@@ -527,7 +548,7 @@ export default function ProductPhotoUpload({
         )}
         {full && (
           <p className="text-xs text-muted">
-            That&apos;s the most a listing can have. Remove one to add another.
+            {copy.full}
           </p>
         )}
       </div>
@@ -539,7 +560,7 @@ export default function ProductPhotoUpload({
       )}
       {busy && (
         <p className="mt-2 text-xs text-muted">
-          You can keep filling in the rest while the photos upload.
+          {copy.keepFilling}
         </p>
       )}
 
@@ -547,15 +568,12 @@ export default function ProductPhotoUpload({
           because nobody reads a photography guide on the way to listing a
           phone — and specific, because "take good photos" helps no one. */}
       <ul className="mt-3 list-disc space-y-1 pl-5 text-xs text-muted">
-        <li>Use a plain, light background — a wall, a sheet or a clean table.</li>
-        <li>Let the item fill most of the frame.</li>
-        <li>No text, logos or stickers added on top of the photo.</li>
-        <li>Show the front, the back, and any marks or damage.</li>
-        <li>Phone photos are fine. We shrink them before uploading to save your data.</li>
+        {copy.tips.map((tip) => (
+          <li key={tip}>{tip}</li>
+        ))}
         {cleanBackground && (
           <li>
-            “Clean background” adds a copy on plain white. It changes nothing about the item, and your original photo stays in the
-            listing.
+            {copy.cleanTip}
           </li>
         )}
       </ul>

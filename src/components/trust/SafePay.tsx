@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PROMISE } from "@/lib/promise";
+import type { Locale } from "@/i18n/locale";
+import { promiseIn } from "@/lib/promise";
 
 /**
  * The promise, on the light pages: product, order and pay.
@@ -15,10 +16,14 @@ import { PROMISE } from "@/lib/promise";
 export default function SafePay({
   compact = false,
   className = "",
+  locale = "en",
 }: {
   compact?: boolean;
   className?: string;
+  locale?: Locale;
 }) {
+  const promise = promiseIn(locale);
+
   return (
     <section
       aria-labelledby="safe-pay-heading"
@@ -29,17 +34,17 @@ export default function SafePay({
         <ShieldMark />
         <div>
           <h2 id="safe-pay-heading" className="font-display text-base font-medium leading-snug">
-            {PROMISE.headline}
+            {promise.headline}
           </h2>
-          <p lang="sw" className="mt-1 text-sm text-muted">
-            {PROMISE.swahili}
+          <p lang={promise.otherLang} className="mt-1 text-sm text-muted">
+            {promise.other}
           </p>
         </div>
       </div>
 
       {!compact && (
         <ul className="mt-4 space-y-3 text-sm">
-          {PROMISE.points.map((point) => (
+          {promise.points.map((point) => (
             <li key={point.title}>
               <span className="font-medium">{point.title}.</span>{" "}
               <span className="text-muted">{point.body}</span>
@@ -49,10 +54,10 @@ export default function SafePay({
       )}
 
       <Link
-        href={PROMISE.link.href}
+        href={promise.link.href}
         className="mt-4 inline-block text-sm underline underline-offset-4 hover:text-foreground"
       >
-        {PROMISE.link.label}
+        {promise.link.label}
       </Link>
     </section>
   );

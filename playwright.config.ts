@@ -15,12 +15,26 @@ export default defineConfig({
   use: {
     baseURL,
     trace: "on-first-retry",
-    // There used to be a seeded `storageState` here, pre-answering the
-    // analytics consent banner so it was not sitting over the bottom of the
-    // viewport intercepting clicks in specs about something else. Both the
-    // banner and `consent.spec.ts` went with Firebase Analytics on 2026-08-29,
-    // and a seeded key for a feature that no longer reads it is the kind of
-    // dead config that outlives everyone who knew why it was there.
+    // The site opens in Swahili for a visitor who has not chosen a language.
+    // These specs were written against the English pages and still assert
+    // English words, so every browser here starts having chosen English --
+    // the same cookie the switch in the top bar writes. The specs about the
+    // language itself (`language.spec.ts`) start with no choice made.
+    storageState: {
+      cookies: [
+        {
+          name: "mf_lang",
+          value: "en",
+          domain: "localhost",
+          path: "/",
+          expires: -1,
+          httpOnly: false,
+          secure: false,
+          sameSite: "Lax",
+        },
+      ],
+      origins: [],
+    },
   },
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },

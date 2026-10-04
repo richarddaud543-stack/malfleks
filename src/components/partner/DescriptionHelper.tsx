@@ -2,16 +2,10 @@
 
 import { useState, useTransition } from "react";
 
-import { draftDescriptionAction, type DraftDescriptionResult } from "@/app/actions/partner-ai";
+import { draftDescriptionAction } from "@/app/actions/partner-ai";
+import { useLocale } from "@/i18n/client";
+import { PARTNER } from "@/i18n/copy/partner";
 
-const MESSAGES: Record<Exclude<DraftDescriptionResult, { ok: true }>["reason"], string> = {
-  "signed-out": "Your session expired. Sign in again and retry.",
-  unavailable: "Writing help isn't available right now. Write it in your own words.",
-  "not-a-partner": "Writing help is for active partners only.",
-  "rate-limited": "That's a lot of drafts in one hour. Try again later, or write it in your own words.",
-  "not-enough": "Add a few facts first — type some notes above, add a detail, or add a photo — then try again.",
-  "provider-failed": "We couldn't write a draft just now. Try again in a moment.",
-};
 
 /**
  * "Help me write this" — a draft description the partner reads before using.
@@ -32,6 +26,7 @@ export default function DescriptionHelper({
   facts: () => { name: string; category: string; notes: string; specs: { key: string; value: string }[]; photoUrl: string | null };
   onUse: (description: string) => void;
 }) {
+  const copy = PARTNER[useLocale()].describe;
   const [draft, setDraft] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -41,7 +36,7 @@ export default function DescriptionHelper({
     startTransition(async () => {
       const result = await draftDescriptionAction(facts());
       if (result.ok) setDraft(result.description);
-      else setError(MESSAGES[result.reason]);
+      else setError(copy.messages[result.reason]);
     });
   }
 
@@ -54,12 +49,12 @@ export default function DescriptionHelper({
           disabled={pending}
           className="min-h-11 rounded-full border border-foreground/20 px-4 text-sm font-medium transition-colors hover:border-foreground/40 disabled:cursor-not-allowed disabled:opacity-55"
         >
-          {pending ? "Writing a draft…" : "Help me write this"}
+          {pending ? copy.writing : copy.help}
         </button>
       )}
       {draft === null && !pending && !error && (
         <p className="mt-1.5 text-xs text-muted">
-          Writes a draft from the name, details, photo and any notes you have typed. It only uses what you gave it.
+          {copy.helpHint}
         </p>
       )}
 
@@ -70,14 +65,13 @@ export default function DescriptionHelper({
       )}
 
       {draft !== null && (
-        <div role="group" aria-label="Suggested description" className="rounded-xl border border-foreground/15 bg-surface-2 p-4">
-          <p className="text-xs font-medium text-muted">Suggested description — read it before you use it</p>
+        <div role="group" aria-label={copy.group} className="rounded-xl border border-foreground/15 bg-surface-2 p-4">
+          <p className="text-xs font-medium text-muted">{copy.suggested}</p>
           <p className="mt-2 whitespace-pre-line text-sm" data-testid="description-draft">
             {draft}
           </p>
           <p className="mt-3 text-xs text-muted">
-            This was written by AI from what you typed. You are the one who knows the item: if anything here is not true of it,
-            don&apos;t use it, or correct it after.
+            {copy.warning}
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button
@@ -88,7 +82,7 @@ export default function DescriptionHelper({
               }}
               className="min-h-11 rounded-full border border-accent bg-accent px-4 text-sm font-medium text-background"
             >
-              Use this
+              {copy.use}
             </button>
             <button
               type="button"
@@ -96,10 +90,10 @@ export default function DescriptionHelper({
               disabled={pending}
               className="min-h-11 rounded-full border border-foreground/20 px-4 text-sm disabled:cursor-not-allowed disabled:opacity-55"
             >
-              {pending ? "Writing…" : "Try another"}
+              {pending ? copy.writingShort : copy.another}
             </button>
             <button type="button" onClick={() => setDraft(null)} className="min-h-11 rounded-full px-4 text-sm text-muted hover:text-foreground">
-              Discard
+              {copy.discard}
             </button>
           </div>
         </div>

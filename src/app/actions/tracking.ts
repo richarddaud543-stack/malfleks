@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
 import { checkRateLimit } from "@/server/rate-limit";
@@ -81,7 +81,7 @@ export async function postDeliveryPingAction(
     );
     if (!outcome.ok) return { ok: false, reason: outcome.reason };
 
-    revalidatePath("/partner/orders");
+    revalidateSitePath("/partner/orders");
     return { ok: true, ping: outcome.ping };
   } catch (error) {
     // Opaque on purpose, matching listProductForPartner: the reason a write

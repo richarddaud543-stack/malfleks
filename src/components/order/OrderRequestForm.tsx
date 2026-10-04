@@ -8,7 +8,6 @@ import {
   MAX_QUANTITY,
   ORDER_STORAGE_KEY,
   OTHER_DELIVERY_CITY,
-  brandCarrierName,
   createOrderRequest,
   emptyOrderInput,
   parseQuantity,
@@ -20,6 +19,9 @@ import {
   type OrderField,
   type OrderRequestInput,
 } from "@/lib/order";
+import { useLocale } from "@/i18n/client";
+import { ORDER } from "@/i18n/copy/order";
+import { SHOP } from "@/i18n/copy/shop";
 import { formatEta } from "@/lib/format";
 import { saveOrderRequest } from "@/app/actions/order-requests";
 import { submitOrder } from "@/app/actions/orders";
@@ -92,6 +94,8 @@ export default function OrderRequestForm({
   // arrives, and treated as signed-out until it does — the safe default is the
   // one where nothing leaves the device.
   const session = useSessionState();
+  const locale = useLocale();
+  const copy = ORDER[locale].form;
 
   const [input, setInput] = useState<OrderRequestInput>(emptyOrderInput);
   const [errors, setErrors] = useState<OrderErrors>({});
@@ -113,7 +117,7 @@ export default function OrderRequestForm({
     const next = { ...input, ...patch };
     setInput(next);
     if (attempted) {
-      const result = validateOrderRequest(next, route, product.priceTZS, branch.city);
+      const result = validateOrderRequest(next, route, product.priceTZS, branch.city, locale);
       setErrors(result.ok ? {} : result.errors);
     }
   }
@@ -133,7 +137,7 @@ export default function OrderRequestForm({
     event.preventDefault();
     setAttempted(true);
 
-    const result = validateOrderRequest(input, route, product.priceTZS, branch.city);
+    const result = validateOrderRequest(input, route, product.priceTZS, branch.city, locale);
     if (!result.ok) {
       setErrors(result.errors);
       // The inputs are already in the DOM — only their aria state changes — so
@@ -280,11 +284,10 @@ export default function OrderRequestForm({
             aria-describedby={describe("agentId", false)}
           >
             <legend className="font-display text-lg font-medium">
-              Choose a delivery agent
+              {copy.chooseAgent}
             </legend>
             <p className="mt-1 text-sm text-muted">
-              {branch.name} doesn&apos;t deliver, so a local agent serving{" "}
-              {branch.city} will carry this order.
+              {copy.chooseAgentBody(branch.name, branch.city)}
             </p>
             <div className="mt-4 flex flex-col gap-3">
               {route.agents.map((agent, index) => (
@@ -312,13 +315,13 @@ export default function OrderRequestForm({
 
         <fieldset className="border-0 p-0">
           <legend className="font-display text-lg font-medium">
-            Your details
+            {copy.details}
           </legend>
 
           <div className="mt-4 flex flex-col gap-5">
             <Field
               id={`${fieldId}-quantity`}
-              label="Quantity"
+              label={copy.quantity}
               error={errors.quantity}
               errorId={`${fieldId}-quantity-error`}
             >
@@ -340,7 +343,7 @@ export default function OrderRequestForm({
 
             <Field
               id={`${fieldId}-fullName`}
-              label="Full name"
+              label={copy.fullName}
               error={errors.fullName}
               errorId={`${fieldId}-fullName-error`}
             >
@@ -360,8 +363,8 @@ export default function OrderRequestForm({
 
             <Field
               id={`${fieldId}-phone`}
-              label="Phone number"
-              hint="A Tanzanian mobile number, e.g. 0754 123 456."
+              label={copy.phone}
+              hint={copy.phoneHint}
               hintId={`${fieldId}-phone-hint`}
               error={errors.phone}
               errorId={`${fieldId}-phone-error`}
@@ -384,8 +387,8 @@ export default function OrderRequestForm({
 
             <Field
               id={`${fieldId}-deliveryCity`}
-              label="Delivery city"
-              hint={`This shop delivers within ${branch.city}.`}
+              label={copy.city}
+              hint={copy.cityHint(branch.city)}
               hintId={`${fieldId}-deliveryCity-hint`}
               error={errors.deliveryCity}
               errorId={`${fieldId}-deliveryCity-error`}
@@ -400,15 +403,15 @@ export default function OrderRequestForm({
                 aria-describedby={describe("deliveryCity", true)}
                 className={`${fieldClass(Boolean(errors.deliveryCity))} sm:max-w-xs`}
               >
-                <option value="">Choose…</option>
+                <option value="">{copy.choose}</option>
                 <option value={branch.city}>{branch.city}</option>
-                <option value={OTHER_DELIVERY_CITY}>Somewhere else</option>
+                <option value={OTHER_DELIVERY_CITY}>{copy.elsewhere}</option>
               </select>
               {input.deliveryCity === OTHER_DELIVERY_CITY && (
                 <p className="mt-2 text-sm text-muted">
-                  This shop can&apos;t deliver outside {branch.city}.{" "}
+                  {copy.outside(branch.city)}{" "}
                   <Link href="/locator" className="text-accent underline underline-offset-4">
-                    Find a shop in your city
+                    {copy.findShop}
                   </Link>
                   .
                 </p>
@@ -417,8 +420,8 @@ export default function OrderRequestForm({
 
             <Field
               id={`${fieldId}-address`}
-              label="Delivery address"
-              hint="Street, area and any landmark that helps the driver."
+              label={copy.address}
+              hint={copy.addressHint}
               hintId={`${fieldId}-address-hint`}
               error={errors.address}
               errorId={`${fieldId}-address-error`}
@@ -443,7 +446,7 @@ export default function OrderRequestForm({
             reached through aria-describedby as focus moves between them. */}
         <p role="alert" className="text-sm text-red-600">
           {attempted && errorCount > 0
-            ? `${errorCount} ${errorCount === 1 ? "detail needs" : "details need"} fixing before you can order.`
+            ? copy.fix(errorCount)
             : ""}
         </p>
       </div>
@@ -457,12 +460,13 @@ export default function OrderRequestForm({
             kind: route.kind,
             carrier:
               route.kind === "brand"
-                ? brandCarrierName(brand)
+                ? SHOP[locale].delivery.ownFleet(brand.name)
                 : selectedAgent?.name ?? null,
-            etaEstimate: selectedAgent ? formatEta(selectedAgent.eta) : undefined,
+            etaEstimate: selectedAgent ? formatEta(selectedAgent.eta, locale) : undefined,
           }}
           branch={{ name: branch.name, city: branch.city }}
           tint={brand.accentColor}
+          locale={locale}
         />
 
         <button
@@ -471,18 +475,18 @@ export default function OrderRequestForm({
           className="btn-pill btn-lime w-full px-8 py-3.5 text-sm disabled:opacity-60"
         >
           {submitting
-            ? "Opening payment…"
+            ? copy.opening
             : session?.signedIn
-              ? "Continue to payment"
-              : "Sign in to order"}
+              ? copy.toPayment
+              : copy.signIn}
         </button>
 
         {/* Load-bearing honesty: say exactly what pressing the button does,
             and it is different for the two cases. */}
         <p className="text-xs text-muted">
           {session?.signedIn
-            ? "Next you pay by mobile money. MalFleks holds your payment until the order is delivered; if the branch can't supply it, you are refunded in full."
-            : "Ordering needs an account, so MalFleks can take your payment and hold it until delivery. Nothing is sent or charged yet — what you typed is kept in this tab and will be here when you come back from signing in."}
+            ? copy.noteSignedIn
+            : copy.noteSignedOut}
         </p>
       </div>
     </form>

@@ -3,17 +3,21 @@
 import { useState, useTransition } from "react";
 
 import { setOwnProductStockAction } from "@/app/actions/partner-stock";
+import { useLocale } from "@/i18n/client";
+import { PARTNER } from "@/i18n/copy/partner";
 
-function errorMessage(reason: string | undefined): string {
+type StockCopy = (typeof PARTNER)["en"]["stock"];
+
+function errorMessage(reason: string | undefined, copy: StockCopy): string {
   switch (reason) {
     case "not-found":
-      return "This product isn't on the shop any more — reload the page.";
+      return copy.notFound;
     case "partner-suspended":
-      return "Your account is suspended, so stock can't be changed. Contact MalFleks.";
+      return copy.suspended;
     case "signed-out":
-      return "Your session has expired. Sign in again.";
+      return copy.signedOut;
     default:
-      return "Couldn't save that. Nothing changed — try again.";
+      return copy.failed;
   }
 }
 
@@ -38,6 +42,7 @@ export default function StockToggle({
   productName: string;
   inStock: boolean;
 }) {
+  const copy = PARTNER[useLocale()].stock;
   const [inStock, setInStock] = useState(initialInStock);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -47,7 +52,7 @@ export default function StockToggle({
     startTransition(async () => {
       const result = await setOwnProductStockAction(productId, !inStock);
       if (result.ok) setInStock(result.inStock);
-      else setError(errorMessage(result.reason));
+      else setError(errorMessage(result.reason, copy));
     });
   }
 
@@ -57,15 +62,15 @@ export default function StockToggle({
         type="button"
         onClick={toggle}
         disabled={pending}
-        aria-label={`${inStock ? "Mark out of stock" : "Mark in stock"}: ${productName}`}
+        aria-label={`${inStock ? copy.markOut : copy.markIn}: ${productName}`}
         className="min-h-11 rounded-full border border-border px-5 py-2 text-sm font-medium transition-colors hover:border-foreground/30 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {pending ? "Saving…" : inStock ? "Mark out of stock" : "Mark in stock"}
+        {pending ? copy.saving : inStock ? copy.markOut : copy.markIn}
       </button>
       {/* What it is now, as text and not only as a button label — and the
           place a screen reader hears the change. */}
       <p role="status" className="text-xs text-muted">
-        {inStock ? "In stock — customers can order it." : "Out of stock — customers can't order it."}
+        {inStock ? copy.inStock : copy.outOfStock}
       </p>
       {error && (
         <p role="alert" className="text-xs text-red-700 dark:text-red-400">

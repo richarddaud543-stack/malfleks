@@ -8,22 +8,27 @@ import {
 } from "@/app/actions/partner-orders";
 
 /** Mirrors `MIN_DECLINE_REASON_LENGTH` on the server, which is the one that counts. */
+import { useLocale } from "@/i18n/client";
+import { PARTNER } from "@/i18n/copy/partner";
+
+type DecideCopy = (typeof PARTNER)["en"]["decide"];
+
 const MIN_REASON_LENGTH = 3;
 
-function errorMessage(reason: string | undefined): string {
+function errorMessage(reason: string | undefined, copy: DecideCopy): string {
   switch (reason) {
     case "invalid-transition":
-      return "This order was already answered — reload to see where it stands.";
+      return copy.already;
     case "not-found":
-      return "This order can't be answered from here.";
+      return copy.notFound;
     case "partner-suspended":
-      return "Your account is suspended, so you can't answer orders. Contact MalFleks.";
+      return copy.suspended;
     case "reason-required":
-      return "Say why in a few words — the customer is told.";
+      return copy.reasonRequired;
     case "signed-out":
-      return "Your session has expired. Sign in again.";
+      return copy.signedOut;
     default:
-      return "Couldn't record that. Nothing changed — try again.";
+      return copy.failed;
   }
 }
 
@@ -55,6 +60,7 @@ export default function BranchDecisionButtons({
    */
   paid?: boolean;
 }) {
+  const copy = PARTNER[useLocale()].decide;
   const [mode, setMode] = useState<"idle" | "declining">("idle");
   const [reason, setReason] = useState("");
   const [done, setDone] = useState<"confirmed" | "declined" | null>(null);
@@ -68,10 +74,10 @@ export default function BranchDecisionButtons({
     return (
       <p role="status" className="mt-4 text-sm font-medium text-accent">
         {done === "confirmed"
-          ? "Confirmed. The customer has been asked to pay — wait for “Paid through MalFleks” before you hand anything over."
+          ? copy.doneConfirmed
           : paid
-            ? "Declined. The customer has been told, and MalFleks will refund them."
-            : "Declined. The customer has been told."}
+            ? copy.doneDeclinedPaid
+            : copy.doneDeclined}
       </p>
     );
   }
@@ -81,13 +87,13 @@ export default function BranchDecisionButtons({
     startTransition(async () => {
       const result = await confirmOrderByBranchAction(orderId);
       if (result.ok) setDone("confirmed");
-      else setError(errorMessage(result.reason));
+      else setError(errorMessage(result.reason, copy));
     });
   }
 
   function decline() {
     if (!reasonOk) {
-      setError(errorMessage("reason-required"));
+      setError(errorMessage("reason-required", copy));
       return;
     }
     setError(null);
@@ -97,7 +103,7 @@ export default function BranchDecisionButtons({
         setDone("declined");
       } else {
         if (result.reason !== "reason-required") setMode("idle");
-        setError(errorMessage(result.reason));
+        setError(errorMessage(result.reason, copy));
       }
     });
   }
@@ -110,10 +116,10 @@ export default function BranchDecisionButtons({
             type="button"
             disabled={pending}
             onClick={confirm}
-            aria-label={`Confirm ${reference} — we have it at this price`}
+            aria-label={copy.confirmLabel(reference)}
             className="min-h-11 rounded-full border border-accent bg-accent px-5 py-2 text-sm font-medium text-background disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {pending ? "Confirming…" : "Confirm — we have it at this price"}
+            {pending ? copy.confirming : copy.confirm}
           </button>}
           <button
             type="button"
@@ -122,23 +128,22 @@ export default function BranchDecisionButtons({
               setError(null);
               setMode("declining");
             }}
-            aria-label={`Can't fulfil ${reference}`}
+            aria-label={copy.cantLabel(reference)}
             className="min-h-11 rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-red-600/40 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Can&apos;t fulfil
+            {copy.cant}
           </button>
         </div>
       ) : (
         <div>
           <label htmlFor={`decline-${orderId}`} className="block text-sm font-medium">
-            Why can&apos;t you fulfil it?
+            {copy.why}
           </label>
           <p className="mt-1 text-xs text-muted">
-            The customer is emailed this as you write it — for example “Out of
-            stock until next week”.{" "}
+            {copy.whyHint}{" "}
             {paid
-              ? "They have paid, so MalFleks refunds them in full. Only do this if you really cannot supply it."
-              : "They have not paid anything."}
+              ? copy.whyPaid
+              : copy.whyUnpaid}
           </p>
           <input
             id={`decline-${orderId}`}
@@ -158,16 +163,16 @@ export default function BranchDecisionButtons({
               }}
               className="min-h-11 rounded-full border border-border px-5 py-2 text-sm text-muted disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Back
+              {copy.back}
             </button>
             <button
               type="button"
               disabled={pending || !reasonOk}
               onClick={decline}
-              aria-label={`Yes, decline ${reference}`}
+              aria-label={copy.yesDeclineLabel(reference)}
               className="min-h-11 rounded-full border border-red-600 px-5 py-2 text-sm font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:cursor-not-allowed disabled:border-border disabled:text-muted disabled:opacity-60 disabled:hover:bg-transparent disabled:hover:text-muted"
             >
-              {pending ? "Declining…" : "Yes, decline this order"}
+              {pending ? copy.declining : copy.yesDecline}
             </button>
           </div>
         </div>

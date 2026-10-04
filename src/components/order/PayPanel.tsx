@@ -5,6 +5,9 @@ import SafePay from "@/components/trust/SafePay";
 import { useEffect, useState, useTransition } from "react";
 
 import { checkoutStatusAction, checkPaymentNowAction } from "@/app/actions/checkout";
+import { useLocale } from "@/i18n/client";
+import { orderNoteLabel } from "@/i18n/copy/account";
+import { carrierLabel, ORDER } from "@/i18n/copy/order";
 import { formatTZS } from "@/lib/format";
 import { formatPhone } from "@/lib/order";
 import type { CheckoutView } from "@/server/orders/checkout";
@@ -27,6 +30,8 @@ const POLL_MS = 8_000;
  * back before ClickPesa's own notification has arrived.
  */
 export default function PayPanel({ initial }: { initial: CheckoutView }) {
+  const locale = useLocale();
+  const copy = ORDER[locale].pay;
   const [view, setView] = useState(initial);
   const [checking, startCheck] = useTransition();
   const [checkedOnce, setCheckedOnce] = useState(false);
@@ -61,22 +66,20 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
       <div className="glass-card rounded-2xl p-6" aria-live="polite">
         {view.state === "waiting" && (
           <>
-            <StateHeading tone="wait">Waiting for the branch</StateHeading>
+            <StateHeading tone="wait">{copy.waitingHeading}</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              This order needs {view.branchName} to confirm the price and delivery before it can be paid for. Nothing is due yet —
-              this page opens for payment as soon as they do, and we&apos;ll email you too. You can leave it open; it updates on
-              its own.
+              {copy.waitingBody(view.branchName)}
             </p>
           </>
         )}
 
         {view.state === "ready" && view.checkoutLink && view.totalTZS !== null && (
           <>
-            <StateHeading tone="go">{view.orderStatus === "confirmed" ? "Confirmed — ready to pay" : "Pay to place your order"}</StateHeading>
+            <StateHeading tone="go">{view.orderStatus === "confirmed" ? copy.readyConfirmed : copy.readyNew}</StateHeading>
             <p className="mt-2 text-sm text-muted">
               {view.orderStatus === "confirmed"
-                ? `${view.branchName} has it in stock at this price. Pay by mobile money to complete your order.`
-                : `Pay by mobile money and your order goes to ${view.branchName} straight away. If they can't supply it, you are refunded in full.`}
+                ? copy.readyConfirmedBody(view.branchName)
+                : copy.readyNewBody(view.branchName)}
             </p>
 
             <a
@@ -87,24 +90,23 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
               className="btn-pill btn-lime mt-6 inline-block px-7 py-3 text-base font-medium"
               data-testid="pay-button"
             >
-              Pay {formatTZS(view.totalTZS)}
+              {copy.payAmount(formatTZS(view.totalTZS))}
             </a>
             <p className="mt-3 text-xs text-muted">
-              Opens ClickPesa&apos;s secure payment page in a new tab. You choose your mobile money network there and approve the payment
-              on your phone. MalFleks never sees your PIN.
+              {copy.opens}
             </p>
 
             {view.lastAttemptFailed && (
               <p role="status" className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm">
-                Your last attempt didn&apos;t go through, and nothing was taken. You can try again with the same button.
+                {copy.lastFailed}
               </p>
             )}
 
             {(leftToPay || checkedOnce) && (
               <div className="mt-6 border-t border-border pt-5">
-                <p className="text-sm font-medium">Paid already?</p>
+                <p className="text-sm font-medium">{copy.paidAlready}</p>
                 <p className="mt-1 text-sm text-muted">
-                  It usually shows here within a minute. If it hasn&apos;t, ask ClickPesa now.
+                  {copy.paidAlreadyBody}
                 </p>
                 <button
                   type="button"
@@ -112,12 +114,11 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
                   disabled={checking}
                   className="btn-pill btn-ink mt-3 px-5 py-2 text-sm disabled:opacity-60"
                 >
-                  {checking ? "Checking…" : "I've paid — check now"}
+                  {checking ? copy.checking : copy.checkNow}
                 </button>
                 {checkedOnce && !checking && (
                   <p role="status" className="mt-3 text-sm text-muted">
-                    Not received yet. If your phone showed the payment as successful, give it a minute and check again — you won&apos;t be
-                    charged twice for pressing this.
+                    {copy.notYet}
                   </p>
                 )}
               </div>
@@ -127,53 +128,52 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
 
         {view.state === "paid" && (
           <>
-            <StateHeading tone="done">Paid — thank you</StateHeading>
+            <StateHeading tone="done">{copy.paidHeading}</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              {view.totalTZS !== null ? `We've received ${formatTZS(view.totalTZS)}. ` : "We've received your payment. "}
-              {view.branchName} has been told to deliver your order, and MalFleks holds your payment until it arrives.
+              {view.totalTZS !== null ? copy.received(formatTZS(view.totalTZS)) : copy.receivedPlain}
+              {copy.paidBody(view.branchName)}
             </p>
             {view.paymentReference && (
               <p className="mt-3 text-sm">
-                Payment reference <span className="font-mono">{view.paymentReference}</span>
+                {copy.paymentReference} <span className="font-mono">{view.paymentReference}</span>
               </p>
             )}
             <Link href={`/track/${encodeURIComponent(view.reference)}`} className="btn-pill btn-ink mt-6 inline-block px-5 py-2 text-sm">
-              Track your delivery
+              {copy.track}
             </Link>
           </>
         )}
 
         {view.state === "cancelled" && (
           <>
-            <StateHeading tone="stop">This order was cancelled</StateHeading>
+            <StateHeading tone="stop">{copy.cancelledHeading}</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              {view.cancelReason ? `Reason given: ${view.cancelReason}. ` : ""}
-              Nothing is due.
+              {view.cancelReason ? copy.reasonGiven(orderNoteLabel(view.cancelReason, locale)) : ""}
+              {copy.nothingDue}
             </p>
             <Link href="/search" className="btn-pill btn-ink mt-6 inline-block px-5 py-2 text-sm">
-              Browse products
+              {copy.browse}
             </Link>
           </>
         )}
 
         {view.state === "unavailable" && (
           <>
-            <StateHeading tone="wait">Payment isn&apos;t open for this order yet</StateHeading>
+            <StateHeading tone="wait">{copy.unavailableHeading}</StateHeading>
             <p className="mt-2 text-sm text-muted">
-              Your order is saved, but we couldn&apos;t open the payment page just now. Nothing has been charged. Try again in a few
-              minutes, or{" "}
+              {copy.unavailable.before}
               <Link href="/contact" className="underline underline-offset-2 hover:text-foreground">
-                contact us
-              </Link>{" "}
-              with your reference.
+                {copy.unavailable.link}
+              </Link>
+              {copy.unavailable.after}
             </p>
           </>
         )}
       </div>
 
       <div className="space-y-4">
-      <aside className="glass-card rounded-2xl p-6 text-sm" aria-label="Order summary">
-        <h2 className="font-display text-lg font-medium">Your order</h2>
+      <aside className="glass-card rounded-2xl p-6 text-sm" aria-label={copy.summaryLabel}>
+        <h2 className="font-display text-lg font-medium">{copy.yourOrder}</h2>
         <dl className="mt-4 space-y-3">
           <div className="flex justify-between gap-4">
             <dt className="text-muted">
@@ -183,13 +183,13 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
           </div>
           {view.deliveryFeeTZS > 0 && (
             <div className="flex justify-between gap-4">
-              <dt className="text-muted">Delivery ({view.routeCarrier})</dt>
+              <dt className="text-muted">{copy.delivery(carrierLabel(view.routeCarrier, locale))}</dt>
               <dd className="tabular-nums">{formatTZS(view.deliveryFeeTZS)}</dd>
             </div>
           )}
           {view.totalTZS !== null && (
             <div className="flex justify-between gap-4 border-t border-border pt-3 font-medium">
-              <dt>Total</dt>
+              <dt>{copy.total}</dt>
               <dd className="tabular-nums" data-testid="pay-total">
                 {formatTZS(view.totalTZS)}
               </dd>
@@ -198,23 +198,23 @@ export default function PayPanel({ initial }: { initial: CheckoutView }) {
         </dl>
         <dl className="mt-5 space-y-2 border-t border-border pt-4 text-xs text-muted">
           <div>
-            <dt className="inline">From </dt>
+            <dt className="inline">{copy.from} </dt>
             <dd className="inline text-foreground">
               {view.branchName}
               {view.branchName.includes(view.branchCity) ? "" : `, ${view.branchCity}`}
             </dd>
           </div>
           <div>
-            <dt className="inline">Delivered by </dt>
-            <dd className="inline text-foreground">{view.routeCarrier}</dd>
+            <dt className="inline">{copy.deliveredBy} </dt>
+            <dd className="inline text-foreground">{carrierLabel(view.routeCarrier, locale)}</dd>
           </div>
           <div>
-            <dt className="inline">Your number </dt>
+            <dt className="inline">{copy.yourNumber} </dt>
             <dd className="inline text-foreground">{formatPhone(view.customerPhone)}</dd>
           </div>
         </dl>
       </aside>
-      {view.state !== "cancelled" && <SafePay compact />}
+      {view.state !== "cancelled" && <SafePay compact locale={locale} />}
       </div>
     </div>
   );

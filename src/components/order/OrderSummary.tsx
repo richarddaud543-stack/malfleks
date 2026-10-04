@@ -1,3 +1,5 @@
+import { carrierLabel, ORDER } from "@/i18n/copy/order";
+import type { Locale } from "@/i18n/locale";
 import { formatTZS } from "@/lib/format";
 import { deliveryRouteLabel, type DeliveryRouteKind } from "@/lib/order";
 
@@ -15,6 +17,8 @@ export interface OrderSummaryProps {
   branch: { name: string; city: string };
   /** Brand accent, used for the card's glow. */
   tint?: string;
+  /** The language of the labels. The form and the confirmation screen pass theirs. */
+  locale?: Locale;
 }
 
 /**
@@ -28,7 +32,9 @@ export default function OrderSummary({
   route,
   branch,
   tint,
+  locale = "en",
 }: OrderSummaryProps) {
+  const copy = ORDER[locale].summary;
   const brandDelivered = route.kind === "brand";
 
   return (
@@ -36,30 +42,30 @@ export default function OrderSummary({
       className="glass-card tint-glow rounded-2xl p-6"
       style={tint ? ({ "--tint": tint } as React.CSSProperties) : undefined}
     >
-      <h3 className="font-display text-lg font-medium">Order summary</h3>
+      <h3 className="font-display text-lg font-medium">{copy.heading}</h3>
 
       <dl className="mt-5 space-y-3 text-sm">
-        <Row label="Item">{product.name}</Row>
-        <Row label="Unit price">{formatTZS(product.unitPriceTZS)}</Row>
-        <Row label="Quantity">{quantity ?? "—"}</Row>
-        <Row label="From">
+        <Row label={copy.item}>{product.name}</Row>
+        <Row label={copy.unitPrice}>{formatTZS(product.unitPriceTZS)}</Row>
+        <Row label={copy.quantity}>{quantity ?? "—"}</Row>
+        <Row label={copy.from}>
           {branch.name}
           <span className="block text-muted">{branch.city}</span>
         </Row>
-        <Row label="Delivery">
+        <Row label={copy.delivery}>
           <span
             className={brandDelivered ? "text-accent" : "text-accent-3"}
           >
-            {deliveryRouteLabel(route.kind)}
+            {deliveryRouteLabel(route.kind, locale)}
           </span>
           <span className="block text-muted">
-            {route.carrier ?? "Not chosen yet"}
+            {route.carrier ? carrierLabel(route.carrier, locale) : copy.notChosen}
             {route.etaEstimate ? ` · ${route.etaEstimate}` : ""}
           </span>
         </Row>
 
         <div className="flex items-baseline justify-between gap-4 border-t border-border pt-4">
-          <dt className="font-medium">Line total</dt>
+          <dt className="font-medium">{copy.total}</dt>
           <dd
             data-testid="order-line-total"
             className="font-display text-xl font-medium"
@@ -71,10 +77,9 @@ export default function OrderSummary({
 
       <p className="mt-4 text-xs text-muted">
         {brandDelivered
-          ? "The branch delivers this itself."
-          : "The courier's delivery fee is added at checkout."}{" "}
-        You pay the full amount to MalFleks, so there is nothing to pay at the
-        door.
+          ? copy.branchDelivers
+          : copy.feeAdded}{" "}
+        {copy.nothingAtDoor}
       </p>
     </div>
   );

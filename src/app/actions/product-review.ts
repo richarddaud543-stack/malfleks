@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { adminSession } from "@/server/auth/admin-session";
@@ -54,13 +55,13 @@ const requireAdminSession = adminSession;
  */
 async function revalidateCatalogue() {
   revalidatePath("/admin/submissions");
-  revalidatePath("/");
-  revalidatePath("/brands", "layout");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/products", "layout");
-  revalidatePath("/delivery", "layout");
-  revalidatePath("/partner");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands", "layout");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/products", "layout");
+  revalidateSitePath("/delivery", "layout");
+  revalidateSitePath("/partner");
   // The calls above only clear this (admin) deployment's own cache. This is
   // the one that actually reaches the shop customers browse — see the module
   // doc on notifyPublicSiteOfCatalogueChange for why both are needed.
@@ -113,7 +114,7 @@ export async function rejectProductSubmission(
     // Nothing customer-facing changed, but the partner's own page shows the
     // decision and the reason — that is the whole point of writing one.
     revalidatePath("/admin/submissions");
-    revalidatePath("/partner");
+    revalidateSitePath("/partner");
     return { ok: true };
   } catch (error) {
     await logServerError("reject-product-submission", error, session.uid);

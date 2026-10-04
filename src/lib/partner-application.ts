@@ -1,3 +1,5 @@
+import { APPLY } from "@/i18n/copy/apply";
+import type { Locale } from "@/i18n/locale";
 import { normalizePhone } from "./order";
 
 /**
@@ -95,35 +97,37 @@ export const MAX_NOTES = 600;
  */
 export function validatePartnerApplication(
   input: PartnerApplicationInput,
-  knownBrandIds: readonly string[]
+  knownBrandIds: readonly string[],
+  locale: Locale = "en"
 ): PartnerApplicationValidation {
+  const words = APPLY[locale].errors;
   const errors: PartnerApplicationErrors = {};
 
   const businessName = input.businessName.trim();
   if (businessName.length < MIN_BUSINESS_NAME) {
     errors.businessName =
       input.kind === "brand"
-        ? "Enter the branch or shop name."
-        : "Enter your courier business name.";
+        ? words.businessBrand
+        : words.businessCourier;
   }
 
   const contactName = input.contactName.trim();
   if (contactName.length < MIN_CONTACT_NAME) {
-    errors.contactName = "Enter the name of the person we should speak to.";
+    errors.contactName = words.contact;
   }
 
   const phone = normalizePhone(input.phone);
   if (input.phone.trim() === "") {
-    errors.phone = "Enter a phone number we can reach you on.";
+    errors.phone = words.phoneMissing;
   } else if (!phone) {
-    errors.phone = "Enter a Tanzanian mobile number, e.g. 0754 123 456.";
+    errors.phone = words.phoneInvalid;
   }
 
   const city = input.city.trim();
   if (city === "") {
-    errors.city = "Choose the city you operate in.";
+    errors.city = words.cityMissing;
   } else if (!isServedCity(city)) {
-    errors.city = "MalFleks does not cover that city yet.";
+    errors.city = words.cityUnserved;
   }
 
   // Brand applicants say whose brand this is; couriers carry for everyone, so
@@ -133,20 +137,20 @@ export function validatePartnerApplication(
   const brandOther = input.brandOther.trim();
   if (input.kind === "brand") {
     if (brandId === "" && brandOther === "") {
-      errors.brandId = "Choose the brand you sell, or name it if it isn't listed.";
+      errors.brandId = words.brandMissing;
     } else if (brandId !== "" && !knownBrandIds.includes(brandId)) {
-      errors.brandId = "That brand isn't one we know. Name it instead.";
+      errors.brandId = words.brandUnknown;
     }
   }
 
   const address = input.address.trim();
   if (input.kind === "brand" && address.length < MIN_ADDRESS) {
-    errors.address = "Enter the street and area the branch trades from.";
+    errors.address = words.address;
   }
 
   const notes = input.notes.trim();
   if (notes.length > MAX_NOTES) {
-    errors.notes = `Keep this under ${MAX_NOTES} characters.`;
+    errors.notes = words.notes(MAX_NOTES);
   }
 
   // `!phone` is unreachable once `errors` is empty; it is here so the success

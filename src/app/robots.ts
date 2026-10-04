@@ -1,8 +1,12 @@
 import type { MetadataRoute } from "next";
 
+import { LOCALES } from "@/i18n/locale";
 import { resolveSiteUrl } from "@/lib/site-url";
 
 const siteUrl = resolveSiteUrl();
+
+/** One person's own pages. They exist at the plain address and once per language. */
+const PRIVATE_PAGES = ["/account", "/partner", "/pay/", "/track/", "/order/"];
 
 /**
  * Everyone may read the shop, search engines and AI assistants alike -- being
@@ -19,7 +23,13 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/account", "/partner", "/pay/", "/track/", "/order/", "/admin", "/api/", "/auth/"],
+      disallow: [
+        ...PRIVATE_PAGES,
+        ...LOCALES.flatMap((locale) => PRIVATE_PAGES.map((path) => `/${locale}${path}`)),
+        "/admin",
+        "/api/",
+        "/auth/",
+      ],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
   };

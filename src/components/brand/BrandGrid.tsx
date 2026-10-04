@@ -1,3 +1,4 @@
+import type { Locale } from "@/i18n/locale";
 import type { Brand, Branch } from "@/data";
 import BrandCard from "./BrandCard";
 import ScrollReveal from "../motion/ScrollReveal";
@@ -20,10 +21,12 @@ export function groupBranchesByBrand(
 export default function BrandGrid({
   brands,
   branchesByBrandId,
+  locale = "en",
 }: {
   brands: Brand[];
   /** Every brand's branches, indexed by brand id — see BrandCard for why. */
   branchesByBrandId: Record<string, Branch[]>;
+  locale?: Locale;
 }) {
   return (
     <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -32,6 +35,7 @@ export default function BrandGrid({
           <BrandCard
             brand={brand}
             branches={branchesByBrandId[brand.id] ?? []}
+            locale={locale}
           />
         </ScrollReveal>
       ))}

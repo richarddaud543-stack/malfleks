@@ -1,4 +1,7 @@
 import Link from "next/link";
+import { ACCOUNT, orderNoteLabel } from "@/i18n/copy/account";
+import { carrierLabel } from "@/i18n/copy/order";
+import type { Locale } from "@/i18n/locale";
 import { formatTZS } from "@/lib/format";
 import { deliveryRouteLabel, formatPhone } from "@/lib/order";
 import type { AccountOrderStatus } from "@/server/orders/checkout";
@@ -21,6 +24,7 @@ import DeleteSavedRequest from "./DeleteSavedRequest";
 export default function SavedRequestCard({
   request,
   status = null,
+  locale = "en",
 }: {
   request: SavedOrderRequest;
   /**
@@ -29,13 +33,15 @@ export default function SavedRequestCard({
    * for it (it predates orders being kept) or the status could not be read.
    */
   status?: AccountOrderStatus | null;
+  locale?: Locale;
 }) {
+  const copy = ACCOUNT[locale].card;
   const state = status?.state ?? null;
   // A cancelled order has nothing to track, and "Track this order" under it
   // read as though it were still on its way. A delivered one keeps the link,
   // named for what it now is: a record.
   const trackLabel =
-    state === "cancelled" ? null : state === "delivered" ? "See the delivery record" : "Track this order";
+    state === "cancelled" ? null : state === "delivered" ? copy.record : copy.track;
 
   const branchHref = `/brands/${request.brand.slug ?? request.brand.id}/branches/${request.branch.id}`;
   const requestedAt = new Date(request.requestedAt);
@@ -46,7 +52,7 @@ export default function SavedRequestCard({
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-xs uppercase tracking-wide text-muted">
-            Your reference
+            {copy.reference}
           </p>
           <p className="mt-1 font-mono text-2xl font-medium tracking-[0.18em]">
             {request.reference}
@@ -57,7 +63,7 @@ export default function SavedRequestCard({
             dateTime={requestedAt.toISOString()}
             className="text-sm text-muted"
           >
-            {requestedAt.toLocaleDateString("en-GB", {
+            {requestedAt.toLocaleDateString(ACCOUNT[locale].dateLocale, {
               day: "numeric",
               month: "short",
               year: "numeric",
@@ -77,22 +83,22 @@ export default function SavedRequestCard({
 
       <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-muted">Quantity</dt>
+          <dt className="text-muted">{copy.quantity}</dt>
           <dd className="mt-0.5">{request.quantity}</dd>
         </div>
         <div>
-          <dt className="text-muted">Total</dt>
+          <dt className="text-muted">{copy.total}</dt>
           <dd className="mt-0.5">{formatTZS(request.lineTotalTZS)}</dd>
         </div>
         <div>
-          <dt className="text-muted">{deliveryRouteLabel(request.route.kind)}</dt>
+          <dt className="text-muted">{deliveryRouteLabel(request.route.kind, locale)}</dt>
           <dd className="mt-0.5">
-            {request.route.carrier}
+            {carrierLabel(request.route.carrier, locale)}
             {request.route.etaEstimate ? ` · ${request.route.etaEstimate}` : ""}
           </dd>
         </div>
         <div>
-          <dt className="text-muted">Branch</dt>
+          <dt className="text-muted">{copy.branch}</dt>
           <dd className="mt-0.5">
             <Link href={branchHref} className="underline-offset-4 hover:underline">
               {request.branch.name}
@@ -101,7 +107,7 @@ export default function SavedRequestCard({
           </dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-muted">Delivering to</dt>
+          <dt className="text-muted">{copy.deliveringTo}</dt>
           <dd className="mt-0.5 whitespace-pre-line">
             {request.customer.fullName} · {formatPhone(request.customer.phone)}
             {"\n"}
@@ -119,33 +125,35 @@ export default function SavedRequestCard({
         >
           {state === "ready" && (
             <>
-              <span className="font-medium">Not paid yet.</span> Pay to place this order with the branch.
+              <span className="font-medium">{copy.ready.strong}</span>
+              {copy.ready.rest}
             </>
           )}
           {state === "waiting" && (
             <>
-              <span className="font-medium">Waiting for the shop to confirm the delivery cost.</span> Nothing is due yet —
-              you&apos;ll pay here once they do.
+              <span className="font-medium">{copy.waiting.strong}</span>
+              {copy.waiting.rest}
             </>
           )}
           {state === "paid" && (
             <>
-              <span className="font-medium">Paid.</span> MalFleks holds your payment until it is delivered.
+              <span className="font-medium">{copy.paid.strong}</span>
+              {copy.paid.rest}
             </>
           )}
           {state === "delivered" && (
             <>
-              <span className="font-medium">Delivered.</span> This order has been marked delivered. Thank you for buying
-              through MalFleks.
+              <span className="font-medium">{copy.delivered.strong}</span>
+              {copy.delivered.rest}
             </>
           )}
           {state === "cancelled" && (
             <>
-              <span className="font-medium">Cancelled.</span>{" "}
-              {status?.cancelReason ? `The reason given: ${status.cancelReason}. ` : "This order will not be delivered. "}
+              <span className="font-medium">{copy.cancelled}</span>{" "}
+              {status?.cancelReason ? copy.reason(orderNoteLabel(status.cancelReason, locale)) : copy.notDelivered}
               {status?.refundDue
-                ? "Your payment will be refunded — we email you when the refund has been sent."
-                : "You have not been charged."}
+                ? copy.refundDue
+                : copy.notCharged}
             </>
           )}
         </p>
@@ -157,7 +165,7 @@ export default function SavedRequestCard({
             href={`/pay/${encodeURIComponent(request.reference)}`}
             className="btn-pill btn-lime px-5"
           >
-            Pay now
+            {copy.payNow}
           </Link>
         )}
         {trackLabel && (

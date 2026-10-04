@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
@@ -76,7 +77,7 @@ export async function markOrderFulfilledByPartnerAction(
     const { notifyOrderDelivered } = await import("@/server/notify/events");
     await notifyOrderDelivered(orderId);
 
-    revalidatePath("/partner/orders");
+    revalidateSitePath("/partner/orders");
     // The admin queue shows the same order and the same status.
     revalidatePath("/admin/orders");
     return { ok: true };
@@ -104,10 +105,10 @@ export type BranchDecisionResult =
 
 /** Both decisions change what three different people see. */
 function revalidateAfterDecision() {
-  revalidatePath("/partner/orders");
+  revalidateSitePath("/partner/orders");
   revalidatePath("/admin/orders", "layout");
   revalidatePath("/admin");
-  revalidatePath("/account");
+  revalidateSitePath("/account");
 }
 
 /**

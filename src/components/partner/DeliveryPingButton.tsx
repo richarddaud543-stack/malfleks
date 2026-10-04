@@ -3,19 +3,22 @@
 import { useState } from "react";
 
 import { postDeliveryPingAction } from "@/app/actions/tracking";
+import { useLocale } from "@/i18n/client";
+import { PARTNER, pingNoteLabel } from "@/i18n/copy/partner";
 import type { DeliveryPingView } from "@/server/orders/tracking";
+
+type PingCopy = (typeof PARTNER)["en"]["ping"];
 
 /** The courier's own words for where they are. Distinct from `Order.status` —
  *  see the note on `DeliveryPing` in `schema.prisma`. */
 const NOTES = ["Picked up", "On the way", "Arrived"] as const;
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, copy: PingCopy): string {
   const ms = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(ms / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes} min ago`;
-  const hours = Math.round(minutes / 60);
-  return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  if (minutes < 1) return copy.justNow;
+  if (minutes < 60) return copy.minutesAgo(minutes);
+  return copy.hoursAgo(Math.round(minutes / 60));
 }
 
 /**
@@ -38,6 +41,8 @@ export default function DeliveryPingButton({
   orderId: string;
   initialPing: DeliveryPingView | null;
 }) {
+  const locale = useLocale();
+  const copy = PARTNER[locale].ping;
   const [ping, setPing] = useState(initialPing);
   const [status, setStatus] = useState<"idle" | "locating" | "sending" | "error">(
     "idle",
@@ -50,7 +55,7 @@ export default function DeliveryPingButton({
 
     if (!("geolocation" in navigator)) {
       setStatus("error");
-      setErrorMessage("This browser can't share your location.");
+      setErrorMessage(copy.noBrowser);
       return;
     }
 
@@ -71,21 +76,21 @@ export default function DeliveryPingButton({
             setStatus("error");
             setErrorMessage(
               result.reason === "not-trackable"
-                ? "This order can no longer take a location update."
+                ? copy.notTrackable
                 : result.reason === "rate-limited"
-                  ? "That's a lot of updates in a row — wait a few seconds and try again."
-                  : "Couldn't send that. Try again in a moment.",
+                  ? copy.rate
+                  : copy.failed,
             );
           }
         } catch {
           setStatus("error");
-          setErrorMessage("Couldn't send that. Try again in a moment.");
+          setErrorMessage(copy.failed);
         }
       },
       () => {
         setStatus("error");
         setErrorMessage(
-          "Location wasn't shared — check your browser's permission for this site.",
+          copy.denied,
         );
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 },
@@ -99,8 +104,8 @@ export default function DeliveryPingButton({
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-muted">
           {ping
-            ? `Last reported ${timeAgo(ping.createdAt)}${ping.note ? ` · ${ping.note}` : ""}`
-            : "No location reported yet"}
+            ? `${copy.lastReported(timeAgo(ping.createdAt, copy))}${ping.note ? ` · ${pingNoteLabel(ping.note, locale)}` : ""}`
+            : copy.none}
         </p>
       </div>
 
@@ -113,7 +118,7 @@ export default function DeliveryPingButton({
         >
           {NOTES.map((label) => (
             <option key={label} value={label}>
-              {label}
+              {pingNoteLabel(label, locale)}
             </option>
           ))}
         </select>
@@ -124,10 +129,10 @@ export default function DeliveryPingButton({
           className="btn-pill btn-ink px-4"
         >
           {status === "locating"
-            ? "Finding you…"
+            ? copy.finding
             : status === "sending"
-              ? "Sending…"
-              : "Update my location"}
+              ? copy.sending
+              : copy.update}
         </button>
       </div>
 

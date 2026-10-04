@@ -1,3 +1,5 @@
+import { PLACES } from "@/i18n/copy/places";
+import type { Locale } from "@/i18n/locale";
 import BrandLogo from "@/components/brand/BrandLogo";
 import Link from "next/link";
 import DeliveryBadge from "@/components/delivery/DeliveryBadge";
@@ -11,11 +13,13 @@ import type { LocatorBranch } from "./locator";
 export default function LocatorBranchCard({
   entry,
   active = false,
+  locale = "en",
 }: {
   entry: LocatorBranch;
   /** True while this card's city is "paired" with a hovered/focused marker
    *  on the map — see CityLocator, which owns the shared pairing state. */
   active?: boolean;
+  locale?: Locale;
 }) {
   const { branch, brand } = entry;
 
@@ -76,13 +80,13 @@ export default function LocatorBranchCard({
           */}
           {!branch.addressLine && (
             <p className="mt-2 text-[11px] text-muted/70">
-              Exact address not published — confirm with {brand.name} first
+              {PLACES[locale].locator.confirmWith(brand.name)}
             </p>
           )}
         </div>
 
         <div className="shrink-0">
-          <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
+          <DeliveryBadge deliveryOffered={branch.deliveryOffered} locale={locale} />
         </div>
       </div>
     </Link>

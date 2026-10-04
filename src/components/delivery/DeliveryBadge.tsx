@@ -1,3 +1,6 @@
+import type { Locale } from "@/i18n/locale";
+import { deliveryRouteLabel } from "@/lib/order";
+
 /**
  * The product's core delivery signal: emerald for brand-fleet delivery,
  * amber for local courier. Those two shades (emerald/amber-400) were chosen
@@ -26,9 +29,11 @@
 export default function DeliveryBadge({
   deliveryOffered,
   className,
+  locale = "en",
 }: {
   deliveryOffered: boolean;
   className?: string;
+  locale?: Locale;
 }) {
   return (
     <span
@@ -41,7 +46,7 @@ export default function DeliveryBadge({
           deliveryOffered ? "bg-emerald-400" : "bg-amber-400"
         }`}
       />
-      {deliveryOffered ? "Brand delivery" : "Local agent delivery"}
+      {deliveryRouteLabel(deliveryOffered ? "brand" : "agent", locale)}
     </span>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import AgentCard from "@/components/delivery/AgentCard";
+import { useLocale } from "@/i18n/client";
+import { PLACES } from "@/i18n/copy/places";
 import { borderAccent } from "@/lib/accent";
 import LocatorBranchCard from "./LocatorBranchCard";
 import TanzaniaMap from "./TanzaniaMap";
@@ -34,6 +36,8 @@ export default function CityLocator({
   initialFilters?: LocatorFilters;
 }) {
   const reduceMotion = useReducedMotion();
+  const locale = useLocale();
+  const copy = PLACES[locale].locator;
   const [filters, setFilters] = useState(initialFilters);
   const { city, brandIds, q = "" } = filters;
 
@@ -76,7 +80,7 @@ export default function CityLocator({
         className="lg:sticky lg:top-24 lg:self-start"
       >
         <h2 id="locator-map-heading" className="sr-only">
-          Map of Tanzania — choose a city
+          {copy.mapHeading}
         </h2>
 
         {/* Google-Maps-style floating search over the map itself, rather than
@@ -95,6 +99,7 @@ export default function CityLocator({
             pairedCity={pairedCity}
             onSelect={(next) => setFilters((f) => ({ ...f, city: next }))}
             onHoverCity={setPairedCity}
+            markerLabel={copy.marker}
           />
 
           <div className="absolute inset-x-2.5 top-2.5 sm:inset-x-4 sm:top-4">
@@ -106,8 +111,8 @@ export default function CityLocator({
                 onChange={(e) =>
                   setFilters((f) => ({ ...f, q: e.target.value }))
                 }
-                placeholder="Search brand, city or branch…"
-                aria-label="Search branches by brand, city or branch name"
+                placeholder={copy.placeholder}
+                aria-label={copy.inputLabel}
                 // `type="search"` earns the right semantics and the right
                 // mobile keyboard, but WebKit/Blink also draw their own
                 // unlabelled clear glyph inside the field — which sat next
@@ -120,7 +125,7 @@ export default function CityLocator({
                 <button
                   type="button"
                   onClick={() => setFilters((f) => ({ ...f, q: "" }))}
-                  aria-label="Clear search"
+                  aria-label={copy.clearSearch}
                   className="-my-2 -mr-2 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:text-foreground"
                 >
                   <ClearIcon />
@@ -132,7 +137,7 @@ export default function CityLocator({
 
         <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-muted">
-            Marker size follows how many branches a city has.
+            {copy.markerNote}
           </p>
           {city !== null && (
             <button
@@ -140,14 +145,14 @@ export default function CityLocator({
               onClick={() => setFilters((f) => ({ ...f, city: null }))}
               className="min-h-10 rounded-full border border-border px-3.5 py-1 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
             >
-              All cities
+              {copy.allCities}
             </button>
           )}
         </div>
 
         <fieldset className="mt-8 border-0 p-0">
           <legend className="text-xs font-medium tracking-wide text-muted uppercase">
-            Brand
+            {copy.brand}
           </legend>
           <div className="mt-3 flex flex-wrap gap-2">
             {brandOptions.map(({ brand, count }) => {
@@ -209,7 +214,7 @@ export default function CityLocator({
               transition={{ duration: 0.2 }}
               className="mt-5 min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
             >
-              Clear filters
+              {copy.clearFilters}
             </motion.button>
           )}
         </AnimatePresence>
@@ -218,24 +223,23 @@ export default function CityLocator({
       <div>
         <p className="text-sm text-muted" role="status" aria-live="polite">
           {results.length === 0
-            ? "No branches match"
-            : `${results.length} branch${results.length === 1 ? "" : "es"}`}
-          {city ? ` in ${city}` : " across Tanzania"}
+            ? copy.none
+            : copy.count(results.length)}{" "}
+          {city ? copy.inCity(city) : copy.across}
         </p>
 
         {results.length === 0 ? (
           <div className="glass-card mt-4 rounded-2xl px-6 py-14 text-center">
-            <p className="font-display text-lg">Nothing here yet</p>
+            <p className="font-display text-lg">{copy.emptyHeading}</p>
             <p className="mt-2 text-sm text-muted">
-              No branch matches that combination — try another city or brand,
-              or clear the search.
+              {copy.emptyBody}
             </p>
             <button
               type="button"
               onClick={() => setFilters(defaultLocatorFilters)}
               className="mt-6 rounded-full bg-accent px-5 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
             >
-              Show every branch
+              {copy.showAll}
             </button>
           </div>
         ) : (
@@ -258,6 +262,7 @@ export default function CityLocator({
                 <LocatorBranchCard
                   entry={entry}
                   active={pairedCity === entry.branch.city}
+                  locale={locale}
                 />
               </li>
             ))}
@@ -269,14 +274,13 @@ export default function CityLocator({
             id="locator-agents-heading"
             className="font-display text-xl font-medium tracking-tight"
           >
-            Who delivers{" "}
+            {copy.whoDelivers}{" "}
             <span className="font-accent-serif text-accent italic">
-              {city ? `in ${city}` : "where"}
+              {city ? copy.inCity(city) : copy.where}
             </span>
           </h2>
           <p className="mt-2 text-sm text-muted">
-            Branches marked “Local agent delivery” are handed to one of these
-            couriers.
+            {copy.agentsNote}
           </p>
 
           {coverage.map((entry) => (
@@ -292,13 +296,13 @@ export default function CityLocator({
               </h3>
               {entry.agents.length === 0 ? (
                 <p className="mt-3 text-sm text-muted">
-                  No courier covers {entry.name} yet.
+                  {copy.noCourier(entry.name)}
                 </p>
               ) : (
                 <ul className="mt-3 grid gap-3 sm:grid-cols-2">
                   {entry.agents.map((agent) => (
                     <li key={agent.id}>
-                      <AgentCard agent={agent} />
+                      <AgentCard agent={agent} locale={locale} />
                     </li>
                   ))}
                 </ul>

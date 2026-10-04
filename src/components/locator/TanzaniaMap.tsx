@@ -16,6 +16,7 @@ export default function TanzaniaMap({
   pairedCity = null,
   onSelect,
   onHoverCity,
+  markerLabel = (city, n) => `${city}, ${n} ${n === 1 ? "branch" : "branches"}`,
 }: {
   cities: LocatorCity[];
   selectedCity: string | null;
@@ -25,6 +26,8 @@ export default function TanzaniaMap({
   pairedCity?: string | null;
   onSelect: (city: string | null) => void;
   onHoverCity?: (city: string | null) => void;
+  /** How a marker is read out: "Dodoma, 4 branches". The locator passes it in its language. */
+  markerLabel?: (city: string, branches: number) => string;
 }) {
   const reduceMotion = useReducedMotion();
 
@@ -112,9 +115,7 @@ export default function TanzaniaMap({
             // Named explicitly rather than left to accumulate from the child
             // spans: browsers join those with whitespace, which put a stray
             // space before the comma ("Dodoma , 4 branches").
-            aria-label={`${city.name}, ${city.branchCount} ${
-              city.branchCount === 1 ? "branch" : "branches"
-            }`}
+            aria-label={markerLabel(city.name, city.branchCount)}
             aria-pressed={isSelected}
             disabled={isEmpty}
             onClick={() => onSelect(isSelected ? null : city.name)}

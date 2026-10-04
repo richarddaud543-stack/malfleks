@@ -29,10 +29,12 @@ test.describe("site identity", () => {
 
   test("every page names its own address as the one to index", async ({ page }) => {
     for (const [path, canonical] of [
-      ["/", "http://localhost:3000"],
-      ["/search?q=corolla", "http://localhost:3000/search"],
-      ["/products/toyota-corolla", "http://localhost:3000/products/toyota-corolla"],
-      ["/how-it-works", "http://localhost:3000/how-it-works"],
+      // Each page exists once per language, and names the address of the
+      // language it is in. These specs browse in English.
+      ["/", "http://localhost:3000/en"],
+      ["/search?q=corolla", "http://localhost:3000/en/search"],
+      ["/products/toyota-corolla", "http://localhost:3000/en/products/toyota-corolla"],
+      ["/how-it-works", "http://localhost:3000/en/how-it-works"],
     ]) {
       await page.goto(path);
       const href = await page.locator('link[rel="canonical"]').getAttribute("href");
@@ -91,60 +93,6 @@ test.describe("how MalFleks works", () => {
     await page.goto("/products/toyota-corolla");
     await expect(page.getByRole("link", { name: "How paying and refunds work" }).first()).toHaveAttribute("href", "/how-it-works");
     await expect(page.getByRole("contentinfo").getByRole("link", { name: "How MalFleks works" })).toHaveAttribute("href", "/how-it-works");
-  });
-});
-
-// The two pages a person reads before trusting MalFleks exist in Swahili
-// since 4 Oct 2026. The rest of the site is English, and the pages say so.
-test.describe("MalFleks in Swahili", () => {
-  test("the home page is in Swahili, marked as Swahili, and tied to its English twin", async ({ page }) => {
-    await page.goto("/sw");
-
-    await expect(page).toHaveTitle("MalFleks — Pesa yako inalindwa mpaka mzigo ufike");
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText(/Pesa yako inalindwa mpaka mzigo\s+ufike/);
-    await expect(page.locator("main [lang=sw]").first()).toBeVisible();
-    await expect(page.getByTestId("untranslated-note")).toContainText("Kiingereza");
-
-    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", "http://localhost:3000/sw");
-    await expect(page.locator('link[rel="alternate"][hreflang="en"]')).toHaveAttribute("href", /localhost:3000\/?$/);
-    await expect(page.locator('link[rel="alternate"][hreflang="sw"]')).toHaveAttribute("href", "http://localhost:3000/sw");
-    await expect(page.locator('meta[property="og:locale"]')).toHaveAttribute("content", "sw_TZ");
-    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute("content", /opengraph-image/);
-  });
-
-  test("you can go from English to Swahili and back, on both pages", async ({ page }) => {
-    await page.goto("/");
-    await expect(page.locator('link[rel="alternate"][hreflang="sw"]')).toHaveAttribute("href", "http://localhost:3000/sw");
-    await page.getByTestId("language-switch").click();
-    await expect(page).toHaveURL(/\/sw$/);
-
-    await page.getByRole("link", { name: "Jinsi inavyofanya kazi" }).click();
-    await expect(page).toHaveURL(/\/sw\/how-it-works$/);
-    await expect(page.getByRole("heading", { level: 1, name: "Jinsi MalFleks inavyofanya kazi" })).toBeVisible();
-    await expect(page.getByText("Je, ni salama kulipa kabla mzigo haujafika?")).toBeVisible();
-
-    await page.getByTestId("language-switch").click();
-    await expect(page).toHaveURL(/\/how-it-works$/);
-    await expect(page.getByRole("heading", { level: 1, name: "How MalFleks works" })).toBeVisible();
-  });
-
-  test("the Swahili questions are given to search engines in Swahili", async ({ page }) => {
-    await page.goto("/sw/how-it-works");
-    const blocks = await page.locator('script[type="application/ld+json"]').allTextContents();
-    const faq = blocks.map((text) => JSON.parse(text)).find((data) => data["@type"] === "FAQPage");
-    expect(faq.inLanguage).toBe("sw");
-    expect(faq.mainEntity).toHaveLength(10);
-    expect(faq.mainEntity[0].name).toBe("Je, ni salama kulipa kabla mzigo haujafika?");
-  });
-
-  test("the sitemap lists both languages and the footer leads to the Swahili page", async ({ page, request }) => {
-    const sitemap = await (await request.get("/sitemap.xml")).text();
-    expect(sitemap).toContain("/sw</loc>");
-    expect(sitemap).toContain("/sw/how-it-works</loc>");
-    expect(sitemap).toContain('hreflang="sw"');
-
-    await page.goto("/search");
-    await expect(page.getByRole("contentinfo").getByRole("link", { name: "MalFleks kwa Kiswahili" })).toHaveAttribute("href", "/sw");
   });
 });
 

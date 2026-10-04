@@ -1,6 +1,6 @@
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { timingSafeEqual } from "node:crypto";
 
-import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -43,14 +43,14 @@ export async function POST(request: Request) {
 
   // The same set `revalidateCatalogue()` covers in the admin actions, kept in
   // sync by hand for now — both live in a small, deliberately-named group.
-  revalidatePath("/");
-  revalidatePath("/brands", "layout");
-  revalidatePath("/products", "layout");
-  revalidatePath("/delivery", "layout");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/agents");
-  revalidatePath("/partner");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands", "layout");
+  revalidateSitePath("/products", "layout");
+  revalidateSitePath("/delivery", "layout");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/agents");
+  revalidateSitePath("/partner");
 
   return NextResponse.json({ ok: true });
 }

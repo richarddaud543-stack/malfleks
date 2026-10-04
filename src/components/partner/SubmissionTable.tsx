@@ -1,3 +1,6 @@
+import { PARTNER } from "@/i18n/copy/partner";
+import { categoryLabel } from "@/i18n/copy/shop";
+import type { Locale } from "@/i18n/locale";
 import Link from "next/link";
 
 import ProductIcon from "@/components/product/ProductIcon";
@@ -19,11 +22,6 @@ import type { PartnerSubmission } from "@/server/partners/portal";
  * they still have to do; the answer is nothing.
  */
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "Waiting on MalFleks",
-  published: "Live on MalFleks",
-  rejected: "Sent back to you",
-};
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "bg-foreground/10 text-foreground",
@@ -33,16 +31,19 @@ const STATUS_CLASS: Record<string, string> = {
 
 export default function SubmissionTable({
   submissions,
+  locale = "en",
 }: {
   submissions: PartnerSubmission[];
+  locale?: Locale;
 }) {
+  const copy = PARTNER[locale].submissions;
+
   if (submissions.length === 0) {
     return (
       <div className="glass-card rounded-2xl px-6 py-12 text-center">
-        <p className="font-display text-lg font-medium">Nothing listed yet</p>
+        <p className="font-display text-lg font-medium">{copy.emptyHeading}</p>
         <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
-          Products you submit appear here with what happened to them. Nothing
-          you submit is visible to customers until MalFleks publishes it.
+          {copy.emptyBody}
         </p>
       </div>
     );
@@ -78,12 +79,12 @@ export default function SubmissionTable({
                   {submission.name}
                 </p>
                 <p className="mt-0.5 text-sm text-muted">
-                  {submission.category} · {formatTZS(submission.priceTZS)}
-                  {!submission.inStock && " · Marked out of stock"}
+                  {categoryLabel(submission.category, locale)} · {formatTZS(submission.priceTZS)}
+                  {!submission.inStock && ` · ${copy.outOfStock}`}
                 </p>
                 <p className="mt-1 text-xs text-muted">
-                  Submitted{" "}
-                  {submission.createdAt.toLocaleDateString("en-GB", {
+                  {copy.submitted}{" "}
+                  {submission.createdAt.toLocaleDateString(PARTNER[locale].dateLocale, {
                     day: "numeric",
                     month: "short",
                     year: "numeric",
@@ -97,7 +98,7 @@ export default function SubmissionTable({
                 STATUS_CLASS[submission.status] ?? "bg-foreground/10"
               }`}
             >
-              {STATUS_LABEL[submission.status] ?? submission.status}
+              {(copy.status as Record<string, string>)[submission.status] ?? submission.status}
             </span>
           </div>
 
@@ -107,7 +108,7 @@ export default function SubmissionTable({
             <p className="mt-4 border-l-2 border-red-600/40 pl-4 text-sm text-muted">
               {submission.decisionNote?.trim()
                 ? submission.decisionNote
-                : "MalFleks sent this back without leaving a reason. Contact us and we'll explain."}
+                : copy.noReason}
             </p>
           )}
 
@@ -116,7 +117,7 @@ export default function SubmissionTable({
               href={`/products/${submission.publishedProductId}`}
               className="mt-4 inline-block text-sm text-accent underline decoration-border underline-offset-4"
             >
-              See it on MalFleks
+              {copy.see}
             </Link>
           )}
         </li>

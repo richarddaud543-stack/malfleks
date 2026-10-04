@@ -1,3 +1,5 @@
+import { PLACES } from "@/i18n/copy/places";
+import type { Locale } from "@/i18n/locale";
 import BrandLogo from "./BrandLogo";
 import Link from "next/link";
 import type { Brand, Branch } from "@/data";
@@ -24,8 +26,10 @@ export interface DeliveryMixSummary {
  * - A genuine mix: the "X of Y" tally, where the count is the useful part.
  */
 export function summarizeDeliveryMix(
-  branches: Branch[]
+  branches: Branch[],
+  locale: Locale = "en"
 ): DeliveryMixSummary | null {
+  const words = PLACES[locale].brands.mix;
   const total = branches.length;
   if (total === 0) return null;
 
@@ -33,25 +37,13 @@ export function summarizeDeliveryMix(
 
   if (total === 1) {
     return delivering === 1
-      ? { text: "Delivers directly", tone: "positive" }
-      : { text: "Local courier delivery", tone: "caution" };
+      ? { text: words.direct, tone: "positive" }
+      : { text: words.courier, tone: "caution" };
   }
 
-  if (delivering === total) {
-    return {
-      text: `Delivers directly at all ${total} branches`,
-      tone: "positive",
-    };
-  }
-
-  if (delivering === 0) {
-    return { text: "No branches deliver directly", tone: "caution" };
-  }
-
-  return {
-    text: `${delivering} of ${total} branches deliver directly`,
-    tone: "caution",
-  };
+  if (delivering === total) return { text: words.all(total), tone: "positive" };
+  if (delivering === 0) return { text: words.none, tone: "caution" };
+  return { text: words.some(delivering, total), tone: "caution" };
 }
 
 /**
@@ -63,11 +55,13 @@ export function summarizeDeliveryMix(
 export default function BrandCard({
   brand,
   branches,
+  locale = "en",
 }: {
   brand: Brand;
   branches: Branch[];
+  locale?: Locale;
 }) {
-  const deliveryMix = summarizeDeliveryMix(branches);
+  const deliveryMix = summarizeDeliveryMix(branches, locale);
 
   return (
     <Link
@@ -96,7 +90,7 @@ export default function BrandCard({
         {brand.name}
       </h3>
       <p className="relative mt-1 text-xs font-medium uppercase tracking-wide text-muted">
-        {brand.category}
+        {PLACES[locale].brands.categories[brand.category] ?? brand.category}
       </p>
       {deliveryMix && (
         <span

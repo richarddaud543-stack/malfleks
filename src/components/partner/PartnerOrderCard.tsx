@@ -1,3 +1,7 @@
+import { orderNoteLabel } from "@/i18n/copy/account";
+import { carrierLabel } from "@/i18n/copy/order";
+import { PARTNER } from "@/i18n/copy/partner";
+import type { Locale } from "@/i18n/locale";
 import { formatTZS } from "@/lib/format";
 import { displayPhone } from "@/lib/order";
 import type { ListedOrder } from "@/server/orders/list-orders";
@@ -32,18 +36,8 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
  *   no payment row at all (one confirmed before paying was required).
  */
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "New — waiting on you",
-  confirmed: "Confirmed",
-  cancelled: "Cancelled",
-  fulfilled: "Fulfilled",
-};
 
 /** What a courier sees: a pending order is waiting on the branch, not on them. */
-const COURIER_STATUS_LABEL: Record<string, string> = {
-  ...STATUS_LABEL,
-  pending: "New — waiting on the branch",
-};
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "bg-accent/15 text-accent",
@@ -57,6 +51,7 @@ export default function PartnerOrderCard({
   lastPing = null,
   canDecide = false,
   viewer = "branch",
+  locale = "en",
 }: {
   order: ListedOrder;
   /** This order's newest `DeliveryPing`, or `null` — only meaningful (and
@@ -71,8 +66,12 @@ export default function PartnerOrderCard({
   canDecide?: boolean;
   /** Who is looking: the branch the order was sent to, or the courier carrying it. */
   viewer?: "branch" | "courier";
+  /** The language of the card. The page passes its own. */
+  locale?: Locale;
 }) {
-  const labels = viewer === "courier" ? COURIER_STATUS_LABEL : STATUS_LABEL;
+  const copy = PARTNER[locale].card;
+  const labels: Record<string, string> =
+    viewer === "courier" ? { ...copy.status, pending: copy.pendingCourier } : copy.status;
   // `routeKind` is "brand" (the branch's own fleet) or "agent" (a courier) —
   // see `DeliveryRouteKind` in `src/lib/order.ts`. This used to compare
   // against "branch", which is not a route kind, so a branch delivering its
@@ -88,9 +87,9 @@ export default function PartnerOrderCard({
   const confirmedUnpaid = order.status === "confirmed" && !paid;
   const label =
     awaitingPayment || confirmedUnpaid
-      ? "Not paid yet"
+      ? copy.notPaid
       : order.status === "confirmed" && paid
-        ? "Paid — deliver now"
+        ? copy.paidDeliver
         : (labels[order.status] ?? order.status);
 
   return (
@@ -104,7 +103,7 @@ export default function PartnerOrderCard({
           <p className="mt-0.5 text-sm text-muted">
             {formatTZS(order.lineTotalTZS)}
             {order.quantity > 1 &&
-              ` · ${formatTZS(order.unitPriceTZS)} each`}
+              ` · ${copy.each(formatTZS(order.unitPriceTZS))}`}
           </p>
         </div>
         <span
@@ -122,21 +121,19 @@ export default function PartnerOrderCard({
       {order.status !== "cancelled" &&
         (order.payment?.status === "captured" ? (
           <p className="mt-4 rounded-xl border border-emerald-600/40 bg-emerald-600/10 px-4 py-3 text-sm">
-            <span className="font-medium">Paid through MalFleks.</span> Collect
-            nothing at the door — MalFleks pays your share after delivery.
+            <span className="font-medium">{copy.paid.strong}</span>
+            {copy.paid.rest}
           </p>
         ) : (
           (order.payment || confirmedUnpaid) && (
             <p className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
-              The customer hasn&apos;t paid yet. There is nothing to do until
-              this says “Paid through MalFleks” — don&apos;t hand anything
-              over before then.
+              {copy.unpaid}
             </p>
           )
         ))}
 
       <div className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3">
-        <p className="text-xs text-muted">Reference to quote</p>
+        <p className="text-xs text-muted">{copy.reference}</p>
         <p className="font-display text-xl font-medium tracking-tight tabular-nums">
           {order.reference}
         </p>
@@ -156,11 +153,9 @@ export default function PartnerOrderCard({
 
       <p className="mt-4 text-xs text-muted">
         {branchDelivers && viewer === "branch"
-          ? "You are delivering this one yourself."
-          : `Delivery by ${order.routeCarrier}${
-              order.routeEtaEstimate ? `, ${order.routeEtaEstimate}` : ""
-            }.`}
-        {order.routeAgentPhone && ` Courier: ${displayPhone(order.routeAgentPhone)}.`}
+          ? copy.selfDelivery
+          : copy.deliveryBy(carrierLabel(order.routeCarrier, locale), order.routeEtaEstimate)}
+        {order.routeAgentPhone && copy.courier(displayPhone(order.routeAgentPhone))}
       </p>
 
       {/* The branch's answer. Only a pending order has a question to answer. */}
@@ -174,7 +169,7 @@ export default function PartnerOrderCard({
       )}
 
       {order.status === "cancelled" && order.decisionNote && (
-        <p className="mt-4 text-xs text-muted">Reason given: {order.decisionNote}</p>
+        <p className="mt-4 text-xs text-muted">{copy.reason(orderNoteLabel(order.decisionNote, locale))}</p>
       )}
 
       {/* Both controls only apply to a confirmed order that has been paid for —
@@ -189,8 +184,8 @@ export default function PartnerOrderCard({
       )}
 
       <p className="mt-2 text-xs text-muted">
-        Requested{" "}
-        {new Date(order.requestedAt).toLocaleString("en-GB", {
+        {copy.requested}{" "}
+        {new Date(order.requestedAt).toLocaleString(PARTNER[locale].dateLocale, {
           day: "numeric",
           month: "short",
           year: "numeric",

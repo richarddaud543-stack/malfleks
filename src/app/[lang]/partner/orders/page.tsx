@@ -1,0 +1,133 @@
+import { PARTNER } from "@/i18n/copy/partner";
+import { pageLocale } from "@/i18n/server";
+import type { Metadata } from "next";
+import Link from "next/link";
+
+import PartnerOrderCard from "@/components/partner/PartnerOrderCard";
+import { listOrders } from "@/server/orders/list-orders";
+import { latestPingsForOrders } from "@/server/orders/tracking";
+import { requirePartner } from "@/server/partners/portal";
+
+type Props = { params: Promise<{ lang: string }> };
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return { title: PARTNER[await pageLocale(params)].orders.title, robots: { index: false, follow: false } };
+}
+
+/** Never prerendered, for the reason stated on `/partner`. */
+export const dynamic = "force-dynamic";
+
+/**
+ * The orders a customer sent to *this* branch.
+ *
+ * The loop did not close without this. A customer picked a product, filled in
+ * their name, phone and address, and got a reference — and the branch that was
+ * supposed to fulfil it had no way to find out. Only MalFleks's admin could see the
+ * order, which made every sale depend on somebody at MalFleks relaying it by phone.
+ *
+ * **`branchId` comes from `requirePartner()`, never from the URL.** That is the
+ * same boundary the rest of the portal holds: a `branchId` in a query string
+ * would hand any partner the name, phone number and home address of every other
+ * branch's customers. `listOrders` takes the filter into its WHERE, so the
+ * scoping is in the query rather than applied afterwards in JavaScript — which
+ * is the version that silently breaks the day someone adds pagination.
+ */
+export default async function PartnerOrdersPage({ params }: Props) {
+  const locale = await pageLocale(params);
+  const copy = PARTNER[locale].orders;
+  const { partner } = await requirePartner("/partner/orders");
+
+  // A brand partner sees orders sent to their branch; a courier sees the jobs
+  // a customer routed to them. Both scopes come from the session, never a URL.
+  const scope = partner.branchId
+    ? { branchId: partner.branchId }
+    : partner.agentId
+      ? { agentId: partner.agentId }
+      : null;
+
+  // The `null` case is load-bearing, not defensive: `listOrders({})` with no
+  // filter returns *every* customer's order, for every branch.
+  const orders = scope ? await listOrders(scope).catch(() => null) : [];
+  const isCourier = partner.kind === "courier";
+  // Only the active partner who owns the branch gets the confirm/decline
+  // buttons. This decides what is drawn; `confirmOrderAsBranch` and
+  // `declineOrderAsBranch` re-prove it from the database on every press.
+  const canDecide = !isCourier && partner.status === "active" && Boolean(partner.branchId);
+
+  // Only a `"confirmed"` order can take a new ping (see `postDeliveryPing`),
+  // so that is the only set worth a query for — most of a queue is `pending`
+  // and has nothing to show yet.
+  const confirmedIds =
+    orders?.filter((o) => o.status === "confirmed").map((o) => o.id) ?? [];
+  const lastPings = await latestPingsForOrders(confirmedIds).catch(
+    () => new Map(),
+  );
+
+  return (
+    <div className="mx-auto max-w-3xl px-5 py-16">
+      <Link href="/partner" className="text-sm text-muted hover:text-foreground">
+        ← {isCourier ? copy.backCourier : copy.backBranch}
+      </Link>
+      <h1 className="mt-4 font-display text-4xl font-medium tracking-tight">
+        {copy.heading(partner.displayName)}
+      </h1>
+      <p className="mt-3 max-w-prose text-muted">
+        {isCourier
+          ? copy.introCourier
+          : copy.introBranch}
+      </p>
+
+      {!isCourier && partner.status !== "active" && (
+        <p className="mt-4 rounded-xl border border-red-600/40 px-4 py-3 text-sm text-muted">
+          {copy.suspended}
+        </p>
+      )}
+
+      {orders === null ? (
+        <div className="glass-card mt-10 rounded-2xl border border-red-600/40 px-6 py-5">
+          <h2 className="font-display text-lg font-medium">
+            {copy.unavailableHeading}
+          </h2>
+          <p className="mt-2 text-sm text-muted">
+            {copy.unavailableBody}
+          </p>
+        </div>
+      ) : !scope ? (
+        <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
+          <p className="font-display text-lg font-medium">
+            {isCourier
+              ? copy.noRoutingHeading
+              : copy.noBranchHeading}
+          </p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+            {isCourier
+              ? copy.noRoutingBody
+              : copy.noBranchBody}
+          </p>
+        </div>
+      ) : orders.length === 0 ? (
+        <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
+          <p className="font-display text-lg font-medium">{copy.none}</p>
+          <p className="mx-auto mt-2 max-w-sm text-sm text-muted">
+            {isCourier
+              ? copy.noneCourier
+              : copy.noneBranch}
+          </p>
+        </div>
+      ) : (
+        <ul className="mt-10 flex flex-col gap-5">
+          {orders.map((order) => (
+            <PartnerOrderCard
+              key={order.id}
+              order={order}
+              lastPing={lastPings.get(order.id) ?? null}
+              canDecide={canDecide}
+              viewer={isCourier ? "courier" : "branch"}
+              locale={locale}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}

@@ -19,6 +19,8 @@ import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
 import { previewDelivery } from "@/lib/order";
 import type { Listing } from "@/lib/search";
+import { useLocale } from "@/i18n/client";
+import { categoryLabel } from "@/i18n/copy/shop";
 
 /**
  * A search hit. Unlike `ProductCard`, this carries the brand and branch context
@@ -32,7 +34,8 @@ export default function ListingCard({ listing }: { listing: Listing }) {
   // `listing.agents` is the database set attached by `buildListings`; without
   // it `previewDelivery` falls back to the static couriers and can name the
   // wrong carrier on a real branch.
-  const outlook = previewDelivery(listing);
+  const locale = useLocale();
+  const outlook = previewDelivery({ ...listing, locale });
 
   return (
     <motion.div
@@ -109,7 +112,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
             />
             <span className="truncate">{brand.name}</span>
             <span aria-hidden="true">·</span>
-            <span className="truncate">{product.category}</span>
+            <span className="truncate">{categoryLabel(product.category, locale)}</span>
           </div>
 
           <h3 className="font-display mt-1 truncate text-base font-medium">
@@ -129,7 +132,7 @@ export default function ListingCard({ listing }: { listing: Listing }) {
             few pixels apart. */}
         <div className="flex shrink-0 items-start justify-between gap-3 sm:flex-col sm:items-end">
           <p className="font-semibold">{formatTZS(product.priceTZS)}</p>
-          <DeliveryRouteLine outlook={outlook} className="sm:items-end" />
+          <DeliveryRouteLine outlook={outlook} locale={locale} className="sm:items-end" />
         </div>
       </Link>
     </motion.div>

@@ -1,3 +1,5 @@
+import { PLACES } from "@/i18n/copy/places";
+import type { Locale } from "@/i18n/locale";
 import Link from "next/link";
 import type { Branch } from "@/data";
 import DeliveryBadge from "../delivery/DeliveryBadge";
@@ -5,9 +7,11 @@ import DeliveryBadge from "../delivery/DeliveryBadge";
 export default function BranchCard({
   branch,
   brandSlug,
+  locale = "en",
 }: {
   branch: Branch;
   brandSlug: string;
+  locale?: Locale;
 }) {
   return (
     <Link
@@ -26,11 +30,11 @@ export default function BranchCard({
             <p className="mt-1 text-xs text-muted">{branch.hours}</p>
           )}
         </div>
-        <DeliveryBadge deliveryOffered={branch.deliveryOffered} />
+        <DeliveryBadge deliveryOffered={branch.deliveryOffered} locale={locale} />
       </div>
       {!branch.addressLine && (
         <p className="mt-3 text-[11px] text-muted">
-          Exact address not published — confirm with the brand first
+          {PLACES[locale].branch.addressNotPublished}
         </p>
       )}
     </Link>

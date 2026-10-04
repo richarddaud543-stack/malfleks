@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { adminSession } from "@/server/auth/admin-session";
@@ -202,7 +203,7 @@ export async function setPartnerStatusAction(_prev: ConsoleState, formData: Form
 
     revalidatePath("/admin/partners", "layout");
     revalidatePath("/admin");
-    revalidatePath("/partner");
+    revalidateSitePath("/partner");
     return { status: "ok", message: status === "suspended" ? "Suspended." : "Reactivated." };
   } catch (error) {
     await logServerError("set-partner-status", error, session.uid);
@@ -217,13 +218,13 @@ export async function setPartnerStatusAction(_prev: ConsoleState, formData: Form
 async function revalidateCatalogue() {
   revalidatePath("/admin/catalogue");
   revalidatePath("/admin/partners", "layout");
-  revalidatePath("/");
-  revalidatePath("/brands", "layout");
-  revalidatePath("/products", "layout");
-  revalidatePath("/delivery", "layout");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/partner");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands", "layout");
+  revalidateSitePath("/products", "layout");
+  revalidateSitePath("/delivery", "layout");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/partner");
   // The shop is a separate deployment with its own cache; see the module doc.
   await notifyPublicSiteOfCatalogueChange();
 }

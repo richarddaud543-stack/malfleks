@@ -36,9 +36,7 @@ describe("the first screen", () => {
 
     expect(screen.getByRole("link", { name: "Search products" })).toHaveAttribute("href", "/search");
     expect(screen.getByRole("link", { name: "How it works" })).toHaveAttribute("href", "/how-it-works");
-    // The only other link is the one to the same page in Swahili.
-    expect(screen.getByRole("link", { name: /Kiswahili/ })).toHaveAttribute("href", "/sw");
-    expect(screen.getAllByRole("link")).toHaveLength(3);
+    expect(screen.getAllByRole("link")).toHaveLength(2);
   });
 
   it("is the same screen in Swahili, leading on to the Swahili explanation", () => {
@@ -47,10 +45,8 @@ describe("the first screen", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Pesa yako inalindwa mpaka mzigo ufike");
     expect(screen.getByText(PROMISE.headline)).toHaveAttribute("lang", "en");
     expect(screen.getByRole("link", { name: "Tafuta bidhaa" })).toHaveAttribute("href", "/search");
-    expect(screen.getByRole("link", { name: "Jinsi inavyofanya kazi" })).toHaveAttribute("href", "/sw/how-it-works");
-    expect(screen.getByRole("link", { name: /English/ })).toHaveAttribute("href", "/");
-    // Search, ordering and paying are not translated; the page says so here.
-    expect(screen.getByTestId("untranslated-note")).toHaveTextContent(/Kiingereza/);
+    // The links are the same plain addresses; the language travels with the visitor.
+    expect(screen.getByRole("link", { name: "Jinsi inavyofanya kazi" })).toHaveAttribute("href", "/how-it-works");
     expect(within(screen.getByRole("figure")).getAllByRole("listitem")[1]).toHaveTextContent("MalFleks inashikilia pesa yako");
   });
 

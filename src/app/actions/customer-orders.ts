@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
@@ -31,8 +32,8 @@ export async function cancelOwnOrderAction(reference: string): Promise<CancelOwn
     if (!outcome.ok) return outcome;
 
     if (outcome.kind === "cancelled") {
-      revalidatePath("/account");
-      revalidatePath("/partner/orders");
+      revalidateSitePath("/account");
+      revalidateSitePath("/partner/orders");
       revalidatePath("/admin/orders", "layout");
       revalidatePath("/admin");
     }

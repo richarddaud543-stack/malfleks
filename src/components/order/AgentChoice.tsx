@@ -1,6 +1,8 @@
 "use client";
 
 import type { DeliveryAgent } from "@/data";
+import { useLocale } from "@/i18n/client";
+import { ORDER } from "@/i18n/copy/order";
 import { formatEta } from "@/lib/format";
 
 /**
@@ -25,6 +27,9 @@ export default function AgentChoice({
   focusKey?: string;
   onSelect: () => void;
 }) {
+  const locale = useLocale();
+  const copy = ORDER[locale].agent;
+
   return (
     <label
       className={`glass-card flex cursor-pointer items-start gap-3 rounded-2xl p-5 transition-colors ${
@@ -46,15 +51,15 @@ export default function AgentChoice({
           <span className="font-display font-medium">{agent.name}</span>
           {agent.verified && (
             <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-medium text-accent">
-              Verified
+              {copy.verified}
             </span>
           )}
         </span>
         <span className="mt-1 block text-sm text-muted">
-          Based in {agent.city} · Serves {agent.regionsServed.join(", ")}
+          {copy.based(agent.city, agent.regionsServed.join(", "))}
         </span>
         <span className="mt-2 block text-sm text-muted">
-          ETA: {formatEta(agent.eta)}
+          {copy.eta(formatEta(agent.eta, locale))}
           {agent.phone ? ` · ${agent.phone}` : ""}
         </span>
       </span>

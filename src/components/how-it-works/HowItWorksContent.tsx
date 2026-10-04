@@ -1,11 +1,10 @@
 import Link from "next/link";
 
-import MoneyPath from "@/components/home/MoneyPath";
-import LanguageSwitch from "@/components/layout/LanguageSwitch";
 import SafePay from "@/components/trust/SafePay";
 import type { Step } from "@/lib/how-it-works";
 import { serializeJsonLd } from "@/lib/product-json-ld";
-import { SITE_COPY, type Locale } from "@/lib/site-copy";
+import type { Locale } from "@/i18n/locale";
+import { SITE_COPY } from "@/lib/site-copy";
 import { buildFaqJsonLd } from "@/lib/site-json-ld";
 
 /**
@@ -25,29 +24,22 @@ import { buildFaqJsonLd } from "@/lib/site-json-ld";
  * for word, in the language of the page.
  */
 export default function HowItWorksContent({ locale }: { locale: Locale }) {
-  const copy = SITE_COPY[locale];
-  const page = copy.howItWorks;
+  const page = SITE_COPY[locale].howItWorks;
 
   return (
-    <div lang={locale} className="mx-auto max-w-3xl px-5 py-16">
+    <div className="mx-auto max-w-3xl px-5 py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(buildFaqJsonLd(page.questions.items, locale)) }}
       />
 
-      <LanguageSwitch locale={locale} page="howItWorks" />
-      <p className="mt-6 font-accent-serif text-xl italic text-accent">{page.eyebrow}</p>
+      <p className="font-accent-serif text-xl italic text-accent">{page.eyebrow}</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">{page.title}</h1>
       <p className="mt-4 max-w-prose text-lg text-muted">{page.lead}</p>
-      {copy.untranslatedNote && (
-        <p data-testid="untranslated-note" className="mt-3 text-sm text-muted">
-          {copy.untranslatedNote}
-        </p>
-      )}
 
-      {/* The promise card is written in English only; the Swahili page shows
-          the same three commitments as the picture from the home page. */}
-      <div className="mt-8">{locale === "en" ? <SafePay /> : <MoneyPath locale={locale} />}</div>
+      <div className="mt-8">
+        <SafePay locale={locale} />
+      </div>
 
       <Steps id="buying" label={page.stepLabel} {...page.buying} />
 

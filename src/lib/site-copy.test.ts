@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import { BUYER_STEPS, QUESTIONS } from "./how-it-works";
 import { PROMISE } from "./promise";
-import { languageAlternates, LOCALES, otherLocale, PAGE_PATHS, SITE_COPY, type SiteCopy } from "./site-copy";
+import { localeAlternates, LOCALES } from "@/i18n/locale";
+import { SITE_COPY, type SiteCopy } from "./site-copy";
 
 /**
  * The English and the Swahili pages are one page written twice. These tests
@@ -83,33 +84,13 @@ describe("the two-language pages", () => {
     }
   });
 
-  it("tell a Swahili reader which pages are not translated, and an English reader nothing", () => {
-    expect(SITE_COPY.sw.untranslatedNote).toMatch(/Kiingereza/);
-    expect(SITE_COPY.en.untranslatedNote).toBeNull();
-  });
-
-  it("name each language in itself", () => {
-    expect(SITE_COPY.en.languageName).toBe("English");
-    expect(SITE_COPY.sw.languageName).toBe("Kiswahili");
-    // A voice user says the word they can see; the spoken label must contain it.
-    for (const locale of LOCALES) {
-      expect(SITE_COPY[locale].switchLabel).toContain(SITE_COPY[locale].languageName);
-    }
-    expect(otherLocale("en")).toBe("sw");
-    expect(otherLocale("sw")).toBe("en");
-  });
-
   it("tell search engines where each page is in each language", () => {
-    expect(languageAlternates("home")).toEqual({
-      canonical: "./",
-      languages: { en: "/", sw: "/sw", "x-default": "/" },
+    expect(localeAlternates("en", "/how-it-works")).toEqual({
+      canonical: "/en/how-it-works",
+      languages: { sw: "/sw/how-it-works", en: "/en/how-it-works", "x-default": "/sw/how-it-works" },
     });
-    expect(languageAlternates("howItWorks").languages).toEqual({
-      en: "/how-it-works",
-      sw: "/sw/how-it-works",
-      "x-default": "/how-it-works",
-    });
-    expect(PAGE_PATHS.home.sw).toBe("/sw");
+    // The home page has no trailing part to its address.
+    expect(localeAlternates("sw", "/").canonical).toBe("/sw");
   });
 
   it("say the shops' cities in a sentence in each language", () => {

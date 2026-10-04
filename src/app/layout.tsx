@@ -1,8 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Bricolage_Grotesque, Instrument_Serif } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
 import SiteAnalytics from "@/components/layout/SiteAnalytics";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE } from "@/lib/site-identity";
 import { resolveSiteUrl } from "@/lib/site-url";
@@ -79,31 +77,24 @@ export const viewport: Viewport = {
   themeColor: "#ffffff",
 };
 
+/**
+ * The document itself: fonts, the page ground, analytics.
+ *
+ * The bar at the top and the footer are not here. They are written in one
+ * language or the other, and this layout sits above the part of the address
+ * that says which -- so `SiteFrame` draws them, from `[lang]/layout.tsx`.
+ *
+ * `lang="sw"` is the default a new visitor gets; `SiteFrame` corrects it for
+ * an English page before anything is read out.
+ */
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="sw"
       className={`${geistSans.variable} ${geistMono.variable} ${displayFont.variable} ${accentSerif.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[1000] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-background"
-        >
-          Skip to content
-        </a>
-        {/* No smooth-scroll script and no grain overlay since 4 Oct 2026. Both
-            were dressing for the dark home page: the first put an animation
-            library on every page of a site read mostly on phones, the second
-            a full-screen filter over all of it. */}
-        <Navbar />
-        {/* tabIndex={-1} is what makes the skip link actually skip: without a
-            focusable target the browser scrolls but leaves focus on <body>,
-            so the next Tab returns to the nav the user just skipped. */}
-        <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
-          {children}
-        </main>
-        <Footer />
+        {children}
         {/* Vercel Web Analytics. Same root layout serves both the public
             `malfleks` deployment and the hostname-gated `malfleks-admin`
             one, so this one addition covers both — the script reports to

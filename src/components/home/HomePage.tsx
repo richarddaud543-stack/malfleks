@@ -2,7 +2,7 @@ import HomeHero from "@/components/home/HomeHero";
 import { HomeOpeningSoon, HomePartners, HomeProducts, HomeShops, HomeSteps } from "@/components/home/HomeSections";
 import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 import { serializeJsonLd } from "@/lib/product-json-ld";
-import type { Locale } from "@/lib/site-copy";
+import type { Locale } from "@/i18n/locale";
 import { buildSiteJsonLd } from "@/lib/site-json-ld";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { getAllBranches, getAllBrands, getAllProducts } from "@/server/repositories";
@@ -47,9 +47,7 @@ export default async function HomePage({ locale }: { locale: Locale }) {
   const [brands, branches, products] = await Promise.all([getAllBrands(), getAllBranches(), getAllProducts()]);
 
   return (
-    // The site's frame (the bar at the top, the footer) is English; this
-    // marks what is inside it as the language it is written in.
-    <div lang={locale}>
+    <>
       <SiteStructuredData />
       <HomeHero locale={locale} />
       {brands.length === 0 ? (
@@ -62,6 +60,6 @@ export default async function HomePage({ locale }: { locale: Locale }) {
         </>
       )}
       <HomePartners locale={locale} />
-    </div>
+    </>
   );
 }

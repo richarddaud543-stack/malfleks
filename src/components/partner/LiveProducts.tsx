@@ -1,3 +1,5 @@
+import { PARTNER } from "@/i18n/copy/partner";
+import type { Locale } from "@/i18n/locale";
 import Link from "next/link";
 
 import { formatTZS } from "@/lib/format";
@@ -5,7 +7,7 @@ import type { LiveProduct } from "@/server/partners/stock";
 import StockToggle from "./StockToggle";
 
 /**
- * "Your live products": what this branch has on the shop right now, and
+ * "{copy.heading}": what this branch has on the shop right now, and
  * whether each one can be ordered.
  *
  * Separate from the submissions table above it on purpose. That table is the
@@ -21,28 +23,30 @@ import StockToggle from "./StockToggle";
 export default function LiveProducts({
   products,
   canChange,
+  locale = "en",
 }: {
   products: LiveProduct[];
   /** False for a suspended partner, who may look but not change anything. */
   canChange: boolean;
+  locale?: Locale;
 }) {
+  const copy = PARTNER[locale].live;
+
   return (
     <section aria-labelledby="live-products-heading" className="mt-12">
       <h2
         id="live-products-heading"
         className="font-display text-lg font-medium tracking-tight"
       >
-        Your live products
+        {copy.heading}
       </h2>
       <p className="mt-2 max-w-prose text-sm text-muted">
-        What customers can see on MalFleks now. Mark a product out of stock the
-        moment you run out, so nobody orders something you can&apos;t supply.
+        {copy.intro}
       </p>
 
       {products.length === 0 ? (
         <p className="glass-card mt-5 rounded-2xl px-6 py-8 text-sm text-muted">
-          Nothing of yours is on the shop yet. A product appears here once
-          MalFleks has published it.
+          {copy.empty}
         </p>
       ) : (
         <ul className="mt-5 flex flex-col gap-3">
@@ -72,7 +76,7 @@ export default function LiveProducts({
                 />
               ) : (
                 <p className="text-sm text-muted">
-                  {product.inStock ? "In stock" : "Out of stock"}
+                  {product.inStock ? copy.inStock : copy.outOfStock}
                 </p>
               )}
             </li>

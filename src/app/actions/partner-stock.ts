@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { isAuthConfigured } from "@/server/auth/config";
@@ -37,13 +38,13 @@ export type PartnerStockResult =
 async function revalidateCatalogue() {
   revalidatePath("/admin/catalogue");
   revalidatePath("/admin/partners", "layout");
-  revalidatePath("/");
-  revalidatePath("/brands", "layout");
-  revalidatePath("/products", "layout");
-  revalidatePath("/delivery", "layout");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/partner");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands", "layout");
+  revalidateSitePath("/products", "layout");
+  revalidateSitePath("/delivery", "layout");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/partner");
   await notifyPublicSiteOfCatalogueChange();
 }
 

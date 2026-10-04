@@ -17,6 +17,8 @@ import ProductIcon from "./ProductIcon";
 import ProductPhoto from "./ProductPhoto";
 import { formatTZS } from "@/lib/format";
 import { iconAccent } from "@/lib/accent";
+import { useLocale } from "@/i18n/client";
+import { categoryLabel, SHOP } from "@/i18n/copy/shop";
 
 // The same cursor-follow spring MagneticButton.tsx uses, so every
 // pointer-tracked element in the app shares one physical feel rather than
@@ -32,6 +34,7 @@ export default function ProductCard({
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
+  const locale = useLocale();
   const [active, setActive] = useState(false);
 
   const x = useMotionValue(0);
@@ -135,11 +138,11 @@ export default function ProductCard({
         <div className="mt-4 flex items-start justify-between gap-2">
           <div>
             <h3 className="font-display text-sm font-medium">{product.name}</h3>
-            <p className="text-xs text-muted">{product.category}</p>
+            <p className="text-xs text-muted">{categoryLabel(product.category, locale)}</p>
           </div>
           {!product.inStock && (
             <span className="shrink-0 text-[11px] text-muted">
-              Out of stock
+              {SHOP[locale].product.outOfStock}
             </span>
           )}
         </div>

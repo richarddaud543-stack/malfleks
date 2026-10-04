@@ -26,6 +26,8 @@ import {
   paramsFromFilters,
   toggleValue,
 } from "@/lib/search-params";
+import { useLocale } from "@/i18n/client";
+import { categoryLabel, SHOP } from "@/i18n/copy/shop";
 import FacetGroup from "./FacetGroup";
 import ListingCard from "./ListingCard";
 
@@ -41,6 +43,8 @@ const QUERY_DEBOUNCE_MS = 250;
 export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const locale = useLocale();
+  const copy = SHOP[locale].search;
 
   // The URL is the single source of truth for filters, which makes every search
   // shareable and the back button work without extra bookkeeping.
@@ -112,7 +116,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
   const facetPanel = (
     <div className="flex flex-col gap-6">
       <FacetGroup
-        title="Brand"
+        title={copy.facets.brand}
         options={facets.brands}
         selected={filters.brandIds}
         onToggle={(value) =>
@@ -120,15 +124,15 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
         }
       />
       <FacetGroup
-        title="Category"
-        options={facets.categories}
+        title={copy.facets.category}
+        options={facets.categories.map((option) => ({ ...option, label: categoryLabel(option.label, locale) }))}
         selected={filters.categories}
         onToggle={(value) =>
           update({ categories: toggleValue(filters.categories, value) })
         }
       />
       <FacetGroup
-        title="City"
+        title={copy.facets.city}
         options={facets.cities}
         selected={filters.cities}
         onToggle={(value) =>
@@ -136,8 +140,11 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
         }
       />
       <FacetGroup
-        title="Price (TZS)"
-        options={facets.priceBands}
+        title={copy.facets.price}
+        options={facets.priceBands.map((option) => ({
+          ...option,
+          label: copy.priceBands[option.value as keyof typeof copy.priceBands] ?? option.label,
+        }))}
         selected={filters.priceBand ? [filters.priceBand] : []}
         // Price is single-select: picking the active band clears it.
         onToggle={(value) =>
@@ -147,7 +154,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
 
       <fieldset className="border-0 p-0">
         <legend className="text-xs font-medium tracking-wide text-muted uppercase">
-          Delivery &amp; stock
+          {copy.facets.delivery}
         </legend>
         <div className="mt-3 flex flex-col gap-2.5">
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-muted hover:text-foreground">
@@ -157,7 +164,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
               onChange={(e) => update({ deliveryOnly: e.target.checked })}
               className="h-4 w-4 accent-[var(--accent)]"
             />
-            Brand delivers it themselves
+            {copy.brandDelivers}
           </label>
           <label className="flex cursor-pointer items-center gap-2.5 text-sm text-muted hover:text-foreground">
             <input
@@ -166,7 +173,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
               onChange={(e) => update({ inStockOnly: e.target.checked })}
               className="h-4 w-4 accent-[var(--accent)]"
             />
-            In stock only
+            {copy.inStockOnly}
           </label>
         </div>
       </fieldset>
@@ -180,7 +187,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
           }}
           className="min-h-11 self-start rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground"
         >
-          Clear all
+          {copy.clearAll}
         </button>
       )}
     </div>
@@ -194,8 +201,8 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
           type="search"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Search products, brands or cities…"
-          aria-label="Search products, brands or cities"
+          placeholder={copy.placeholder}
+          aria-label={copy.inputLabel}
           className="w-full bg-transparent text-sm outline-none placeholder:text-muted"
         />
       </div>
@@ -203,9 +210,9 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted" role="status" aria-live="polite">
           {listings.length === 0
-            ? "No products found"
-            : `${listings.length} product${listings.length === 1 ? "" : "s"}`}
-          {filterCount > 0 && ` · ${filterCount} filter${filterCount === 1 ? "" : "s"} active`}
+            ? copy.none
+            : copy.count(listings.length)}
+          {filterCount > 0 && ` · ${copy.filtersActive(filterCount)}`}
         </p>
 
         <div className="flex items-center gap-2">
@@ -216,20 +223,20 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
             aria-controls="filter-panel"
             className="min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground lg:hidden"
           >
-            Filters{filterCount > 0 ? ` (${filterCount})` : ""}
+            {copy.filters}{filterCount > 0 ? ` (${filterCount})` : ""}
           </button>
 
           <label className="flex items-center gap-2 text-xs text-muted">
-            <span className="sr-only sm:not-sr-only">Sort</span>
+            <span className="sr-only sm:not-sr-only">{copy.sort}</span>
             <select
               value={filters.sort}
               onChange={(e) => update({ sort: e.target.value as SortKey })}
-              aria-label="Sort results"
+              aria-label={copy.sortLabel}
               className="min-h-11 rounded-full border border-border bg-surface-2 px-3 py-1.5 text-sm text-foreground outline-none"
             >
               {sortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {copy.sortOptions[option.value]}
                 </option>
               ))}
             </select>
@@ -264,9 +271,9 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
         <div>
           {listings.length === 0 ? (
             <div className="glass-card rounded-2xl px-6 py-16 text-center">
-              <p className="font-display text-lg">Nothing matches that yet</p>
+              <p className="font-display text-lg">{copy.noMatchHeading}</p>
               <p className="mt-2 text-sm text-muted">
-                Try a broader search, or clear a filter or two.
+                {copy.noMatchBody}
               </p>
               <button
                 type="button"
@@ -276,7 +283,7 @@ export default function SearchExplorer({ catalogue }: { catalogue: Listing[] }) 
                 }}
                 className="mt-6 rounded-full bg-accent px-5 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
               >
-                Reset search
+                {copy.reset}
               </button>
             </div>
           ) : (

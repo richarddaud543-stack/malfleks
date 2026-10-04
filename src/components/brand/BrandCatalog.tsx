@@ -1,16 +1,14 @@
 "use client";
 
+import { useLocale } from "@/i18n/client";
+import { PLACES } from "@/i18n/copy/places";
+
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import type { Brand, Branch, BrandCategory } from "@/data";
 import BrandGrid from "./BrandGrid";
 
-const categories: { value: BrandCategory | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "automotive", label: "Automotive" },
-  { value: "electronics", label: "Electronics" },
-  { value: "telecom", label: "Telecom" },
-];
+const CATEGORY_ORDER: (BrandCategory | "all")[] = ["all", "automotive", "electronics", "telecom"];
 
 /**
  * The active category's pill background slides between buttons via Motion's
@@ -35,6 +33,12 @@ export default function BrandCatalog({
 }) {
   const [active, setActive] = useState<BrandCategory | "all">("all");
   const reduceMotion = useReducedMotion();
+  const locale = useLocale();
+  const copy = PLACES[locale].brands;
+  const categories = CATEGORY_ORDER.map((value) => ({
+    value,
+    label: value === "all" ? copy.all : copy.categories[value],
+  }));
 
   const filtered =
     active === "all" ? brands : brands.filter((b) => b.category === active);
@@ -82,7 +86,7 @@ export default function BrandCatalog({
       </div>
       )}
       <div className={showChips ? "mt-8" : ""}>
-        <BrandGrid brands={filtered} branchesByBrandId={branchesByBrandId} />
+        <BrandGrid brands={filtered} branchesByBrandId={branchesByBrandId} locale={locale} />
       </div>
     </div>
   );

@@ -3,19 +3,23 @@
 import { useState, useTransition } from "react";
 
 import { cancelOwnOrderAction } from "@/app/actions/customer-orders";
+import { useLocale } from "@/i18n/client";
+import { ACCOUNT } from "@/i18n/copy/account";
 
-function errorMessage(reason: string): string {
+type CancelCopy = (typeof ACCOUNT)["en"]["cancel"];
+
+function errorMessage(reason: string, copy: CancelCopy): string {
   switch (reason) {
     case "signed-out":
-      return "Your session has expired. Sign in again to cancel this order.";
+      return copy.signedOut;
     case "too-late":
-      return "This order has changed since the page loaded. Reload to see where it stands.";
+      return copy.tooLate;
     case "already-asked":
-      return "You have already asked us to cancel this order. We will reply by email.";
+      return copy.alreadyAsked;
     case "not-found":
-      return "We couldn't find this order on your account.";
+      return copy.notFound;
     default:
-      return "We couldn't do that just now. Nothing was changed — try again in a moment.";
+      return copy.failed;
   }
 }
 
@@ -32,6 +36,7 @@ function errorMessage(reason: string): string {
  * `DeleteSavedRequest` beside it.
  */
 export default function CancelOrderButton({ reference, paid }: { reference: string; paid: boolean }) {
+  const copy = ACCOUNT[useLocale()].cancel;
   const [armed, setArmed] = useState(false);
   const [asked, setAsked] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +45,7 @@ export default function CancelOrderButton({ reference, paid }: { reference: stri
   if (asked) {
     return (
       <p role="status" className="mt-4 w-full text-sm text-muted">
-        We have passed this on. Nothing is cancelled yet — a person at MalFleks will check with the shop and email you
-        about the order and your refund.
+        {copy.passedOn}
       </p>
     );
   }
@@ -57,7 +61,7 @@ export default function CancelOrderButton({ reference, paid }: { reference: stri
         return;
       }
       setArmed(false);
-      setError(errorMessage(result.reason));
+      setError(errorMessage(result.reason, copy));
     });
   }
 
@@ -67,8 +71,8 @@ export default function CancelOrderButton({ reference, paid }: { reference: stri
         <>
           <span className="mr-auto text-sm text-muted">
             {paid
-              ? "Ask MalFleks to cancel this paid order?"
-              : "Cancel this order? You have not been charged for it."}
+              ? copy.askPaid
+              : copy.askUnpaid}
           </span>
           <button
             type="button"
@@ -76,16 +80,16 @@ export default function CancelOrderButton({ reference, paid }: { reference: stri
             disabled={pending}
             className="min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground disabled:opacity-50"
           >
-            Keep it
+            {copy.keep}
           </button>
           <button
             type="button"
             onClick={go}
             disabled={pending}
-            aria-label={paid ? `Yes, ask to cancel order ${reference}` : `Yes, cancel order ${reference}`}
+            aria-label={paid ? copy.yesAskLabel(reference) : copy.yesCancelLabel(reference)}
             className="min-h-11 rounded-full border border-red-600 px-4 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:opacity-50"
           >
-            {pending ? "Working…" : paid ? "Yes, ask" : "Yes, cancel"}
+            {pending ? copy.working : paid ? copy.yesAsk : copy.yesCancel}
           </button>
         </>
       ) : (
@@ -95,10 +99,10 @@ export default function CancelOrderButton({ reference, paid }: { reference: stri
             setError(null);
             setArmed(true);
           }}
-          aria-label={paid ? `Ask to cancel order ${reference}` : `Cancel order ${reference}`}
+          aria-label={paid ? copy.askLabel(reference) : copy.cancelLabel(reference)}
           className="min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-red-600/40 hover:text-red-600"
         >
-          {paid ? "Ask to cancel" : "Cancel this order"}
+          {paid ? copy.ask : copy.cancel}
         </button>
       )}
       {error && (

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import { adminSession } from "@/server/auth/admin-session";
@@ -53,11 +54,11 @@ const requireAdminSession = adminSession;
 async function revalidateCatalogue() {
   revalidatePath("/admin");
   revalidatePath("/admin/applications");
-  revalidatePath("/");
-  revalidatePath("/brands");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/agents");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/agents");
   // The calls above only clear this (admin) deployment's own cache. This is
   // the one that actually reaches the shop customers browse — see the module
   // doc on notifyPublicSiteOfCatalogueChange for why both are needed.

@@ -1,5 +1,6 @@
 import { ShieldMark } from "@/components/trust/SafePay";
-import { SITE_COPY, type Locale } from "@/lib/site-copy";
+import type { Locale } from "@/i18n/locale";
+import { SITE_COPY } from "@/lib/site-copy";
 
 /**
  * Where the buyer's money is at each moment, drawn as three stops on a line.

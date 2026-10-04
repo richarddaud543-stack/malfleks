@@ -18,9 +18,12 @@ import { iconAccent } from "@/lib/accent";
 export default function ProductShowcase({
   accentColor,
   icon,
+  note = "No photo yet",
 }: {
   accentColor: string;
   icon: string;
+  /** The line that says there is no photo; the page passes it in its language. */
+  note?: string;
 }) {
   const iconColor = iconAccent(accentColor);
 
@@ -45,7 +48,7 @@ export default function ProductShowcase({
       </div>
 
       <p className="absolute bottom-4 rounded-full bg-background/80 px-3 py-1 text-xs text-muted" data-testid="no-photo-note">
-        No photo yet
+        {note}
       </p>
     </div>
   );

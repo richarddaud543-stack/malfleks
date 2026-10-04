@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { revalidatePath } from "next/cache";
 
 import type { ConsoleState } from "@/app/actions/admin-console";
@@ -43,13 +44,13 @@ function field(formData: FormData, name: string): string {
 async function revalidateCatalogue() {
   revalidatePath("/admin/catalogue");
   revalidatePath("/admin/partners", "layout");
-  revalidatePath("/");
-  revalidatePath("/brands", "layout");
-  revalidatePath("/products", "layout");
-  revalidatePath("/delivery", "layout");
-  revalidatePath("/search");
-  revalidatePath("/locator");
-  revalidatePath("/partner");
+  revalidateSitePath("/");
+  revalidateSitePath("/brands", "layout");
+  revalidateSitePath("/products", "layout");
+  revalidateSitePath("/delivery", "layout");
+  revalidateSitePath("/search");
+  revalidateSitePath("/locator");
+  revalidateSitePath("/partner");
   // The shop is a separate deployment with its own cache; see
   // `revalidate-public-site.ts`.
   await notifyPublicSiteOfCatalogueChange();

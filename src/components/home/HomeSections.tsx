@@ -3,7 +3,8 @@ import Link from "next/link";
 import BrandGrid, { groupBranchesByBrand } from "@/components/brand/BrandGrid";
 import ProductCard from "@/components/product/ProductCard";
 import type { Branch, Brand, Product } from "@/data";
-import { PAGE_PATHS, SITE_COPY, type Locale } from "@/lib/site-copy";
+import type { Locale } from "@/i18n/locale";
+import { SITE_COPY } from "@/lib/site-copy";
 
 /**
  * The home page below its first screen. Four plain sections, each a
@@ -61,7 +62,7 @@ export function HomeProducts({
           {copy.all}
         </Link>
       </div>
-      <ul lang="en" className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+      <ul className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         {picks.map(({ product, brand }) => (
           <li key={product.id}>
             <ProductCard product={product} accentColor={brand.accentColor} />
@@ -93,7 +94,7 @@ export function HomeSteps({ locale = "en" }: { locale?: Locale }) {
       </ol>
       <p className="mt-8">
         <Link
-          href={PAGE_PATHS.howItWorks[locale]}
+          href="/how-it-works"
           className="text-sm font-medium text-accent underline decoration-border underline-offset-4"
         >
           {copy.more}
@@ -136,8 +137,8 @@ export function HomeShops({
           {copy.find}
         </Link>
       </div>
-      <div lang="en" className="mt-6">
-        <BrandGrid brands={brands} branchesByBrandId={groupBranchesByBrand(branches)} />
+      <div className="mt-6">
+        <BrandGrid brands={brands} branchesByBrandId={groupBranchesByBrand(branches)} locale={locale} />
       </div>
     </section>
   );

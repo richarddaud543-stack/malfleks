@@ -1,4 +1,6 @@
 import type { DeliveryEta } from "@/data";
+import { SHOP } from "@/i18n/copy/shop";
+import type { Locale } from "@/i18n/locale";
 
 export function formatTZS(amount: number): string {
   return new Intl.NumberFormat("en-TZ", {
@@ -20,16 +22,12 @@ export function formatTZS(amount: number): string {
  * The separator is an en dash (U+2013), matching the numeric ranges already
  * used across the price bands.
  */
-export function formatEta({ minDays, maxDays }: DeliveryEta): string {
-  const day = (n: number) => (n === 1 ? "1 day" : `${n} days`);
-
-  if (maxDays === 0) return "Same-day";
-  if (minDays === maxDays) return maxDays === 1 ? "Next day" : day(maxDays);
-  // A 0–n quote is a courier that *might* manage today but will not commit to
-  // it. Saying "Same-day" there would promise the best case as if it were the
-  // only case.
-  if (minDays === 0) return `Today – ${day(maxDays)}`;
-  return `${minDays}–${maxDays} days`;
+export function formatEta({ minDays, maxDays }: DeliveryEta, locale: Locale = "en"): string {
+  const words = SHOP[locale].delivery.eta;
+  if (maxDays === 0) return words.sameDay;
+  if (minDays === maxDays) return maxDays === 1 ? words.nextDay : words.days(maxDays);
+  if (minDays === 0) return words.todayTo(words.days(maxDays));
+  return words.range(minDays, maxDays);
 }
 
 /**
@@ -50,13 +48,18 @@ export function formatEta({ minDays, maxDays }: DeliveryEta): string {
  * city always does. A branch we know least about still produces a true
  * sentence.
  */
-export function describeBranchLocation(branch: {
-  name: string;
-  city: string;
-  addressLine?: string;
-  hours?: string;
-}): string {
-  const where = branch.addressLine ?? `in ${branch.city}`;
-  const at = branch.addressLine ? `is at ${where}` : `is ${where}`;
-  return branch.hours ? `${branch.name} ${at}, open ${branch.hours}` : `${branch.name} ${at}`;
+export function describeBranchLocation(
+  branch: {
+    name: string;
+    city: string;
+    addressLine?: string;
+    hours?: string;
+  },
+  locale: Locale = "en",
+): string {
+  const words = SHOP[locale].product;
+  const where = branch.addressLine
+    ? words.branchAt(branch.name, branch.addressLine)
+    : words.branchIn(branch.name, branch.city);
+  return branch.hours ? `${where}, ${words.open(branch.hours)}` : where;
 }

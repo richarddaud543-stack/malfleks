@@ -1,3 +1,5 @@
+import { SHOP } from "@/i18n/copy/shop";
+import type { Locale } from "@/i18n/locale";
 import { formatEta } from "@/lib/format";
 import { deliveryRouteLabel, type DeliveryOutlook } from "@/lib/order";
 
@@ -57,10 +59,13 @@ export default function DeliveryRouteLine({
   outlook,
   size = "compact",
   className,
+  locale = "en",
 }: {
   outlook: DeliveryOutlook;
   size?: DeliveryRouteLineSize;
   className?: string;
+  /** The language of the labels. `outlook` itself is built in a language too -- pass the same one to `previewDelivery`. */
+  locale?: Locale;
 }) {
   const { kind, unavailable } = outlook;
   const brandDelivered = kind === "brand";
@@ -87,14 +92,14 @@ export default function DeliveryRouteLine({
         className={`inline-flex items-center gap-1.5 rounded-full bg-foreground font-medium ${scale.chip} ${tone}`}
       >
         <span className={`h-1.5 w-1.5 rounded-full ${dot}`} />
-        {unavailable ?? deliveryRouteLabel(kind)}
+        {unavailable ?? deliveryRouteLabel(kind, locale)}
       </span>
 
       {/* Nothing is promised about a route the customer cannot take, so the
           detail line is dropped entirely rather than greyed out. */}
       {!unavailable && (
         <span className={`leading-tight text-muted ${scale.detail}`}>
-          {detailFor(outlook)}
+          {detailFor(outlook, locale)}
         </span>
       )}
     </div>
@@ -107,11 +112,11 @@ export default function DeliveryRouteLine({
  * With more than one courier serving the city the count replaces the name —
  * naming only the fastest would read as if it were the only option.
  */
-function detailFor({ carrier, choiceCount, eta }: DeliveryOutlook): string {
+function detailFor({ carrier, choiceCount, eta }: DeliveryOutlook, locale: Locale): string {
   if (!eta) return carrier ?? "";
 
-  const soonest = formatEta(eta);
+  const soonest = formatEta(eta, locale);
   return choiceCount > 1
-    ? `${soonest} · ${choiceCount} couriers`
+    ? `${soonest} · ${SHOP[locale].delivery.couriers(choiceCount)}`
     : `${soonest} · ${carrier}`;
 }

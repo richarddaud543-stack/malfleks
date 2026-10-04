@@ -1,5 +1,6 @@
 import type { Question, Step } from "./how-it-works";
 import { BUYER_STEPS, COURIER_STEPS, QUESTIONS, SELLER_STEPS } from "./how-it-works";
+import type { Locale } from "@/i18n/locale";
 import { PROMISE } from "./promise";
 import { SITE_DESCRIPTION, SITE_TITLE } from "./site-identity";
 
@@ -7,13 +8,11 @@ import { SITE_DESCRIPTION, SITE_TITLE } from "./site-identity";
  * The words of the two pages MalFleks publishes in both languages -- the home
  * page and "How MalFleks works" -- in English and in Swahili.
  *
- * ## Why only these two, and why this way
+ * ## Why this file looks the way it does
  *
- * These are the pages a person reads to decide whether to trust MalFleks, and
- * the pages a search in Swahili should be able to find. The pages where the
- * work happens (search, the order form, the pay page, the account) are still
- * English only, and the Swahili pages say so rather than leave a reader to
- * find out halfway through an order.
+ * These were the first two pages written in both languages, and the pages a
+ * person reads to decide whether to trust MalFleks. The rest of the site's
+ * words are in `src/i18n/copy/`, one file per area, in the same shape.
  *
  * The English side is not written here: it is read from `promise.ts` and
  * `how-it-works.ts`, the same constants the English pages always used, so
@@ -32,27 +31,9 @@ import { SITE_DESCRIPTION, SITE_TITLE } from "./site-identity";
  * English neighbour says, because every English line restates something the
  * Terms commit to.
  */
-export type Locale = "en" | "sw";
-
-export const LOCALES: readonly Locale[] = ["en", "sw"];
-
-/** Where each two-language page lives, per language. */
-export const PAGE_PATHS = {
-  home: { en: "/", sw: "/sw" },
-  howItWorks: { en: "/how-it-works", sw: "/sw/how-it-works" },
-} as const;
-
 export interface SiteCopy {
-  /** The name of this language, in itself, for the switch that leads here. */
-  languageName: string;
-  /** What a screen reader hears on the link that switches to this language. */
-  switchLabel: string;
-  /** Shown on the Swahili pages only: which parts of the site are not translated yet. */
-  untranslatedNote: string | null;
   /** The home page's title and description, for the browser tab, search engines and a pasted link. */
   homeMeta: { title: string; description: string };
-  /** Open Graph's name for this language and country. */
-  ogLocale: string;
   hero: {
     /** The headline without its last word, and that last word, which takes the accent face. */
     headline: string;
@@ -94,11 +75,7 @@ export interface SiteCopy {
 }
 
 const en: SiteCopy = {
-  languageName: "English",
-  switchLabel: "Read this page in English",
-  untranslatedNote: null,
   homeMeta: { title: SITE_TITLE, description: SITE_DESCRIPTION },
-  ogLocale: "en_GB",
   hero: {
     headline: PROMISE.headline.replace(/\s+arrives$/, ""),
     headlineAccent: "arrives",
@@ -252,7 +229,7 @@ const SW_QUESTIONS: readonly Question[] = [
   {
     question: "Je, naweza kughairi oda?",
     answer:
-      "Oda ambayo hujailipia unaweza kuighairi mwenyewe kwenye ukurasa wa oda zako; hutozwi chochote. Kama umeshalipa, bonyeza “Ask to cancel” hapo mapema iwezekanavyo. Mtu wa MalFleks atawasiliana na duka na kukutumia barua pepe kuhusu oda na malipo yako.",
+      "Oda ambayo hujailipia unaweza kuighairi mwenyewe kwenye ukurasa wa oda zako; hutozwi chochote. Kama umeshalipa, bonyeza “Omba kughairi” hapo mapema iwezekanavyo. Mtu wa MalFleks atawasiliana na duka na kukutumia barua pepe kuhusu oda na malipo yako.",
     link: { href: "/account", label: "Oda zako" },
   },
   {
@@ -279,15 +256,11 @@ const SW_QUESTIONS: readonly Question[] = [
 ];
 
 const sw: SiteCopy = {
-  languageName: "Kiswahili",
-  switchLabel: "Soma ukurasa huu kwa Kiswahili",
-  untranslatedNote: "Kurasa za kutafuta, kuagiza na kulipa bado ziko kwa Kiingereza.",
   homeMeta: {
     title: "MalFleks — Pesa yako inalindwa mpaka mzigo ufike",
     description:
       "Nunua kwenye maduka halisi Tanzania na ulipe kwa usalama kwa pesa ya simu. MalFleks inashikilia malipo yako mpaka mzigo wako ufike.",
   },
-  ogLocale: "sw_TZ",
   hero: {
     headline: "Pesa yako inalindwa mpaka mzigo",
     headlineAccent: "ufike",
@@ -350,27 +323,9 @@ const sw: SiteCopy = {
       terms: "masharti ya matumizi",
       between: ", na tunachohifadhi kukuhusu kiko kwenye ",
       privacy: "taarifa ya faragha",
-      after: " (kwa Kiingereza).",
+      after: ".",
     },
   },
 };
 
 export const SITE_COPY: Record<Locale, SiteCopy> = { en, sw };
-
-/** The other language, for the link that switches to it. */
-export function otherLocale(locale: Locale): Locale {
-  return locale === "en" ? "sw" : "en";
-}
-
-/**
- * What a two-language page tells a search engine about its other version:
- * its own canonical address, and where the same page is in each language.
- *
- * A page that sets `alternates` replaces the root layout's, so the canonical
- * is repeated here rather than lost. "x-default" -- the version for a reader
- * whose language is neither -- is the English one.
- */
-export function languageAlternates(page: keyof typeof PAGE_PATHS) {
-  const paths = PAGE_PATHS[page];
-  return { canonical: "./", languages: { en: paths.en, sw: paths.sw, "x-default": paths.en } };
-}

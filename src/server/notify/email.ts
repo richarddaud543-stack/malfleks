@@ -344,7 +344,7 @@ function money(amountTZS: number): string {
 }
 
 /** To the customer: the branch has confirmed, the checkout is open. */
-export function paymentReadyMessage(input: {
+function paymentReadyMessageEn(input: {
   firstName: string | null;
   reference: string;
   productName: string;
@@ -374,7 +374,7 @@ export function paymentReadyMessage(input: {
 }
 
 /** To the customer: the money arrived. */
-export function paymentReceivedMessage(input: {
+function paymentReceivedMessageEn(input: {
   firstName: string | null;
   reference: string;
   productName: string;
@@ -434,7 +434,7 @@ function greeting(name: string | null | undefined): string {
 }
 
 /** To the applicant: approved. Approval is an account, not a listing -- the email must not imply otherwise. */
-export function applicationApprovedMessage(input: {
+function applicationApprovedMessageEn(input: {
   contactName: string | null;
   businessName: string;
   kind: string;
@@ -460,7 +460,7 @@ export function applicationApprovedMessage(input: {
 }
 
 /** To the applicant: not approved, and why. */
-export function applicationRejectedMessage(input: {
+function applicationRejectedMessageEn(input: {
   contactName: string | null;
   businessName: string;
   reason: string | null;
@@ -481,7 +481,7 @@ export function applicationRejectedMessage(input: {
 }
 
 /** To the partner: the branch is on the map, or the courier is in the routing. */
-export function partnerActivatedMessage(input: {
+function partnerActivatedMessageEn(input: {
   contactName: string | null;
   businessName: string;
   kind: string;
@@ -514,7 +514,7 @@ export function partnerActivatedMessage(input: {
 // Those are on `/partner/orders`, behind the partner's own session.
 
 /** To the branch: a customer's order is waiting for them to confirm it. */
-export function branchNewOrderMessage(input: {
+function branchNewOrderMessageEn(input: {
   reference: string;
   productName: string;
   quantity: number;
@@ -537,7 +537,7 @@ export function branchNewOrderMessage(input: {
 }
 
 /** To the branch, once: an order has waited a day without an answer. */
-export function branchOrderReminderMessage(input: {
+function branchOrderReminderMessageEn(input: {
   reference: string;
   productName: string;
   siteUrl: string;
@@ -564,7 +564,7 @@ export function branchOrderReminderMessage(input: {
  * `collect` -- the courier, on an agent route: fetch it from the branch.
  * `hand-over` -- the branch, on an agent route: have it ready for the courier.
  */
-export function orderPaidPartnerMessage(input: {
+function orderPaidPartnerMessageEn(input: {
   role: "deliver" | "collect" | "hand-over";
   reference: string;
   productName: string;
@@ -601,7 +601,7 @@ export function orderPaidPartnerMessage(input: {
 }
 
 /** To the branch: a product they submitted is on sale. */
-export function productPublishedMessage(input: {
+function productPublishedMessageEn(input: {
   productName: string;
   /** The live product's id, when it is known -- the link then goes to its own page. */
   productId: string | null;
@@ -624,7 +624,7 @@ export function productPublishedMessage(input: {
 }
 
 /** To the branch: a product they submitted was sent back, and why. */
-export function productSentBackMessage(input: {
+function productSentBackMessageEn(input: {
   productName: string;
   reason: string | null;
   siteUrl: string;
@@ -642,7 +642,7 @@ export function productSentBackMessage(input: {
 }
 
 /** To the partner: MalFleks has sent them money. */
-export function payoutSentMessage(input: {
+function payoutSentMessageEn(input: {
   amountTZS: number;
   payoutReference: string;
   /** How many delivered orders this payout covers. */
@@ -665,7 +665,7 @@ export function payoutSentMessage(input: {
 }
 
 /** To the partner: their account was suspended, or the suspension was lifted. */
-export function partnerStatusMessage(input: {
+function partnerStatusMessageEn(input: {
   status: "active" | "suspended";
   businessName: string;
   reason: string | null;
@@ -710,7 +710,7 @@ export function partnerStatusMessage(input: {
  * send time -- never a guess from the order's status, because an order can be
  * confirmed, emailed a pay link and cancelled without a shilling moving.
  */
-export function orderCancelledMessage(input: {
+function orderCancelledMessageEn(input: {
   firstName: string | null;
   reference: string;
   productName: string;
@@ -737,7 +737,7 @@ export function orderCancelledMessage(input: {
 }
 
 /** To the customer: it arrived. */
-export function orderDeliveredMessage(input: {
+function orderDeliveredMessageEn(input: {
   firstName: string | null;
   reference: string;
   productName: string;
@@ -761,7 +761,7 @@ export function orderDeliveredMessage(input: {
 }
 
 /** To the customer: money has gone back to them. */
-export function refundRecordedMessage(input: {
+function refundRecordedMessageEn(input: {
   firstName: string | null;
   reference: string;
   amountTZS: number;
@@ -877,4 +877,396 @@ export function cancelRequestAdminMessage(input: {
       `${input.adminUrl}/admin/orders/${input.orderId}`,
     ].join("\n"),
   };
+}
+
+// ---------------------------------------------------------------------------
+// The same messages in Swahili, and the two together
+// ---------------------------------------------------------------------------
+//
+// Every email to a customer, a shop or a courier carries both languages:
+// Swahili first, English below (the owner's decision, 4 Oct 2026). One email
+// in both means nobody gets a message they cannot read, and MalFleks does not
+// have to record anyone's language to send it. Emails to MalFleks's own inbox
+// (the functions above ending in "AdminMessage", the application and order
+// notices, the daily digest) stay in English: one person reads them.
+//
+// Each function above ending in `En` is the English text as it always was.
+// The `Sw` function beside it here says the same thing, line for line --
+// written by Claude for the owner to correct. `both()` joins a pair.
+
+type Message = { subject: string; body: string };
+
+/** The line between the two languages in an email. */
+export const ENGLISH_BELOW = "—— English ——";
+
+/** One email in two languages: Swahili, then English. */
+export function both(sw: Message, en: Message): Message {
+  return {
+    subject: `${sw.subject} | ${en.subject}`,
+    body: [sw.body, "", ENGLISH_BELOW, "", en.body].join("\n"),
+  };
+}
+
+function salamu(name: string | null | undefined): string {
+  const first = name?.trim().split(/\s+/)[0];
+  return first ? `Habari ${first},` : "Habari,";
+}
+
+function paymentReadyMessageSw(input: Parameters<typeof paymentReadyMessageEn>[0]): Message {
+  return {
+    subject: `Oda yako ya MalFleks ${input.reference} imethibitishwa — lipa kuikamilisha`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `${input.branchName} limethibitisha oda yako:`,
+      `${input.quantity} × ${input.productName} — jumla ${money(input.totalTZS)}.`,
+      "",
+      "Lipa kwa pesa ya simu hapa:",
+      `${input.siteUrl}/pay/${encodeURIComponent(input.reference)}`,
+      "",
+      "MalFleks inashikilia malipo yako mpaka oda ifike. Isipoweza kufikishwa,",
+      "unarudishiwa pesa.",
+      "",
+      `Namba yako ya kumbukumbu ni ${input.reference}. Kama hukuweka oda hii, puuza`,
+      "barua pepe hii — hutozwi chochote usipolipa.",
+    ].join("\n"),
+  };
+}
+
+function paymentReceivedMessageSw(input: Parameters<typeof paymentReceivedMessageEn>[0]): Message {
+  return {
+    subject: `Malipo ya oda yako ya MalFleks ${input.reference} yamepokelewa`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `Tumepokea ${money(input.amountTZS)} kwa ajili ya ${input.productName}.`,
+      `Kumbukumbu ya oda: ${input.reference}`,
+      `Kumbukumbu ya malipo: ${input.paymentReference}`,
+      "",
+      "MalFleks inashikilia malipo haya mpaka oda yako ifike.",
+      "",
+      "Fuatilia mzigo wako hapa:",
+      `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
+      "",
+      "Hifadhi barua pepe hii kama risiti yako.",
+    ].join("\n"),
+  };
+}
+
+function applicationApprovedMessageSw(input: Parameters<typeof applicationApprovedMessageEn>[0]): Message {
+  const courier = input.kind === "courier";
+  return {
+    subject: `MalFleks: ${input.businessName} imekubaliwa`,
+    body: [
+      salamu(input.contactName),
+      "",
+      `Ombi lako la ${input.businessName} limekubaliwa, na akaunti uliyoombea sasa ni`,
+      "akaunti yako ya mshirika.",
+      "",
+      courier
+        ? "Imebaki hatua moja kabla wateja hawajaweza kukuchagua: tunathibitisha miji unayohudumia na kukuweka kwenye mpangilio wa usafirishaji. Tutakutumia barua pepe ikishakamilika."
+        : "Imebaki hatua moja kabla wateja hawajaweza kukupata: tunathibitisha anwani na saa zako za kufungua na kuliweka tawi lako kwenye ramani. Tutakutumia barua pepe ikishakamilika.",
+      "",
+      "Fungua ukurasa wako wa mshirika:",
+      `${input.siteUrl}/partner`,
+    ].join("\n"),
+  };
+}
+
+function applicationRejectedMessageSw(input: Parameters<typeof applicationRejectedMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: ombi lako la ${input.businessName}`,
+    body: [
+      salamu(input.contactName),
+      "",
+      `Hatukuweza kulikubali ombi la ${input.businessName} kwa sasa.`,
+      ...(input.reason ? ["", `Sababu: ${input.reason}`] : []),
+      "",
+      "Kama hilo linaweza kurekebishwa, unakaribishwa kuomba tena:",
+      `${input.siteUrl}/apply`,
+    ].join("\n"),
+  };
+}
+
+function partnerActivatedMessageSw(input: Parameters<typeof partnerActivatedMessageEn>[0]): Message {
+  const courier = input.kind === "courier";
+  return {
+    subject: courier
+      ? `MalFleks: ${input.businessName} sasa inaonekana kwa wateja`
+      : `MalFleks: ${input.businessName} iko kwenye ramani`,
+    body: [
+      salamu(input.contactName),
+      "",
+      courier
+        ? `${input.businessName} imewekwa kwenye mpangilio wa usafirishaji. Wateja wanaoagiza kwenye tawi la eneo lako sasa wanaweza kukuchagua upeleke mizigo.`
+        : `${input.businessName} sasa iko kwenye ramani ya MalFleks, kwa hiyo wateja wanaweza kulipata tawi na kuagiza.`,
+      "",
+      courier ? "Kazi zako za usafirishaji zitaonekana hapa:" : "Weka bidhaa yako ya kwanza hapa:",
+      courier ? `${input.siteUrl}/partner/orders` : `${input.siteUrl}/partner/products/new`,
+    ].join("\n"),
+  };
+}
+
+function branchNewOrderMessageSw(input: Parameters<typeof branchNewOrderMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: oda mpya ${input.reference} — tafadhali thibitisha`,
+    body: [
+      `Mteja ameomba ${input.quantity} × ${input.productName}.`,
+      `Kumbukumbu: ${input.reference}`,
+      "",
+      "Bado hakuna kilicholipwa. Kama unayo kwa bei iliyowekwa, thibitisha oda",
+      "na mteja ataombwa kulipa. Kama huwezi kumpatia, sema hivyo na ataambiwa",
+      "mara moja.",
+      "",
+      "Ithibitishe au ikatae hapa:",
+      `${input.siteUrl}/partner/orders`,
+    ].join("\n"),
+  };
+}
+
+function branchOrderReminderMessageSw(input: Parameters<typeof branchOrderReminderMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: oda ${input.reference} bado inakusubiri`,
+    body: [
+      `Oda ya ${input.productName} (kumbukumbu ${input.reference}) imesubiri jibu lako`,
+      "kwa zaidi ya siku moja. Mteja hawezi kulipa mpaka uithibitishe.",
+      "",
+      "Ithibitishe, au tuambie kuwa huwezi kumpatia:",
+      `${input.siteUrl}/partner/orders`,
+      "",
+      "Hiki ndicho kikumbusho pekee tunachotuma kwa oda hii.",
+    ].join("\n"),
+  };
+}
+
+function orderPaidPartnerMessageSw(input: Parameters<typeof orderPaidPartnerMessageEn>[0]): Message {
+  const what = `${input.quantity} × ${input.productName}`;
+  const subject =
+    input.role === "hand-over"
+      ? `MalFleks: oda ${input.reference} imelipiwa — mkabidhi msafirishaji`
+      : `MalFleks: oda ${input.reference} imelipiwa — fikisha sasa`;
+  const cantSupply = [
+    "Kama huwezi kumpatia, bonyeza \"Hatuwezi kuitimiza\" kwenye ukurasa wako wa oda",
+    "mara moja ili mteja arudishiwe pesa.",
+  ];
+  const next =
+    input.role === "deliver"
+      ? [
+          "Tafadhali ifikishe sasa. Usipokee chochote mlangoni -- MalFleks inashikilia",
+          "malipo na itakulipa sehemu yako ukishaweka oda kuwa imefika.",
+          "",
+          ...cantSupply,
+        ]
+      : input.role === "collect"
+        ? [
+            `Tafadhali ichukue ${input.branchName} na uifikishe sasa. Usipokee chochote`,
+            "mlangoni -- MalFleks inashikilia malipo na itakulipa sehemu yako ukishaweka",
+            "oda kuwa imefika.",
+          ]
+        : [
+            `Tafadhali iandae kwa ajili ya ${input.carrier}, ambaye ndiye anayeipeleka. MalFleks`,
+            "inashikilia malipo na itakulipa sehemu yako msafirishaji akishaweka oda kuwa",
+            "imefika.",
+            "",
+            ...cantSupply,
+          ];
+  return {
+    subject,
+    body: [
+      `Mteja amelipia ${what}.`,
+      `Kumbukumbu: ${input.reference}`,
+      "",
+      ...next,
+      "",
+      "Jina, namba na anwani ya mteja viko kwenye ukurasa wako wa oda:",
+      `${input.siteUrl}/partner/orders`,
+    ].join("\n"),
+  };
+}
+
+function productPublishedMessageSw(input: Parameters<typeof productPublishedMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: ${input.productName} sasa inauzwa`,
+    body: [
+      `${input.productName} imechapishwa na wateja wanaweza kuiagiza.`,
+      "",
+      input.productId ? "Itazame dukani:" : "Tazama bidhaa zako:",
+      input.productId
+        ? `${input.siteUrl}/products/${encodeURIComponent(input.productId)}`
+        : `${input.siteUrl}/partner`,
+      "",
+      "Ikiisha, iweke kuwa imeisha kwenye ukurasa wako wa mshirika ili mtu asiagize",
+      "usichoweza kumpatia.",
+    ].join("\n"),
+  };
+}
+
+function productSentBackMessageSw(input: Parameters<typeof productSentBackMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: ${input.productName} imerudishwa`,
+    body: [
+      `${input.productName} haijachapishwa.`,
+      ...(input.reason ? ["", `Sababu: ${input.reason}`] : []),
+      "",
+      "Rekebisha hilo kisha uitume tena hapa:",
+      `${input.siteUrl}/partner/products/new`,
+    ].join("\n"),
+  };
+}
+
+function payoutSentMessageSw(input: Parameters<typeof payoutSentMessageEn>[0]): Message {
+  return {
+    subject: `MalFleks: umetumiwa ${money(input.amountTZS)} (${input.payoutReference})`,
+    body: [
+      `MalFleks imekutumia ${money(input.amountTZS)}${
+        input.orderCount > 0 ? ` kwa oda ${input.orderCount} ${input.orderCount === 1 ? "iliyofika" : "zilizofika"}` : ""
+      }.`,
+      `Kumbukumbu ya malipo: ${input.payoutReference}`,
+      "",
+      "Imetumwa kwenye namba ya pesa ya simu ambayo MalFleks inayo kwa ajili yako.",
+      "Isipofika kufikia kesho, tuambie na utaje kumbukumbu hapo juu:",
+      `${input.siteUrl}/contact`,
+    ].join("\n"),
+  };
+}
+
+function partnerStatusMessageSw(input: Parameters<typeof partnerStatusMessageEn>[0]): Message {
+  if (input.status === "suspended") {
+    return {
+      subject: `MalFleks: akaunti ya ${input.businessName} imesimamishwa`,
+      body: [
+        `Akaunti ya mshirika ya ${input.businessName} imesimamishwa.`,
+        ...(input.reason ? ["", `Sababu: ${input.reason}`] : []),
+        "",
+        "Bado unaweza kuingia na kuona bidhaa na oda zako, lakini huwezi kutuma",
+        "bidhaa wala kuthibitisha oda mpaka usimamishaji uondolewe.",
+        "",
+        "Kama unaona hili ni kosa, tuambie:",
+        `${input.siteUrl}/contact`,
+      ].join("\n"),
+    };
+  }
+  return {
+    subject: `MalFleks: akaunti ya ${input.businessName} inafanya kazi tena`,
+    body: [
+      `Usimamishaji wa ${input.businessName} umeondolewa. Unaweza tena kutuma bidhaa`,
+      "na kuthibitisha oda.",
+      "",
+      "Fungua ukurasa wako wa mshirika:",
+      `${input.siteUrl}/partner`,
+    ].join("\n"),
+  };
+}
+
+function orderCancelledMessageSw(input: Parameters<typeof orderCancelledMessageEn>[0]): Message {
+  return {
+    subject: `Oda yako ya MalFleks ${input.reference} imeghairiwa`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `Oda yako ya ${input.productName} (kumbukumbu ${input.reference}) imeghairiwa.`,
+      ...(input.reason ? ["", `Sababu: ${input.reason}`] : []),
+      "",
+      input.paid
+        ? "Utarudishiwa malipo yako. Tutakutumia barua pepe tena pesa ikisharudishwa."
+        : "Hujatozwa chochote.",
+      "",
+      "Oda zako:",
+      `${input.siteUrl}/account`,
+    ].join("\n"),
+  };
+}
+
+function orderDeliveredMessageSw(input: Parameters<typeof orderDeliveredMessageEn>[0]): Message {
+  return {
+    subject: `Oda yako ya MalFleks ${input.reference} imefika`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `Oda yako ya ${input.productName} (kumbukumbu ${input.reference}) imewekwa kuwa`,
+      "imefika. Asante kwa kununua kupitia MalFleks.",
+      "",
+      "Kama haijakufikia, au ina tatizo, tuambie:",
+      `${input.siteUrl}/contact`,
+      "",
+      "Kumbukumbu ya usafirishaji inabaki hapa:",
+      `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
+    ].join("\n"),
+  };
+}
+
+function refundRecordedMessageSw(input: Parameters<typeof refundRecordedMessageEn>[0]): Message {
+  return {
+    subject: `Umerudishiwa pesa ya oda yako ya MalFleks ${input.reference}`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `Tumekurudishia ${money(input.amountTZS)} kwa oda yako iliyoghairiwa ${input.reference}.`,
+      `Kumbukumbu ya marejesho: ${input.refundReference}`,
+      "",
+      "Inarudi kwenye namba ya pesa ya simu uliyolipia. Isipofika kufikia kesho,",
+      "tuambie na utaje kumbukumbu ya marejesho:",
+      `${input.siteUrl}/contact`,
+    ].join("\n"),
+  };
+}
+
+export function paymentReadyMessage(input: Parameters<typeof paymentReadyMessageEn>[0]): Message {
+  return both(paymentReadyMessageSw(input), paymentReadyMessageEn(input));
+}
+
+export function paymentReceivedMessage(input: Parameters<typeof paymentReceivedMessageEn>[0]): Message {
+  return both(paymentReceivedMessageSw(input), paymentReceivedMessageEn(input));
+}
+
+export function applicationApprovedMessage(input: Parameters<typeof applicationApprovedMessageEn>[0]): Message {
+  return both(applicationApprovedMessageSw(input), applicationApprovedMessageEn(input));
+}
+
+export function applicationRejectedMessage(input: Parameters<typeof applicationRejectedMessageEn>[0]): Message {
+  return both(applicationRejectedMessageSw(input), applicationRejectedMessageEn(input));
+}
+
+export function partnerActivatedMessage(input: Parameters<typeof partnerActivatedMessageEn>[0]): Message {
+  return both(partnerActivatedMessageSw(input), partnerActivatedMessageEn(input));
+}
+
+export function branchNewOrderMessage(input: Parameters<typeof branchNewOrderMessageEn>[0]): Message {
+  return both(branchNewOrderMessageSw(input), branchNewOrderMessageEn(input));
+}
+
+export function branchOrderReminderMessage(input: Parameters<typeof branchOrderReminderMessageEn>[0]): Message {
+  return both(branchOrderReminderMessageSw(input), branchOrderReminderMessageEn(input));
+}
+
+export function orderPaidPartnerMessage(input: Parameters<typeof orderPaidPartnerMessageEn>[0]): Message {
+  return both(orderPaidPartnerMessageSw(input), orderPaidPartnerMessageEn(input));
+}
+
+export function productPublishedMessage(input: Parameters<typeof productPublishedMessageEn>[0]): Message {
+  return both(productPublishedMessageSw(input), productPublishedMessageEn(input));
+}
+
+export function productSentBackMessage(input: Parameters<typeof productSentBackMessageEn>[0]): Message {
+  return both(productSentBackMessageSw(input), productSentBackMessageEn(input));
+}
+
+export function payoutSentMessage(input: Parameters<typeof payoutSentMessageEn>[0]): Message {
+  return both(payoutSentMessageSw(input), payoutSentMessageEn(input));
+}
+
+export function partnerStatusMessage(input: Parameters<typeof partnerStatusMessageEn>[0]): Message {
+  return both(partnerStatusMessageSw(input), partnerStatusMessageEn(input));
+}
+
+export function orderCancelledMessage(input: Parameters<typeof orderCancelledMessageEn>[0]): Message {
+  return both(orderCancelledMessageSw(input), orderCancelledMessageEn(input));
+}
+
+export function orderDeliveredMessage(input: Parameters<typeof orderDeliveredMessageEn>[0]): Message {
+  return both(orderDeliveredMessageSw(input), orderDeliveredMessageEn(input));
+}
+
+export function refundRecordedMessage(input: Parameters<typeof refundRecordedMessageEn>[0]): Message {
+  return both(refundRecordedMessageSw(input), refundRecordedMessageEn(input));
 }

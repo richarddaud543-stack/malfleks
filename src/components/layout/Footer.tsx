@@ -1,6 +1,12 @@
 import Link from "next/link";
 
-export default function Footer() {
+import { CHROME } from "@/i18n/copy/chrome";
+import type { Locale } from "@/i18n/locale";
+import { PROMISE } from "@/lib/promise";
+
+export default function Footer({ locale = "en" }: { locale?: Locale }) {
+  const copy = CHROME[locale].footer;
+
   return (
     <footer data-site-chrome="" className="mx-auto mt-24 max-w-6xl px-3 pb-6 sm:px-6">
       <div className="panel px-6 py-12 sm:px-10 sm:py-14">
@@ -11,22 +17,22 @@ export default function Footer() {
               MalFleks<span className="text-accent">.</span>
             </div>
             <p className="mt-3 max-w-xs text-sm text-muted">
-              Shop from brand branches across Tanzania and pay safely:
-              MalFleks holds your money until your order arrives.
-              <span lang="sw" className="mt-1 block">
-                Pesa yako inalindwa mpaka mzigo ufike.
+              {copy.blurb}
+              {/* The promise in the other language, as on the home page. */}
+              <span lang={locale === "en" ? "sw" : "en"} className="mt-1 block">
+                {locale === "en" ? PROMISE.swahili : `${PROMISE.headline}.`}
               </span>
             </p>
           </div>
 
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Explore</h2>
+            <h2 className="text-sm font-semibold text-foreground">{copy.explore}</h2>
             <ul className="mt-2 text-sm text-muted">
-              <li><Link href="/search" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Search products</Link></li>
-              <li><Link href="/brands" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">All brands</Link></li>
-              <li><Link href="/agents" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Delivery agents</Link></li>
-              <li><Link href="/locator" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Branch locator</Link></li>
-              <li><Link href="/apply" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Become a partner</Link></li>
+              <li><Link href="/search" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.searchProducts}</Link></li>
+              <li><Link href="/brands" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.allBrands}</Link></li>
+              <li><Link href="/agents" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.agents}</Link></li>
+              <li><Link href="/locator" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.locator}</Link></li>
+              <li><Link href="/apply" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.apply}</Link></li>
             </ul>
           </div>
 
@@ -42,14 +48,12 @@ export default function Footer() {
           <div>
             <h2 className="text-sm font-semibold text-foreground">MalFleks</h2>
             <ul className="mt-2 text-sm text-muted">
-              <li><Link href="/account" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Your orders</Link></li>
-              <li><Link href="/how-it-works" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">How MalFleks works</Link></li>
-              {/* The two pages that exist in Swahili start here; named in Swahili, for the reader it is for. */}
-              <li><Link href="/sw" hrefLang="sw" lang="sw" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">MalFleks kwa Kiswahili</Link></li>
-              <li><Link href="/terms#paying" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Paying, delivery and refunds</Link></li>
-              <li><Link href="/contact" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Contact</Link></li>
-              <li><Link href="/terms" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Terms of use</Link></li>
-              <li><Link href="/privacy" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">Privacy</Link></li>
+              <li><Link href="/account" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.yourOrders}</Link></li>
+              <li><Link href="/how-it-works" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.howItWorks}</Link></li>
+              <li><Link href="/terms#paying" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.paying}</Link></li>
+              <li><Link href="/contact" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.contact}</Link></li>
+              <li><Link href="/terms" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.terms}</Link></li>
+              <li><Link href="/privacy" className="inline-flex min-h-9 items-center transition-colors hover:text-foreground">{copy.privacy}</Link></li>
             </ul>
           </div>
         </div>
@@ -61,9 +65,7 @@ export default function Footer() {
             matters and it stays; the word prototype was telling visitors the
             wrong thing about whether this is real.
           */}
-          Brand logos are trademarks of their respective owners, used here for
-          identification only. MalFleks holds no stock; payment for a confirmed
-          order is held by MalFleks until it is delivered.
+          {copy.legal}
         </div>
       </div>
     </footer>

@@ -1,25 +1,29 @@
+import { PLACES } from "@/i18n/copy/places";
+import type { Locale } from "@/i18n/locale";
 import type { DeliveryAgent } from "@/data";
 import { formatEta } from "@/lib/format";
 import { displayPhone } from "@/lib/order";
 
-export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
+export default function AgentCard({ agent, locale = "en" }: { agent: DeliveryAgent; locale?: Locale }) {
+  const copy = PLACES[locale].agents;
+
   return (
     <div className="glass-card rounded-2xl p-5 transition-colors hover:border-white/20">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="font-display font-medium">{agent.name}</h3>
           <p className="mt-1 text-sm text-muted">
-            Based in {agent.city} · Serves {agent.regionsServed.join(", ")}
+            {copy.based(agent.city, agent.regionsServed.join(", "))}
           </p>
         </div>
         {agent.verified && (
           <span className="shrink-0 rounded-full bg-accent/15 px-2.5 py-1 text-[11px] font-medium text-accent">
-            Verified
+            {copy.verified}
           </span>
         )}
       </div>
       <div className="mt-4 flex items-center justify-between gap-3 text-sm">
-        <span className="text-muted">ETA: {formatEta(agent.eta)}</span>
+        <span className="text-muted">{copy.eta(formatEta(agent.eta, locale))}</span>
         {/*
           A courier with no published number renders no link at all — not a
           dead `tel:` and not a placeholder. This mirrors what
@@ -34,7 +38,7 @@ export default function AgentCard({ agent }: { agent: DeliveryAgent }) {
           </a>
         ) : (
           <span className="text-right text-xs text-muted">
-            No published number — arranged through the branch
+            {copy.noNumber}
           </span>
         )}
       </div>

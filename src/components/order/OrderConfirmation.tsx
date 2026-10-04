@@ -8,6 +8,8 @@ import {
   parseOrderRequest,
   type OrderRequest,
 } from "@/lib/order";
+import { useLocale } from "@/i18n/client";
+import { carrierLabel, ORDER } from "@/i18n/copy/order";
 import OrderSummary from "./OrderSummary";
 
 /** The stored request never changes while this screen is open. */
@@ -25,6 +27,8 @@ function readStoredOrder(): string | null {
 }
 
 export default function OrderConfirmation() {
+  const locale = useLocale();
+  const copy = ORDER[locale].confirmation;
   // The request lives only in this browser tab, so the server has nothing to
   // render. `undefined` is the server snapshot: it holds the loading state
   // through hydration instead of flashing "no request" at everyone.
@@ -42,7 +46,7 @@ export default function OrderConfirmation() {
   if (order === undefined) {
     return (
       <p className="text-muted" role="status">
-        Loading your request…
+        {copy.loading}
       </p>
     );
   }
@@ -51,28 +55,26 @@ export default function OrderConfirmation() {
     return (
       <div className="glass-card rounded-2xl px-6 py-16 text-center">
         <h1 className="font-display text-2xl font-medium">
-          No order request to show
+          {copy.noneHeading}
         </h1>
         <p className="mt-3 text-sm text-muted">
-          A request made without signing in is held in this browser tab only — a
-          different tab, or a session that has since closed, won&apos;t have it.
-          Nothing was sent anywhere.
+          {copy.noneBody}
         </p>
         <p className="mt-3 text-sm text-muted">
-          If you were signed in when you made it, it will be on{" "}
+          {copy.noneAccount.before}
           <Link
             href="/account"
             className="underline underline-offset-2 hover:text-foreground"
           >
-            your account
+            {copy.noneAccount.link}
           </Link>
-          .
+          {copy.noneAccount.after}
         </p>
         <Link
           href="/search"
           className="btn-pill btn-lime mt-8 px-6 py-2.5 text-sm"
         >
-          Browse products
+          {copy.browse}
         </Link>
       </div>
     );
@@ -87,15 +89,15 @@ export default function OrderConfirmation() {
   return (
     <div data-testid="order-confirmation">
       <p className="font-accent-serif text-xl italic text-accent">
-        Request ready
+        {copy.eyebrow}
       </p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
-        Your request for {order.product.name}
+        {copy.heading(order.product.name)}
       </h1>
 
       <div className="glass-card mt-8 rounded-2xl p-6">
         <p className="text-xs uppercase tracking-wide text-muted">
-          Your reference
+          {copy.reference}
         </p>
         <p
           data-testid="order-reference"
@@ -104,8 +106,7 @@ export default function OrderConfirmation() {
           {order.reference}
         </p>
         <p className="mt-3 text-sm text-muted">
-          Quote this when you contact{" "}
-          {brandDelivered ? "the branch" : "the branch or the agent"}.
+          {copy.quote(brandDelivered)}
         </p>
 
         {/* The single most useful thing this screen can tell someone: whether
@@ -113,40 +114,39 @@ export default function OrderConfirmation() {
             plainly rather than only celebrating the good one. */}
         {order.savedToAccount ? (
           <p className="mt-4 border-t border-border pt-4 text-sm">
-            <span className="font-medium">Saved to your account.</span>{" "}
+            <span className="font-medium">{copy.saved}</span>{" "}
             <Link
               href="/account"
               className="underline underline-offset-2 hover:text-foreground"
             >
-              Find it again
-            </Link>{" "}
-            any time — closing this tab won&apos;t lose it.{" "}
+              {copy.findAgain.link}
+            </Link>
+            {copy.findAgain.after}
             <Link
               href={`/track/${encodeURIComponent(order.reference)}`}
               className="underline underline-offset-2 hover:text-foreground"
             >
-              Track it
-            </Link>{" "}
-            once it is paid.
+              {copy.track.link}
+            </Link>
+            {copy.track.after}
           </p>
         ) : (
           <p className="mt-4 border-t border-border pt-4 text-sm text-muted">
-            This request lives in this browser tab only, so write the reference
-            down or{" "}
+            {copy.tabOnly.before}
             <Link
               href="/sign-in"
               className="underline underline-offset-2 hover:text-foreground"
             >
-              sign in
-            </Link>{" "}
-            to have the next one kept for you.
+              {copy.tabOnly.link}
+            </Link>
+            {copy.tabOnly.after}
           </p>
         )}
       </div>
 
       <div className="mt-8 grid gap-8 lg:grid-cols-[1fr_320px] lg:items-start">
         <div>
-          <h2 className="font-display text-lg font-medium">What happens next</h2>
+          <h2 className="font-display text-lg font-medium">{copy.next}</h2>
           <ol className="mt-4 space-y-4">
             {/* Where the request went is the first thing this screen owes the
                 customer, and it is different for the two cases. A signed-in
@@ -157,68 +157,53 @@ export default function OrderConfirmation() {
             <Step n={1}>
               {order.savedToAccount ? (
                 <>
-                  Nothing has been paid yet. Your order is saved with
-                  MalFleks.{" "}
+                  {copy.step1Saved.before}
                   <Link
                     href={`/pay/${encodeURIComponent(order.reference)}`}
                     className="underline underline-offset-2 hover:text-foreground"
                   >
-                    Open your checkout page
-                  </Link>{" "}
-                  to pay for it. If it says the branch has to confirm first,
-                  {" "}{order.branch.name} has been asked and we email you as
-                  soon as it can be paid.
+                    {copy.step1Saved.link}
+                  </Link>
+                  {copy.step1Saved.after(order.branch.name)}
                 </>
               ) : (
                 <>
-                  Nothing has been paid and nothing has been reserved. Because
-                  you weren&apos;t signed in, this request has not been sent
-                  to MalFleks or to {order.branch.name} — it exists in this
-                  browser tab only. Use the reference above when you contact{" "}
-                  {brandDelivered ? "the branch" : "the branch or the agent"}{" "}
-                  yourself.
+                  {copy.step1Unsaved(order.branch.name, brandDelivered)}
                 </>
               )}
             </Step>
             <Step n={2}>
               {brandDelivered ? (
                 <>
-                  {order.branch.name} runs its own delivery, so{" "}
-                  {order.brand.name} will handle pickup and drop-off.{" "}
+                  {copy.step2Brand(order.branch.name, order.brand.name)}
                   {order.branch.phone ? (
                     <>
-                      Call the branch on {order.branch.phone} to confirm stock
-                      and agree a delivery time.
+                      {copy.step2BrandCall(order.branch.phone)}
                     </>
                   ) : (
                     <>
-                      We don&apos;t have a published number for this branch, so
-                      take your reference to the counter in {order.branch.city}{" "}
-                      to confirm stock and agree a delivery time — its{" "}
+                      {copy.step2BrandNoPhone.before(order.branch.city)}
                       <Link href={branchHref} className="underline underline-offset-2 hover:text-foreground">
-                        address and opening hours
-                      </Link>{" "}
-                      are on the branch page.
+                        {copy.step2BrandNoPhone.link}
+                      </Link>
+                      {copy.step2BrandNoPhone.after}
                     </>
                   )}
                 </>
               ) : (
                 <>
-                  {order.branch.name} doesn&apos;t deliver, so{" "}
-                  {order.route.carrier} — a local agent serving{" "}
-                  {order.branch.city} — carries this order.{" "}
+                  {copy.step2Agent(order.branch.name, carrierLabel(order.route.carrier, locale), order.branch.city)}
                   {order.route.agentPhone ? (
                     <>
-                      Call them on {order.route.agentPhone} to arrange
-                      collection from the branch.
+                      {copy.step2AgentCall(order.route.agentPhone)}
                     </>
                   ) : (
                     <>
-                      Their number is on the{" "}
+                      {copy.step2AgentNoPhone.before}
                       <Link href="/agents" className="underline underline-offset-2 hover:text-foreground">
-                        delivery agents page
+                        {copy.step2AgentNoPhone.link}
                       </Link>
-                      ; call them to arrange collection from the branch.
+                      {copy.step2AgentNoPhone.after}
                     </>
                   )}
                 </>
@@ -227,41 +212,37 @@ export default function OrderConfirmation() {
             <Step n={3}>
               {order.savedToAccount ? (
                 <>
-                  You pay on MalFleks by mobile money on{" "}
+                  {copy.step3Saved.before}
                   <Link
                     href={`/pay/${encodeURIComponent(order.reference)}`}
                     className="underline underline-offset-2 hover:text-foreground"
                   >
-                    your checkout page
+                    {copy.step3Saved.link}
                   </Link>
-                  . MalFleks holds your payment until the order is delivered,
-                  and refunds you in full if the branch can&apos;t supply it.
+                  {copy.step3Saved.after}
                 </>
               ) : (
                 <>
-                  Payment and delivery charges are agreed directly with{" "}
-                  {brandDelivered ? "the branch" : "the branch and the agent"}.
-                  Because you weren&apos;t signed in, MalFleks has no record
-                  of this request and takes no payment for it.
+                  {copy.step3Unsaved(brandDelivered)}
                 </>
               )}
             </Step>
           </ol>
 
           <h2 className="mt-10 font-display text-lg font-medium">
-            Where it&apos;s going
+            {copy.where}
           </h2>
           <dl className="mt-4 space-y-3 text-sm">
             <div>
-              <dt className="text-muted">Name</dt>
+              <dt className="text-muted">{copy.name}</dt>
               <dd className="mt-0.5">{order.customer.fullName}</dd>
             </div>
             <div>
-              <dt className="text-muted">Phone</dt>
+              <dt className="text-muted">{copy.phone}</dt>
               <dd className="mt-0.5">{formatPhone(order.customer.phone)}</dd>
             </div>
             <div>
-              <dt className="text-muted">Address</dt>
+              <dt className="text-muted">{copy.address}</dt>
               <dd className="mt-0.5 whitespace-pre-line">
                 {order.customer.address}
               </dd>
@@ -273,13 +254,13 @@ export default function OrderConfirmation() {
               href={`/products/${order.product.id}`}
               className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
             >
-              Back to {order.product.name}
+              {copy.back(order.product.name)}
             </Link>
             <Link
               href="/search"
               className="rounded-full border border-border px-5 py-2 text-sm text-muted transition-colors hover:border-foreground/30 hover:text-foreground"
             >
-              Keep browsing
+              {copy.keepBrowsing}
             </Link>
           </div>
         </div>
@@ -294,6 +275,7 @@ export default function OrderConfirmation() {
             etaEstimate: order.route.etaEstimate,
           }}
           branch={order.branch}
+          locale={locale}
         />
       </div>
     </div>

@@ -5,6 +5,8 @@ import Link from "next/link";
 import { submitPartnerApplication } from "@/app/actions/partner-applications";
 import { useSessionState } from "@/components/auth/session-state";
 import { usePartnerStatus } from "@/components/apply/partner-status";
+import { useLocale } from "@/i18n/client";
+import { APPLY } from "@/i18n/copy/apply";
 import {
   MAX_NOTES,
   SERVED_CITIES,
@@ -47,6 +49,8 @@ export default function PartnerApplicationForm({
   brands: { id: string; name: string }[];
 }) {
   const session = useSessionState();
+  const locale = useLocale();
+  const copy = APPLY[locale].form;
   // Called unconditionally, before any early return: the branches below bail
   // out at several points and a hook after one of them would break the order.
   const status = usePartnerStatus(session?.signedIn);
@@ -69,7 +73,7 @@ export default function PartnerApplicationForm({
     const next = { ...input, ...patch };
     setInput(next);
     if (attempted) {
-      const result = validatePartnerApplication(next, brandIds);
+      const result = validatePartnerApplication(next, brandIds, locale);
       setErrors(result.ok ? {} : result.errors);
     }
   }
@@ -79,7 +83,7 @@ export default function PartnerApplicationForm({
     setAttempted(true);
     setFailure(null);
 
-    const result = validatePartnerApplication(input, brandIds);
+    const result = validatePartnerApplication(input, brandIds, locale);
     if (!result.ok) {
       setErrors(result.errors);
       const firstBroken = FIELD_ORDER.find((field) => result.errors[field]);
@@ -100,14 +104,14 @@ export default function PartnerApplicationForm({
     }
     setFailure(
       outcome.reason === "signed-out"
-        ? "Your session expired. Sign in again and resend this."
+        ? copy.failSignedOut
         : outcome.reason === "quota"
-          ? "You already have several applications waiting. We'll work through those first."
+          ? copy.failQuota
           : outcome.reason === "rejected"
-            ? "Something in the form didn't pass our checks. Look over it and try again."
+            ? copy.failRejected
             : outcome.reason === "rate-limited"
-              ? "You've submitted a few applications in quick succession. Wait a bit and try again."
-              : "We couldn't record this right now. Nothing was saved — your answers are still here, so try again in a moment."
+              ? copy.failRate
+              : copy.failOther
     );
   }
 
@@ -125,17 +129,15 @@ export default function PartnerApplicationForm({
   if (!session.signedIn) {
     return (
       <div className="glass-card mt-10 rounded-2xl px-6 py-10 text-center">
-        <h2 className="font-display text-xl font-medium">Sign in to apply</h2>
+        <h2 className="font-display text-xl font-medium">{copy.signInHeading}</h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          We ask for a sign-in because the account you apply with becomes the
-          account you manage your branch from. Nothing else about your MalFleks
-          account changes, and applying costs nothing.
+          {copy.signInBody}
         </p>
         <Link
           href="/sign-in?next=/apply"
           className="btn-pill btn-lime mt-8 inline-block px-6 py-2.5 text-sm"
         >
-          Sign in to continue
+          {copy.signInAction}
         </Link>
       </div>
     );
@@ -145,18 +147,18 @@ export default function PartnerApplicationForm({
     return (
       <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
         <h2 className="font-display text-2xl font-medium">
-          Application received
+          {copy.doneHeading}
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-          It is recorded against your account. Someone at MalFleks reviews every
-          application by hand — <strong>there is no automatic approval</strong>,
-          and we will contact you on the number you gave us.
+          {copy.doneBody.before}
+          <strong>{copy.doneBody.strong}</strong>
+          {copy.doneBody.after}
         </p>
         <Link
           href="/"
           className="btn-pill btn-ink mt-8 inline-block px-6 py-2.5 text-sm"
         >
-          Back to MalFleks
+          {copy.back}
         </Link>
       </div>
     );
@@ -186,30 +188,27 @@ export default function PartnerApplicationForm({
     return (
       <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
         <h2 className="font-display text-2xl font-medium">
-          You are already a MalFleks partner
+          {copy.partnerHeading}
         </h2>
         {status.live ? (
           <p className="mx-auto mt-3 max-w-md text-sm text-muted">
             {status.kind === "courier"
-              ? "Your courier account is live. Delivery jobs and your coverage are in your partner area."
-              : "Your shop is live on MalFleks. List a product or check what is waiting for review in your partner area."}
+              ? copy.liveCourier
+              : copy.liveShop}
           </p>
         ) : (
           // The gap between "approved" and "on the map" is a real state a
           // partner can sit in, and the one most likely to look like a broken
           // site. Name it rather than leaving them to guess.
           <p className="mx-auto mt-3 max-w-md text-sm text-muted">
-            Your application was approved and your account is ready. MalFleks
-            has not put you on the map yet — that is a second step someone here
-            does by hand, and until it is done you cannot list anything. You do
-            not need to apply again; we will call you on the number you gave us.
+            {copy.notLive}
           </p>
         )}
         <Link
           href="/partner"
           className="btn-pill btn-lime mt-8 inline-block px-6 py-2.5 text-sm"
         >
-          Go to your partner area
+          {copy.partnerArea}
         </Link>
       </div>
     );
@@ -219,14 +218,14 @@ export default function PartnerApplicationForm({
     return (
       <div className="glass-card mt-10 rounded-2xl px-6 py-12 text-center">
         <h2 className="font-display text-2xl font-medium">
-          Your application is with us
+          {copy.pendingHeading}
         </h2>
         <p className="mx-auto mt-3 max-w-md text-sm text-muted">
           {status.submittedAt ? (
             <>
-              Received{" "}
+              {copy.received}{" "}
               <strong>
-                {new Date(status.submittedAt).toLocaleDateString("en-GB", {
+                {new Date(status.submittedAt).toLocaleDateString(APPLY[locale].dateLocale, {
                   day: "numeric",
                   month: "long",
                   year: "numeric",
@@ -235,15 +234,15 @@ export default function PartnerApplicationForm({
               .{" "}
             </>
           ) : null}
-          Someone at MalFleks reads every application by hand, so this takes a
-          little time. <strong>You do not need to send another one</strong> — we
-          will call you on the number you gave us.
+          {copy.pendingBody.before}
+          <strong>{copy.pendingBody.strong}</strong>
+          {copy.pendingBody.after}
         </p>
         <Link
           href="/"
           className="btn-pill btn-ink mt-8 inline-block px-6 py-2.5 text-sm"
         >
-          Back to MalFleks
+          {copy.back}
         </Link>
       </div>
     );
@@ -276,10 +275,7 @@ export default function PartnerApplicationForm({
           and honest about the fact that we remember it. */}
       {status.state === "rejected" && (
         <p className="mb-6 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
-          We reviewed an earlier application from this account and were not able
-          to take it on. You are welcome to apply again — if anything has
-          changed about your branch or your delivery business, say so in the
-          notes at the end.
+          {copy.rejectedNote}
         </p>
       )}
 
@@ -287,21 +283,21 @@ export default function PartnerApplicationForm({
           even asks. Radios rather than a select: two options, both worth
           reading, and arrow keys move between them. */}
       <fieldset className="border-0 p-0">
-        <legend className="text-sm font-medium">What are you applying as?</legend>
+        <legend className="text-sm font-medium">{copy.kindLegend}</legend>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           {(
             [
               {
                 value: "brand" as PartnerKind,
-                title: "A brand branch",
-                blurb: "You have a shop or showroom and want to sell through MalFleks.",
+                title: copy.kindBrand,
+                blurb: copy.kindBrandBlurb,
               },
               {
                 value: "courier" as PartnerKind,
-                title: "A delivery courier",
-                blurb: "You carry goods and want to be offered delivery jobs.",
+                title: copy.kindCourier,
+                blurb: copy.kindCourierBlurb,
               },
-            ] as const
+            ]
           ).map((option) => {
             const selected = input.kind === option.value;
             return (
@@ -338,7 +334,7 @@ export default function PartnerApplicationForm({
       <div className="mt-7 grid gap-5">
         <Field
           id={`${fieldId}-businessName`}
-          label={isBrand ? "Branch or shop name" : "Courier business name"}
+          label={isBrand ? copy.businessBrand : copy.businessCourier}
           error={errors.businessName}
           errorId={`${fieldId}-businessName-error`}
         >
@@ -357,7 +353,7 @@ export default function PartnerApplicationForm({
 
         <Field
           id={`${fieldId}-contactName`}
-          label="Who should we speak to?"
+          label={copy.contact}
           error={errors.contactName}
           errorId={`${fieldId}-contactName-error`}
         >
@@ -376,8 +372,8 @@ export default function PartnerApplicationForm({
 
         <Field
           id={`${fieldId}-phone`}
-          label="Phone number"
-          hint="A Tanzanian mobile number, e.g. 0754 123 456."
+          label={copy.phone}
+          hint={copy.phoneHint}
           hintId={`${fieldId}-phone-hint`}
           error={errors.phone}
           errorId={`${fieldId}-phone-error`}
@@ -398,7 +394,7 @@ export default function PartnerApplicationForm({
 
         <Field
           id={`${fieldId}-city`}
-          label={isBrand ? "Which city is the branch in?" : "Which city do you cover?"}
+          label={isBrand ? copy.cityBrand : copy.cityCourier}
           error={errors.city}
           errorId={`${fieldId}-city-error`}
         >
@@ -411,7 +407,7 @@ export default function PartnerApplicationForm({
             aria-describedby={describe("city", false)}
             className={fieldClass(Boolean(errors.city))}
           >
-            <option value="">Choose a city…</option>
+            <option value="">{copy.chooseCity}</option>
             {SERVED_CITIES.map((city) => (
               <option key={city} value={city}>
                 {city}
@@ -424,8 +420,8 @@ export default function PartnerApplicationForm({
           <>
             <Field
               id={`${fieldId}-brandId`}
-              label="Which brand do you sell?"
-              hint="Not listed? Leave it on 'Another brand' and type the name below."
+              label={copy.brand}
+              hint={copy.brandHint}
               hintId={`${fieldId}-brandId-hint`}
               error={errors.brandId}
               errorId={`${fieldId}-brandId-error`}
@@ -439,7 +435,7 @@ export default function PartnerApplicationForm({
                 aria-describedby={describe("brandId", true)}
                 className={fieldClass(Boolean(errors.brandId))}
               >
-                <option value="">Another brand</option>
+                <option value="">{copy.anotherBrand}</option>
                 {brands.map((brand) => (
                   <option key={brand.id} value={brand.id}>
                     {brand.name}
@@ -451,7 +447,7 @@ export default function PartnerApplicationForm({
             {input.brandId === "" && (
               <Field
                 id={`${fieldId}-brandOther`}
-                label="Name the brand"
+                label={copy.brandOther}
                 error={errors.brandOther}
                 errorId={`${fieldId}-brandOther-error`}
               >
@@ -470,7 +466,7 @@ export default function PartnerApplicationForm({
 
             <Field
               id={`${fieldId}-address`}
-              label="Street and area the branch trades from"
+              label={copy.address}
               error={errors.address}
               errorId={`${fieldId}-address-error`}
             >
@@ -491,11 +487,11 @@ export default function PartnerApplicationForm({
 
         <Field
           id={`${fieldId}-notes`}
-          label="Anything else? (optional)"
+          label={copy.notes}
           hint={
             isBrand
-              ? "How many branches you run, what you stock, whether you deliver yourself."
-              : "How many riders, what you carry, which areas you know best."
+              ? copy.notesHintBrand
+              : copy.notesHintCourier
           }
           hintId={`${fieldId}-notes-hint`}
           error={errors.notes}
@@ -524,7 +520,7 @@ export default function PartnerApplicationForm({
       )}
       {attempted && Object.keys(errors).length > 0 && (
         <p role="alert" className="mt-6 text-sm text-red-600">
-          Check the highlighted answers and send again.
+          {copy.check}
         </p>
       )}
 
@@ -533,12 +529,11 @@ export default function PartnerApplicationForm({
         disabled={submitting}
         className="btn-pill btn-lime mt-7 w-full px-6 py-3 text-sm disabled:opacity-60 sm:w-auto"
       >
-        {submitting ? "Sending…" : "Send application"}
+        {submitting ? copy.sending : copy.send}
       </button>
 
       <p className="mt-4 text-xs text-muted">
-        MalFleks reviews every application by hand. Nothing is approved
-        automatically, and applying costs nothing.
+        {copy.footnote}
       </p>
     </form>
   );

@@ -1,6 +1,52 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import {
+  DEFAULT_LOCALE,
+  isLocale,
+  LOCALE_COOKIE,
+  localePath,
+  splitLocale,
+  type Locale,
+} from "@/i18n/locale";
 import { isAdminHost } from "@/lib/admin-host";
+
+/**
+ * Addresses that are not pages written in a language: the admin console, the
+ * API, the sign-in callback, and the files a browser or crawler asks for by
+ * name. Everything else is a shop page and exists once per language.
+ */
+const NOT_A_LANGUAGE_PAGE = /^\/(admin|api|auth|_next|_vercel|icon|apple-icon|opengraph-image|\.well-known)(\/|$)|^\/(manifest\.webmanifest|robots\.txt|sitemap\.xml)$|\.[a-z0-9]{2,5}$/i;
+
+/**
+ * Serves a shop page in the visitor's language.
+ *
+ * The pages live at `/sw/…` and `/en/…`. A visitor asks for `/search`; this
+ * answers with `/sw/search` or `/en/search` without changing the address they
+ * see. Which one is their cookie's say, and Swahili when they have never
+ * chosen. `forced` is for the admin hostname, whose few shop pages (sign-in)
+ * are always English.
+ *
+ * An address that already names its language (`/en/search`, from a search
+ * engine or a shared link) is served as asked.
+ *
+ * Returns nothing for an address that is not a language page.
+ */
+function inLanguage(request: NextRequest, forced?: Locale): NextResponse | null {
+  const { pathname } = request.nextUrl;
+  if (NOT_A_LANGUAGE_PAGE.test(pathname)) return null;
+
+  const cookie = request.cookies.get(LOCALE_COOKIE)?.value;
+  const { locale: named } = splitLocale(pathname);
+
+  // Served as asked. Nothing is remembered here: see `RememberLandingLanguage`
+  // for why that is the browser's job and not this file's.
+  if (named) return NextResponse.next();
+
+  const locale = forced ?? (isLocale(cookie) ? cookie : DEFAULT_LOCALE);
+  const url = request.nextUrl.clone();
+  url.pathname = localePath(locale, pathname);
+  return NextResponse.rewrite(url);
+}
 
 /**
  * What makes the admin hostname feel like its own site.
@@ -35,8 +81,9 @@ export function proxy(request: NextRequest) {
 
   // No separate admin site configured, or this is the public one: hands off.
   // The public site's behaviour is unchanged by this file existing.
+  // On the shop, the one thing this file does is choose the language.
   if (!isAdminHost(host, process.env.MALFLEKS_ADMIN_HOST)) {
-    return NextResponse.next();
+    return inLanguage(request) ?? NextResponse.next();
   }
 
   const { pathname } = request.nextUrl;
@@ -68,7 +115,8 @@ export function proxy(request: NextRequest) {
 
   // Belt and braces on top of the per-page `robots` metadata: a header covers
   // every response on this host, including ones nobody thought to annotate.
-  const response = NextResponse.next();
+  // The admin hostname's few shop pages (sign-in) are always in English.
+  const response = inLanguage(request, "en") ?? NextResponse.next();
   response.headers.set("x-robots-tag", "noindex, nofollow");
   return response;
 }

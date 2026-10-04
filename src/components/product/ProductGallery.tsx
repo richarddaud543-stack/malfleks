@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { useLocale } from "@/i18n/client";
+import { SHOP } from "@/i18n/copy/shop";
 import ProductPhoto from "./ProductPhoto";
 
 /**
@@ -48,6 +50,7 @@ export default function ProductGallery({
   /** The product's name, for the photos' alt text and the dialog's label. */
   name: string;
 }) {
+  const copy = SHOP[useLocale()].gallery;
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
 
@@ -151,7 +154,7 @@ export default function ProductGallery({
   if (count === 0) return null;
 
   const src = photos[current];
-  const position = many ? ` — photo ${current + 1} of ${count}` : "";
+  const position = many ? ` — ${copy.position(current + 1, count)}` : "";
 
   return (
     <div className="w-full">
@@ -160,7 +163,7 @@ export default function ProductGallery({
         type="button"
         onClick={open}
         aria-haspopup="dialog"
-        aria-label={`Zoom in on ${name}${position}`}
+        aria-label={`${copy.zoom(name)}${position}`}
         data-testid="gallery-main"
         className="glass-card shadow-float relative block w-full cursor-zoom-in overflow-hidden rounded-[1.75rem] p-0 sm:rounded-[2rem]"
       >
@@ -175,17 +178,17 @@ export default function ProductGallery({
           className="w-full"
           fallback={
             <span className="flex aspect-square w-full items-center justify-center bg-white px-6 text-center text-sm text-muted">
-              This photo couldn&apos;t be loaded.
+              {copy.failed}
             </span>
           }
         />
         <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-foreground/80 px-3 py-1.5 text-xs font-medium text-background">
-          Tap to zoom
+          {copy.tapToZoom}
         </span>
       </button>
 
       {many && (
-        <ul className="relative mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={`Photos of ${name}`}>
+        <ul className="relative mt-3 flex gap-2 overflow-x-auto pb-1" aria-label={copy.photosOf(name)}>
           {photos.map((photo, i) => {
             const selected = i === current;
             return (
@@ -193,7 +196,7 @@ export default function ProductGallery({
                 <button
                   type="button"
                   onClick={() => setIndex(i)}
-                  aria-label={`Show photo ${i + 1} of ${count}`}
+                  aria-label={copy.show(i + 1, count)}
                   aria-current={selected ? "true" : undefined}
                   className={`block overflow-hidden rounded-xl border-2 transition-colors ${
                     selected ? "border-accent" : "border-border hover:border-foreground/40"
@@ -229,7 +232,7 @@ export default function ProductGallery({
           >
             <div className="flex items-center justify-between gap-3 px-4 py-3 text-white">
               <p className="min-w-0 truncate text-sm" aria-live="polite">
-                {many ? `Photo ${current + 1} of ${count}` : name}
+                {many ? copy.counter(current + 1, count) : name}
               </p>
               <button
                 ref={closeRef}
@@ -237,7 +240,7 @@ export default function ProductGallery({
                 onClick={close}
                 className="min-h-11 shrink-0 rounded-full border border-white/40 px-5 text-sm font-medium text-white hover:bg-white/10"
               >
-                Close
+                {copy.close}
               </button>
             </div>
 
@@ -265,18 +268,18 @@ export default function ProductGallery({
                 <button
                   type="button"
                   onClick={() => step(-1)}
-                  aria-label="Previous photo"
+                  aria-label={copy.previousLabel}
                   className="min-h-11 rounded-full border border-white/40 px-5 text-sm font-medium text-white hover:bg-white/10"
                 >
-                  ← Previous
+                  ← {copy.previous}
                 </button>
                 <button
                   type="button"
                   onClick={() => step(1)}
-                  aria-label="Next photo"
+                  aria-label={copy.nextLabel}
                   className="min-h-11 rounded-full border border-white/40 px-5 text-sm font-medium text-white hover:bg-white/10"
                 >
-                  Next →
+                  {copy.next} →
                 </button>
               </div>
             )}

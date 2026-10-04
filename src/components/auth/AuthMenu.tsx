@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { signOut } from "@/app/actions/auth";
+import { useLocale } from "@/i18n/client";
+import { CHROME } from "@/i18n/copy/chrome";
 import { invalidateSessionState, useSessionState } from "./session-state";
 
 /**
@@ -25,6 +27,7 @@ export default function AuthMenu({
   const session = useSessionState();
   const [pending, startTransition] = useTransition();
   const [failed, setFailed] = useState(false);
+  const copy = CHROME[useLocale()].auth;
 
   if (session === undefined) {
     return (
@@ -40,11 +43,11 @@ export default function AuthMenu({
       <Link
         href="/sign-in"
         onClick={onNavigate}
-        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
+        className={`inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
           compact ? "flex-1 text-center" : ""
         }`}
       >
-        Sign in
+        {copy.signIn}
       </Link>
     );
   }
@@ -67,21 +70,21 @@ export default function AuthMenu({
       <Link
         href="/account"
         onClick={onNavigate}
-        className={`inline-flex min-h-11 items-center justify-center rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
+        className={`inline-flex min-h-11 items-center justify-center whitespace-nowrap rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground/75 transition-colors hover:border-foreground/30 hover:text-foreground ${
           compact ? "flex-1 text-center" : ""
         }`}
       >
         {/* The first name only: a nav pill is not the place for
             "Rehema Mwakalinga-Kimaro". The full name is on /account. */}
-        {session.name ? `${session.name.split(" ")[0]} · Orders` : "My orders"}
+        {session.name ? copy.ordersFor(session.name.split(" ")[0]) : copy.myOrders}
       </Link>
       <button
         type="button"
         onClick={handleSignOut}
         disabled={pending}
-        className="min-h-11 rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-60"
+        className="min-h-11 whitespace-nowrap rounded-full px-3 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-60"
       >
-        {pending ? "Signing out…" : "Sign out"}
+        {pending ? copy.signingOut : copy.signOut}
       </button>
       {/* Visible, not only announced. This used to be `sr-only`, so a sighted
           customer pressed "Sign out", saw the button go back to "Sign out",
@@ -101,7 +104,7 @@ export default function AuthMenu({
             : "sr-only"
         }
       >
-        {failed ? "Sign out failed — you are still signed in. Try again." : ""}
+        {failed ? copy.signOutFailed : ""}
       </span>
     </div>
   );

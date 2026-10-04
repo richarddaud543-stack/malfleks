@@ -1,7 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
 import { checkRateLimit } from "@/server/rate-limit";
@@ -96,7 +96,7 @@ export async function listProductForPartner(
     if (!outcome.ok) return { listed: false, reason: outcome.reason };
 
     // The dashboard counts and the listing table both change.
-    revalidatePath("/partner");
+    revalidateSitePath("/partner");
     return { listed: true, id: outcome.value.id };
   } catch (error) {
     // Deliberately opaque to the caller. The reason a write failed is not the

@@ -23,7 +23,16 @@ export interface Crumb {
  * Links are at least 44px tall: on a phone a row of small text links is the
  * easiest thing on the page to miss with a thumb.
  */
-export default function Breadcrumbs({ trail, siteUrl }: { trail: Crumb[]; siteUrl?: string }) {
+export default function Breadcrumbs({
+  trail,
+  siteUrl,
+  label = "Breadcrumb",
+}: {
+  trail: Crumb[];
+  siteUrl?: string;
+  /** What a screen reader calls this trail; pages pass it in their language. */
+  label?: string;
+}) {
   const structured =
     siteUrl && trail.length > 1
       ? {
@@ -39,7 +48,7 @@ export default function Breadcrumbs({ trail, siteUrl }: { trail: Crumb[]; siteUr
       : null;
 
   return (
-    <nav aria-label="Breadcrumb" className="text-sm text-muted">
+    <nav aria-label={label} className="text-sm text-muted">
       <ol className="flex flex-wrap items-center gap-x-1.5">
         {trail.map((crumb, i) => {
           const last = i === trail.length - 1;

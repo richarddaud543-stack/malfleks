@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { deleteOrderRequest } from "@/app/actions/order-requests";
+import { useLocale } from "@/i18n/client";
+import { ACCOUNT } from "@/i18n/copy/account";
 
 /**
  * The control that lets a customer take their own details back out of the
@@ -33,6 +35,7 @@ export default function DeleteSavedRequest({
    */
   blocked?: "unpaid" | "undelivered" | null;
 }) {
+  const copy = ACCOUNT[useLocale()].remove;
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -42,9 +45,9 @@ export default function DeleteSavedRequest({
       <div className="mt-5 w-full border-t border-border pt-4">
         <p className="text-sm text-muted">
           {blocked === "unpaid"
-            ? "This order is confirmed and waiting for your payment, so it stays here until it is paid and delivered, or cancelled."
-            : "This order is paid and on its way, so it stays here until it is delivered."}{" "}
-          You can remove it after that.
+            ? copy.blockedUnpaid
+            : copy.blockedUndelivered}{" "}
+          {copy.after}
         </p>
       </div>
     );
@@ -63,12 +66,12 @@ export default function DeleteSavedRequest({
       setArmed(false);
       setError(
         result.reason === "signed-out"
-          ? "Your session has expired. Sign in again to remove this request."
+          ? copy.signedOut
           : result.reason === "not-found"
-            ? "This request has already been removed."
+            ? copy.notFound
             : result.reason === "order-in-progress"
-              ? "This order is confirmed and still in progress, so it can't be removed yet. Reload to see where it stands."
-              : "We couldn't remove this request. Nothing was changed — try again in a moment."
+              ? copy.inProgress
+              : copy.failed
       );
     });
   }
@@ -87,7 +90,7 @@ export default function DeleteSavedRequest({
       {armed ? (
         <>
           <span className="mr-auto text-sm text-muted">
-            Remove this request permanently?
+            {copy.confirm}
           </span>
           <button
             type="button"
@@ -95,16 +98,16 @@ export default function DeleteSavedRequest({
             disabled={pending}
             className="min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-foreground/20 hover:text-foreground disabled:opacity-50"
           >
-            Keep it
+            {copy.keep}
           </button>
           <button
             type="button"
             onClick={confirmDelete}
             disabled={pending}
-            aria-label={`Yes, permanently remove request ${reference}`}
+            aria-label={copy.yesLabel(reference)}
             className="min-h-11 rounded-full border border-red-600 px-4 py-1.5 text-sm font-medium text-red-600 transition-colors hover:bg-red-600 hover:text-white disabled:opacity-50"
           >
-            {pending ? "Removing…" : "Yes, remove"}
+            {pending ? copy.removing : copy.yes}
           </button>
         </>
       ) : (
@@ -114,10 +117,10 @@ export default function DeleteSavedRequest({
             setError(null);
             setArmed(true);
           }}
-          aria-label={`Remove request ${reference}`}
+          aria-label={copy.removeLabel(reference)}
           className="min-h-11 rounded-full border border-border px-4 py-1.5 text-sm text-muted transition-colors hover:border-red-600/40 hover:text-red-600"
         >
-          Remove
+          {copy.remove}
         </button>
       )}
     </div>

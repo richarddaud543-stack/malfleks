@@ -6,7 +6,11 @@ import Link from "next/link";
 
 import { safeDestination } from "@/lib/auth-redirect";
 import { startGoogleSignIn } from "@/app/actions/auth";
+import { useLocale } from "@/i18n/client";
+import { ACCOUNT } from "@/i18n/copy/account";
 import { useSessionState } from "./session-state";
+
+type SignInCopy = (typeof ACCOUNT)["en"]["signIn"];
 
 /**
  * Google sign-in.
@@ -43,27 +47,28 @@ import { useSessionState } from "./session-state";
 export { DEFAULT_DESTINATION, safeDestination } from "@/lib/auth-redirect";
 
 /** Maps the callback's `?error=` back to something a customer can act on. */
-function messageForError(code: string | null): string | null {
+function messageForError(code: string | null, copy: SignInCopy): string | null {
   switch (code) {
     case null:
       return null;
     case "cancelled":
-      return "Sign-in was cancelled.";
+      return copy.errorCancelled;
     case "unconfigured":
-      return "Signing in isn't available on this deployment yet.";
+      return copy.errorUnconfigured;
     default:
-      return "Sign-in didn't complete. Please try again.";
+      return copy.errorFailed;
   }
 }
 
 export default function SignInPanel({ configured }: { configured: boolean }) {
   const router = useRouter();
+  const copy = ACCOUNT[useLocale()].signIn;
   const errorId = useId();
   const session = useSessionState();
   const searchParams = useSearchParams();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(
-    messageForError(searchParams.get("error")),
+    messageForError(searchParams.get("error"), copy),
   );
 
   const next = safeDestination(searchParams.get("next"));
@@ -89,15 +94,13 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
     return (
       <div className="glass-card rounded-2xl p-6">
         <p className="text-sm text-muted">
-          Sign-in isn&apos;t available on this deployment — it has no Supabase
-          authentication configuration. You can still browse every shop and
-          product; ordering needs sign-in to be switched on.
+          {copy.notConfigured}
         </p>
         <Link
           href="/search"
           className="btn-pill btn-lime mt-6 px-6 py-2.5 text-sm"
         >
-          Browse products
+          {copy.browse}
         </Link>
       </div>
     );
@@ -113,7 +116,7 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
         className="btn-pill btn-ink flex w-full items-center justify-center gap-3 px-6 py-3.5 text-sm disabled:opacity-60"
       >
         <GoogleMark />
-        {busy ? "Signing in…" : "Continue with Google"}
+        {busy ? copy.busy : copy.google}
       </button>
 
       {/* Always in the DOM so a screen reader announces the message when it
@@ -127,19 +130,18 @@ export default function SignInPanel({ configured }: { configured: boolean }) {
       </p>
 
       <p className="mt-4 text-sm text-muted">
-        We use your Google account to keep your orders, so you can pay for
-        them here and track their delivery. MalFleks asks for nothing else.
+        {copy.why}
       </p>
 
       <p className="mt-6 border-t border-border pt-4 text-sm text-muted">
-        You don&apos;t need an account to look around.{" "}
+        {copy.lookAround.before}
         <Link
           href="/search"
           className="underline underline-offset-2 hover:text-foreground"
         >
-          Browse products
-        </Link>{" "}
-        and sign in when you are ready to order.
+          {copy.lookAround.link}
+        </Link>
+        {copy.lookAround.after}
       </p>
     </div>
   );

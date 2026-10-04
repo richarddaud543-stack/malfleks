@@ -1,3 +1,5 @@
+import { PARTNER } from "@/i18n/copy/partner";
+import type { Locale } from "@/i18n/locale";
 import { canonicalCategory, normalizeCategory } from "./product-categories";
 import { PRODUCT_ICON_KEYS } from "./product-icons";
 import { MAX_PRODUCT_PHOTOS, normalizeProductPhotoUrls } from "./product-photo";
@@ -102,6 +104,8 @@ export const MAX_SPECS = 12;
 export const MAX_PRICE_TZS = 2_000_000_000;
 
 export interface ProductListingOptions {
+  /** The language of the messages. The form passes the one the page is in. */
+  locale?: Locale;
   /**
    * The Supabase project URL photo URLs are checked against. Defaults to
    * `NEXT_PUBLIC_SUPABASE_URL`, which is the right answer in the browser; the
@@ -115,6 +119,7 @@ export function validateProductListing(
   input: ProductListingInput,
   options: ProductListingOptions = {},
 ): ProductListingValidation {
+  const words = PARTNER[options.locale ?? "en"].listing.errors;
   const errors: ProductListingErrors = {};
 
   const name = input.name.trim();
@@ -125,31 +130,30 @@ export function validateProductListing(
   const image = input.image.trim();
 
   if (name.length < MIN_NAME) {
-    errors.name = "Give the product a name customers would recognise.";
+    errors.name = words.name;
   }
 
   if (category === "") {
-    errors.category = "Say what kind of product this is.";
+    errors.category = words.categoryMissing;
   } else if (!canonicalCategory(category)) {
     // A kind we do not have would become its own search filter on the shop.
     // The form only offers the list; this is the server holding the same line
     // against a request that did not come from the form.
-    errors.category = "Choose one of the kinds in the list. If none fits, pick “Other”.";
+    errors.category = words.categoryUnknown;
   }
 
   if (description.length < MIN_DESCRIPTION) {
-    errors.description =
-      "Describe it in a sentence or two — this is what a customer reads before ordering.";
+    errors.description = words.descriptionShort;
   } else if (description.length > MAX_DESCRIPTION) {
-    errors.description = `Keep the description under ${MAX_DESCRIPTION} characters.`;
+    errors.description = words.descriptionLong(MAX_DESCRIPTION);
   }
 
   if (image === "") {
-    errors.image = "Choose the picture that fits this product best.";
+    errors.image = words.imageMissing;
   } else if (!(PRODUCT_ICON_KEYS as readonly string[]).includes(image)) {
     // A key outside the set renders as a smartphone regardless of what was
     // listed, which is silently wrong on a car. Caught here rather than shown.
-    errors.image = "That isn't one of the pictures we can show.";
+    errors.image = words.imageUnknown;
   }
 
   // Optional. `ProductPhotoUpload` only ever hands back URLs from our own
@@ -161,23 +165,23 @@ export function validateProductListing(
   if (!photos.ok) {
     errors.photoUrls =
       photos.reason === "too-many"
-        ? `A listing can have up to ${MAX_PRODUCT_PHOTOS} photos. Remove some and try again.`
-        : "One of the photos didn't finish uploading properly. Remove it and try again.";
+        ? words.photosTooMany(MAX_PRODUCT_PHOTOS)
+        : words.photosBroken;
   }
 
   const price = input.price.trim().replace(/[,\s]/g, "");
   if (price === "") {
-    errors.price = "Give the price in whole shillings.";
+    errors.price = words.priceMissing;
   } else if (!/^\d+$/.test(price)) {
     // Deliberately stricter than `Number()`: "1.25e6" and "0x10" both parse to
     // something, and neither is what a shopkeeper meant to type.
-    errors.price = "Digits only — whole shillings, no decimals.";
+    errors.price = words.priceDigits;
   } else {
     const parsed = Number(price);
     if (parsed <= 0) {
-      errors.price = "The price has to be more than zero.";
+      errors.price = words.priceZero;
     } else if (parsed > MAX_PRICE_TZS) {
-      errors.price = "That price looks like a typo. Check the zeros.";
+      errors.price = words.priceHuge;
     }
   }
 
@@ -188,9 +192,9 @@ export function validateProductListing(
   // A half-filled row is a mistake, not a spec. Saying so beats dropping it
   // quietly and letting the partner wonder where it went.
   if (specs.some((spec) => spec.key === "" || spec.value === "")) {
-    errors.specs = "Every detail needs both a label and a value.";
+    errors.specs = words.specsHalf;
   } else if (specs.length > MAX_SPECS) {
-    errors.specs = `That's more than ${MAX_SPECS} details — keep the ones that matter.`;
+    errors.specs = words.specsTooMany(MAX_SPECS);
   }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };

@@ -34,3 +34,35 @@ export const PROMISE = {
   /** The plain-language page; the Terms' "Paying" section is linked from there. */
   link: { href: "/how-it-works", label: "How paying and refunds work" },
 } as const;
+
+/**
+ * The same promise in Swahili, point for point. Used by the promise card
+ * (`SafePay`) when the site is in Swahili; the English above is used when it
+ * is in English. Written by Claude on 4 Oct 2026 for the owner to correct --
+ * and held to the same rule: nothing here may promise more than the Terms do.
+ */
+export const PROMISE_SW = {
+  headline: "Pesa yako inalindwa mpaka mzigo ufike",
+  points: [
+    {
+      title: "Unalipa MalFleks, si mtu usiyemjua",
+      body: "Malipo yako yanakwenda MalFleks kwa pesa ya simu, kupitia ClickPesa. Hutumi pesa kamwe kwenye namba binafsi ya muuzaji.",
+    },
+    {
+      title: "Duka linalipwa baada ya mzigo kufika",
+      body: "MalFleks inalilipa tawi na msafirishaji sehemu zao mzigo wako ukishafika.",
+    },
+    {
+      title: "Unarudishiwa pesa yote isipopatikana",
+      body: "Tawi au MalFleks ikighairi oda uliyoilipia, unarudishiwa kiasi chote.",
+    },
+  ],
+  link: { href: "/how-it-works", label: "Jinsi malipo na kurudishiwa pesa kunavyofanya kazi" },
+} as const;
+
+/** The promise card's words in one language, and the one line shown in the other. */
+export function promiseIn(locale: "en" | "sw") {
+  return locale === "sw"
+    ? { ...PROMISE_SW, other: PROMISE.headline, otherLang: "en" as const }
+    : { headline: PROMISE.headline, points: PROMISE.points, link: PROMISE.link, other: PROMISE.swahili, otherLang: "sw" as const };
+}

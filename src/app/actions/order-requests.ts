@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateSitePath } from "@/server/revalidate-site";
 import { verifySession } from "@/server/auth/dal";
 import { isAuthConfigured } from "@/server/auth/config";
 import { checkRateLimit } from "@/server/rate-limit";
@@ -66,7 +66,7 @@ export async function saveOrderRequest(
       };
     }
 
-    revalidatePath("/account");
+    revalidateSitePath("/account");
     return { saved: true, reference: outcome.reference };
   } catch (error) {
     // A database outage must not cost the customer their order request: the
@@ -130,7 +130,7 @@ export async function deleteOrderRequest(id: string): Promise<DeleteResult> {
     const outcome = await deleteOrderRequestForCustomer(session.uid, id);
     if (!outcome.deleted) return { deleted: false, reason: outcome.reason };
 
-    revalidatePath("/account");
+    revalidateSitePath("/account");
     return { deleted: true };
   } catch (error) {
     // Unlike the save path, there is no local copy to fall back on: the

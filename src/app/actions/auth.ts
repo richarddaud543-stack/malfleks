@@ -1,5 +1,7 @@
 "use server";
 
+import { ACCOUNT } from "@/i18n/copy/account";
+import { chosenLocale } from "@/i18n/server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -91,17 +93,17 @@ export type SignInResult = { ok: false; message: string };
  * a different `provider` — not a rewrite.
  */
 export async function startGoogleSignIn(next: string): Promise<SignInResult> {
+  // The messages are read by the person who pressed the button, in the
+  // language they chose.
+  const copy = ACCOUNT[await chosenLocale()].signIn;
+
   if (!isAuthConfigured()) {
-    return {
-      ok: false,
-      message:
-        "Signing in isn't available on this deployment yet. You can still place an order request without an account.",
-    };
+    return { ok: false, message: copy.actionUnconfigured };
   }
 
   const supabase = await createServerSupabase();
   if (!supabase) {
-    return { ok: false, message: "Sign-in is unavailable right now. Please try again." };
+    return { ok: false, message: copy.actionUnavailable };
   }
 
   const destination = safeDestination(next);
@@ -121,7 +123,7 @@ export async function startGoogleSignIn(next: string): Promise<SignInResult> {
   });
 
   if (error || !data.url) {
-    return { ok: false, message: "We couldn't reach Google. Check your connection and try again." };
+    return { ok: false, message: copy.actionGoogle };
   }
 
   // Outside any try/catch, as `redirect` works by throwing.

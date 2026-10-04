@@ -4,16 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import AuthMenu from "@/components/auth/AuthMenu";
-
-const links = [
-  { href: "/search", label: "Search" },
-  { href: "/brands", label: "Brands" },
-  { href: "/locator", label: "Near Me" },
-  { href: "/agents", label: "Delivery Agents" },
-];
+import LanguageToggle from "@/components/layout/LanguageToggle";
+import { useLocale } from "@/i18n/client";
+import { CHROME } from "@/i18n/copy/chrome";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const copy = CHROME[useLocale()].nav;
+  const links = [
+    { href: "/search", label: copy.search },
+    { href: "/brands", label: copy.brands },
+    { href: "/locator", label: copy.nearMe },
+    { href: "/agents", label: copy.agents },
+  ];
 
   return (
     <header data-site-chrome="" className="sticky top-3 z-50 px-3 sm:top-4 sm:px-6">
@@ -29,12 +32,12 @@ export default function Navbar() {
           MalFleks<span className="text-accent">.</span>
         </Link>
 
-        <div className="hidden items-center gap-7 lg:flex">
+        <div className="hidden items-center gap-5 xl:gap-7 lg:flex">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
+              className="whitespace-nowrap text-sm font-medium text-foreground/75 transition-colors hover:text-foreground"
             >
               {l.label}
             </Link>
@@ -42,12 +45,20 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
+          <LanguageToggle />
           <AuthMenu />
-          <Link href="/locator" className="btn-pill btn-ink">
-            Find a branch
-          </Link>
+          {/* From the widest screens only: with the language switch in the
+              bar there is no room for both buttons at 1024px, and "Near me"
+              in the links beside it already goes to the same page. */}
+          {/* A wrapper, because `.btn-pill` sets its own `display` and would
+              win over a `hidden` on the link itself. */}
+          <span className="hidden xl:inline-flex">
+            <Link href="/locator" className="btn-pill btn-ink">
+              {copy.findBranch}
+            </Link>
+          </span>
           <Link href="/search" className="btn-pill btn-lime">
-            Shop now
+            {copy.shopNow}
           </Link>
         </div>
 
@@ -62,13 +73,20 @@ export default function Navbar() {
             <circle cx="9" cy="9" r="5.5" />
             <path d="m13.5 13.5 3.5 3.5" />
           </svg>
-          Search
+          {/* The word goes on the narrowest phones, where the language switch
+              needs the room; the link keeps its name for a screen reader. */}
+          <span className="sr-only min-[400px]:not-sr-only">{copy.search}</span>
         </Link>
+
+        {/* The language switch is in the bar itself on every screen size: a
+            reader who cannot read the page must not have to open a menu,
+            labelled in that same language, to change it. */}
+        <LanguageToggle className="lg:hidden" />
 
         <button
           onClick={() => setOpen((v) => !v)}
           className="flex h-11 w-11 flex-col items-center justify-center gap-1.5 lg:hidden"
-          aria-label="Toggle menu"
+          aria-label={copy.toggleMenu}
           aria-expanded={open}
           aria-controls="mobile-menu"
         >
@@ -116,14 +134,14 @@ export default function Navbar() {
                   onClick={() => setOpen(false)}
                   className="btn-pill btn-ink flex-1"
                 >
-                  Find a branch
+                  {copy.findBranch}
                 </Link>
                 <Link
                   href="/search"
                   onClick={() => setOpen(false)}
                   className="btn-pill btn-lime flex-1"
                 >
-                  Shop now
+                  {copy.shopNow}
                 </Link>
               </div>
             </div>

@@ -8,6 +8,9 @@ import type {
 } from "@/data";
 import { formatEta, formatTZS } from "./format";
 import { MINIMUM_ORDER_VALUE_TZS } from "@/lib/fees";
+import { ORDER } from "@/i18n/copy/order";
+import { SHOP } from "@/i18n/copy/shop";
+import type { Locale } from "@/i18n/locale";
 
 /**
  * Order request logic.
@@ -72,8 +75,8 @@ export function resolveDeliveryRoute(
   return { kind: "agent", agents: candidates };
 }
 
-export function deliveryRouteLabel(kind: DeliveryRouteKind): string {
-  return kind === "brand" ? "Brand delivery" : "Local agent delivery";
+export function deliveryRouteLabel(kind: DeliveryRouteKind, locale: Locale = "en"): string {
+  return SHOP[locale].delivery[kind];
 }
 
 /**
@@ -108,14 +111,13 @@ export function brandCarrierName(brand: Brand): string {
  */
 export function orderBlockReason(
   product: Product,
-  route: DeliveryRoute
+  route: DeliveryRoute,
+  locale: Locale = "en"
 ): string | null {
-  if (!product.inStock) {
-    return "This product is out of stock at its branch, so it can't be requested yet.";
-  }
+  if (!product.inStock) return SHOP[locale].delivery.blockedOutOfStock;
 
   if (route.kind === "agent" && route.agents.length === 0) {
-    return "No delivery agent currently serves this branch's city, so this order can't be routed.";
+    return SHOP[locale].delivery.blockedNoCourier;
   }
 
   return null;
@@ -162,26 +164,30 @@ export function previewDelivery({
   brand,
   branch,
   agents,
+  locale = "en",
 }: {
   product: Product;
   brand: Brand;
   branch: Branch;
   /** See `resolveDeliveryRoute` — omit only where there is no database. */
   agents?: DeliveryAgent[];
+  /** The language of the short "why not" label and the fleet's name. */
+  locale?: Locale;
 }): DeliveryOutlook {
+  const words = SHOP[locale].delivery;
   const route = resolveDeliveryRoute(branch, agents);
   const fastest = fastestAgent(route.agents);
 
   const unavailable = !product.inStock
-    ? "Out of stock"
+    ? words.outOfStock
     : route.kind === "agent" && route.agents.length === 0
-      ? `No courier serves ${branch.city}`
+      ? words.noCourier(branch.city)
       : null;
 
   return {
     kind: route.kind,
     carrier:
-      route.kind === "brand" ? brandCarrierName(brand) : (fastest?.name ?? null),
+      route.kind === "brand" ? words.ownFleet(brand.name) : (fastest?.name ?? null),
     choiceCount: route.agents.length,
     eta: fastest?.eta ?? null,
     unavailable,
@@ -339,29 +345,31 @@ export function validateOrderRequest(
   input: OrderRequestInput,
   route: DeliveryRoute,
   unitPriceTZS: number,
-  deliveryCity?: string
+  deliveryCity?: string,
+  locale: Locale = "en"
 ): OrderValidation {
+  const words = ORDER[locale].errors;
   const errors: OrderErrors = {};
 
   if (deliveryCity !== undefined) {
     const chosen = (input.deliveryCity ?? "").trim();
     if (chosen === "") {
-      errors.deliveryCity = "Say which city this is going to.";
+      errors.deliveryCity = words.cityMissing;
     } else if (chosen !== deliveryCity) {
-      errors.deliveryCity = `This shop only delivers within ${deliveryCity}.`;
+      errors.deliveryCity = words.cityOutside(deliveryCity);
     }
   }
 
   const quantityText = input.quantity.trim();
   const rawQuantity = Number(quantityText);
   if (quantityText === "") {
-    errors.quantity = "Enter how many you want.";
+    errors.quantity = words.quantityMissing;
   } else if (!Number.isInteger(rawQuantity)) {
-    errors.quantity = "Quantity must be a whole number.";
+    errors.quantity = words.quantityWhole;
   } else if (rawQuantity < 1) {
-    errors.quantity = "Quantity must be at least 1.";
+    errors.quantity = words.quantityMin;
   } else if (rawQuantity > MAX_QUANTITY) {
-    errors.quantity = `For more than ${MAX_QUANTITY} units, contact the branch directly.`;
+    errors.quantity = words.quantityMax(MAX_QUANTITY);
   } else if (
     MINIMUM_ORDER_VALUE_TZS !== null &&
     rawQuantity * unitPriceTZS < MINIMUM_ORDER_VALUE_TZS
@@ -369,25 +377,25 @@ export function validateOrderRequest(
     // A whole-order rule, not really about the quantity field — but it's the
     // one thing the customer can change to fix it, and reusing `quantity`
     // avoids inventing a new error slot `OrderErrors`/the form don't have.
-    errors.quantity = `MalFleks orders start at ${formatTZS(MINIMUM_ORDER_VALUE_TZS)}. Add more to reach the minimum.`;
+    errors.quantity = words.belowMinimum(formatTZS(MINIMUM_ORDER_VALUE_TZS));
   }
   const quantity = parseQuantity(input.quantity);
 
   const fullName = input.fullName.trim();
   if (fullName.length < MIN_NAME_LENGTH) {
-    errors.fullName = "Enter the name the driver should ask for.";
+    errors.fullName = words.name;
   }
 
   const phone = normalizePhone(input.phone);
   if (input.phone.trim() === "") {
-    errors.phone = "Enter a phone number we can reach you on.";
+    errors.phone = words.phoneMissing;
   } else if (!phone) {
-    errors.phone = "Enter a Tanzanian mobile number, e.g. 0754 123 456.";
+    errors.phone = words.phoneInvalid;
   }
 
   const address = input.address.trim();
   if (address.length < MIN_ADDRESS_LENGTH) {
-    errors.address = "Enter a street and area so the driver can find you.";
+    errors.address = words.address;
   }
 
   // A brand route has nothing to pick, so a stray agentId is simply dropped
@@ -396,7 +404,7 @@ export function validateOrderRequest(
   if (route.kind === "agent") {
     agent = route.agents.find((a) => a.id === input.agentId) ?? null;
     if (!agent) {
-      errors.agentId = "Select an agent to carry this order.";
+      errors.agentId = words.agent;
     }
   }
 
