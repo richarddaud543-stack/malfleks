@@ -1,3 +1,4 @@
+import { catalogueWriter, photoStudio } from "./studio";
 import type { Agent } from "./types";
 import { watchman } from "./watchman";
 
@@ -12,7 +13,7 @@ import { watchman } from "./watchman";
  * The offices the city is laid out in are the `office` field on each agent, so
  * a new department appears the moment its first resident does.
  */
-export const AGENTS: Agent[] = [watchman];
+export const AGENTS: Agent[] = [watchman, photoStudio, catalogueWriter];
 
 const BY_KEY = new Map(AGENTS.map((agent) => [agent.key, agent]));
 

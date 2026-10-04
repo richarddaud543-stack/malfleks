@@ -198,7 +198,19 @@ export function tidyDraft(raw: string): string {
   return (end > 200 ? cut.slice(0, end + 1) : cut).trim();
 }
 
-export async function draftDescription(input: DraftInput): Promise<DraftOutcome> {
+/**
+ * Extra instructions from the owner, added to what the model is told.
+ *
+ * It arrives from the school (`AgentLesson`) by way of the agent, never from a
+ * browser, and it is appended *after* the rules -- which forbid inventing a
+ * fact and changing the product -- so a lesson can add to them but is read in
+ * their light, not instead of them.
+ */
+export interface HelpOptions {
+  extraInstructions?: string;
+}
+
+export async function draftDescription(input: DraftInput, options: HelpOptions = {}): Promise<DraftOutcome> {
   const googleKey = key("GEMINI_API_KEY");
   const apiKey = key("ANTHROPIC_API_KEY");
   if (!googleKey && !apiKey) return { ok: false, reason: "not-configured" };
@@ -206,12 +218,12 @@ export async function draftDescription(input: DraftInput): Promise<DraftOutcome>
   const hasSomething = input.notes.trim().length >= 10 || input.specs.some((s) => s.key.trim() && s.value.trim()) || input.photoUrl !== null;
   if (input.name.trim().length < 2 || !hasSomething) return { ok: false, reason: "not-enough" };
 
-  if (googleKey) return draftWithGemini(googleKey, input);
+  if (googleKey) return draftWithGemini(googleKey, input, options);
   if (!apiKey) return { ok: false, reason: "not-configured" };
 
   const content: unknown[] = [];
   if (input.photoUrl) content.push({ type: "image", source: { type: "url", url: input.photoUrl } });
-  content.push({ type: "text", text: `${DRAFT_INSTRUCTIONS}\n\nFacts:\n${buildDraftFacts(input)}` });
+  content.push({ type: "text", text: `${DRAFT_INSTRUCTIONS}${options.extraInstructions ?? ""}\n\nFacts:\n${buildDraftFacts(input)}` });
 
   try {
     const response = await fetch(ANTHROPIC_URL, {
@@ -238,13 +250,13 @@ export async function draftDescription(input: DraftInput): Promise<DraftOutcome>
   }
 }
 
-async function draftWithGemini(apiKey: string, input: DraftInput): Promise<DraftOutcome> {
+async function draftWithGemini(apiKey: string, input: DraftInput, options: HelpOptions): Promise<DraftOutcome> {
   try {
     const parts: GeminiPart[] = [];
     // The photo is a help, not a requirement: a draft from the typed facts alone is still a true draft.
     const photo = input.photoUrl ? await loadPhoto(input.photoUrl).catch(() => null) : null;
     if (photo) parts.push(asPart(photo));
-    parts.push({ text: `${DRAFT_INSTRUCTIONS}\n\nFacts:\n${buildDraftFacts(input)}` });
+    parts.push({ text: `${DRAFT_INSTRUCTIONS}${options.extraInstructions ?? ""}\n\nFacts:\n${buildDraftFacts(input)}` });
 
     const answer = await askGemini(apiKey, key("AI_GEMINI_TEXT_MODEL") ?? DEFAULT_GEMINI_TEXT_MODEL, parts, { maxOutputTokens: 2000, temperature: 0.4 }, TIMEOUT_MS);
     const description = tidyDraft(answer?.text ?? "");
@@ -298,7 +310,7 @@ async function sameItem(apiKey: string, original: InlineImage, edited: InlineIma
   }
 }
 
-async function cleanWithGemini(apiKey: string, photoUrl: string): Promise<CleanPhotoOutcome> {
+async function cleanWithGemini(apiKey: string, photoUrl: string, options: HelpOptions): Promise<CleanPhotoOutcome> {
   try {
     const original = await loadPhoto(photoUrl);
     if (!original) return { ok: false, reason: "invalid-photo" };
@@ -306,7 +318,7 @@ async function cleanWithGemini(apiKey: string, photoUrl: string): Promise<CleanP
     const answer = await askGemini(
       apiKey,
       key("AI_GEMINI_IMAGE_MODEL") ?? DEFAULT_GEMINI_IMAGE_MODEL,
-      [asPart(original), { text: CLEAN_INSTRUCTIONS }],
+      [asPart(original), { text: `${CLEAN_INSTRUCTIONS}${options.extraInstructions ?? ""}` }],
       { responseModalities: ["IMAGE"] },
       IMAGE_TIMEOUT_MS,
     );
@@ -333,13 +345,16 @@ async function cleanWithGemini(apiKey: string, photoUrl: string): Promise<CleanP
  * not. The caller's ownership of the photo does not matter -- it is public --
  * but its origin does.
  */
-export async function cleanPhotoBackground(photoUrl: string): Promise<CleanPhotoOutcome> {
+export async function cleanPhotoBackground(photoUrl: string, options: HelpOptions = {}): Promise<CleanPhotoOutcome> {
   const apiKey = key("PHOTOROOM_API_KEY");
   const googleKey = key("GEMINI_API_KEY");
   if (!apiKey && !googleKey) return { ok: false, reason: "not-configured" };
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? "";
   if (!isValidProductPhotoUrl(photoUrl, supabaseUrl)) return { ok: false, reason: "invalid-photo" };
-  if (!apiKey) return cleanWithGemini(googleKey as string, photoUrl);
+  // Photoroom cuts the item out rather than redrawing it, so it is preferred
+  // when its key is present -- and it takes no instructions, which is why the
+  // owner's lessons only reach the generative path.
+  if (!apiKey) return cleanWithGemini(googleKey as string, photoUrl, options);
 
   try {
     const original = await fetch(photoUrl, { signal: AbortSignal.timeout(TIMEOUT_MS) });

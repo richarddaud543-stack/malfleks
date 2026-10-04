@@ -50,6 +50,17 @@ export interface Lesson {
 /** Everything an agent is given when it wakes. */
 export interface AgentShift {
   now: Date;
+
+  /**
+   * The work this shift was woken for, when it was woken *by* work: the photo a
+   * seller just uploaded, the facts they just typed. Null for a shift that came
+   * from the clock and has to go looking for its own work.
+   *
+   * Deliberately `unknown`: the harness does not know any agent's job, so it
+   * cannot check the shape. Each agent narrows it and refuses what it cannot
+   * use, exactly as it would an argument arriving from a browser.
+   */
+  input: unknown;
   rank: AgentRank;
   trigger: AgentTrigger;
 
@@ -85,6 +96,16 @@ export interface AgentResult {
   /** One sentence a person can read in a list. */
   summary: string;
   metrics: AgentMetrics;
+
+  /**
+   * What the caller asked for -- a cleaned photo, a drafted description.
+   *
+   * Handed back to whoever started the shift and **never written to the
+   * archive**: the archive is a record a person reads, and an image or an essay
+   * in every row would make it unreadable and the table enormous. What the
+   * archive keeps of this work is the summary and the numbers.
+   */
+  data?: unknown;
 }
 
 export interface Agent {

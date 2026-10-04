@@ -31,6 +31,7 @@ const CLEAN_MESSAGES: Record<Exclude<CleanPhotoResult, { ok: true }>["reason"], 
   "invalid-photo": "We couldn't read that photo. Remove it and add it again.",
   "provider-failed": "We couldn't clean that photo just now. Your original is unchanged.",
   "not-faithful": "The cleaned copy changed how the item looks, so we did not use it. Your original is unchanged.",
+  paused: "Background cleaning is switched off at the moment. Your photo is fine as it is.",
 };
 
 /**

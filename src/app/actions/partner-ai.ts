@@ -1,6 +1,7 @@
 "use server";
 
 import { isValidProductPhotoUrl } from "@/lib/product-photo";
+import type { CleanPhotoOutcome, DraftOutcome } from "@/server/ai/listing-help";
 import { isAuthConfigured } from "@/server/auth/config";
 import { verifySession } from "@/server/auth/dal";
 import { logServerError } from "@/server/error-log";
@@ -9,6 +10,11 @@ import { checkRateLimit } from "@/server/rate-limit";
 /**
  * The two optional AI helpers on the "List a product" form. See
  * `src/server/ai/listing-help.ts` for what they do and what they must never do.
+ *
+ * Since 4 Oct 2026 neither action does the work itself: it hands it to the
+ * agent whose job it is (`photo-studio`, `catalogue-writer`), so every use is
+ * recorded in the city's archive, obeys the owner's lessons, and stops when he
+ * pauses that agent. The seller sees no difference.
  *
  * Both cost money per call, so both are gated the way a write is: signed in,
  * an *active brand partner* (proved from the database, not from the page that
@@ -19,7 +25,7 @@ import { checkRateLimit } from "@/server/rate-limit";
 const DRAFT_LIMIT = { action: "ai-draft-description", limit: 20, windowMs: 60 * 60_000 };
 const CLEAN_LIMIT = { action: "ai-clean-photo", limit: 20, windowMs: 60 * 60_000 };
 
-type Blocker = "signed-out" | "unavailable" | "not-a-partner" | "rate-limited";
+type Blocker = "signed-out" | "unavailable" | "not-a-partner" | "rate-limited" | "paused";
 
 async function activeBrandPartner(): Promise<{ ok: true; uid: string } | { ok: false; reason: Blocker }> {
   if (!isAuthConfigured()) return { ok: false, reason: "unavailable" };
@@ -48,7 +54,7 @@ export async function draftDescriptionAction(input: {
     if (!who.ok) return who;
     uid = who.uid;
 
-    const { draftDescription, listingAiFeatures } = await import("@/server/ai/listing-help");
+    const { listingAiFeatures } = await import("@/server/ai/listing-help");
     if (!listingAiFeatures().describe) return { ok: false, reason: "unavailable" };
 
     const limit = await checkRateLimit(who.uid, DRAFT_LIMIT);
@@ -63,7 +69,18 @@ export async function draftDescriptionAction(input: {
       ? input.specs.slice(0, 12).map((spec) => ({ key: text(spec?.key), value: text(spec?.value) }))
       : [];
 
-    const outcome = await draftDescription({ name: text(input?.name), category: text(input?.category), notes: text(input?.notes), specs, photoUrl });
+    const { runAgent } = await import("@/agents/runtime");
+    const shift = await runAgent("catalogue-writer", "event", {
+      input: { name: text(input?.name), category: text(input?.category), notes: text(input?.notes), specs, photoUrl },
+    });
+    // The agent is in the registry, so `unknown-agent` cannot happen; a skipped
+    // shift means the owner paused it or sent it back to school.
+    if (!shift.ok) return { ok: false, reason: "unavailable" };
+    if (shift.run.outcome === "skipped") return { ok: false, reason: "paused" };
+    if (shift.run.outcome === "error") return { ok: false, reason: "unavailable" };
+
+    const outcome = shift.data as DraftOutcome | undefined;
+    if (!outcome) return { ok: false, reason: "unavailable" };
     if (outcome.ok) return outcome;
     if (outcome.reason === "not-configured") return { ok: false, reason: "unavailable" };
     if (outcome.reason === "provider-failed") await logServerError("ai-draft-description", new Error("The description provider did not return a usable draft"), who.uid);
@@ -85,13 +102,20 @@ export async function cleanPhotoBackgroundAction(photoUrl: string): Promise<Clea
     if (!who.ok) return who;
     uid = who.uid;
 
-    const { cleanPhotoBackground, listingAiFeatures } = await import("@/server/ai/listing-help");
+    const { listingAiFeatures } = await import("@/server/ai/listing-help");
     if (!listingAiFeatures().cleanPhoto) return { ok: false, reason: "unavailable" };
 
     const limit = await checkRateLimit(who.uid, CLEAN_LIMIT);
     if (!limit.allowed) return { ok: false, reason: "rate-limited" };
 
-    const outcome = await cleanPhotoBackground(typeof photoUrl === "string" ? photoUrl : "");
+    const { runAgent } = await import("@/agents/runtime");
+    const shift = await runAgent("photo-studio", "event", { input: { photoUrl: typeof photoUrl === "string" ? photoUrl : "" } });
+    if (!shift.ok) return { ok: false, reason: "unavailable" };
+    if (shift.run.outcome === "skipped") return { ok: false, reason: "paused" };
+    if (shift.run.outcome === "error") return { ok: false, reason: "unavailable" };
+
+    const outcome = shift.data as CleanPhotoOutcome | undefined;
+    if (!outcome) return { ok: false, reason: "unavailable" };
     if (outcome.ok) return outcome;
     if (outcome.reason === "not-configured") return { ok: false, reason: "unavailable" };
     if (outcome.reason === "provider-failed") await logServerError("ai-clean-photo", new Error("The photo provider did not return a usable image"), who.uid);

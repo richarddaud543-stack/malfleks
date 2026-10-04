@@ -39,6 +39,12 @@ import {
 /** The agent key that stands for the whole city, used by the one switch that stops everybody. */
 export const CITY_KEY = "*";
 
+export interface RunOptions {
+  /** The work to hand the shift, for an agent woken by an event rather than a clock. */
+  input?: unknown;
+  now?: Date;
+}
+
 export interface ShiftRecord {
   id: string;
   agentKey: string;
@@ -55,7 +61,7 @@ type Db = ReturnType<typeof getPrisma>;
 
 /** A shift that could not even start. `unknown-agent` is the only one a caller can cause. */
 export type RunRefusal = { ok: false; reason: "unknown-agent" };
-export type RunOutcome = { ok: true; run: ShiftRecord } | RunRefusal;
+export type RunOutcome = { ok: true; run: ShiftRecord; data?: unknown } | RunRefusal;
 
 export async function agentRank(key: string, db: Db = getPrisma()): Promise<AgentRank> {
   const agent = agentByKey(key);
@@ -166,16 +172,18 @@ const MAX_SUMMARY = 300;
  * Never throws: an agent that crashes is a recorded `error`, because the
  * caller is a cron route whose own failure would hide the agent's.
  */
-export async function runAgent(key: string, trigger: AgentTrigger, now: Date = new Date()): Promise<RunOutcome> {
+export async function runAgent(key: string, trigger: AgentTrigger, options: RunOptions = {}): Promise<RunOutcome> {
   const agent = agentByKey(key);
   if (!agent) return { ok: false, reason: "unknown-agent" };
 
   const db = getPrisma();
+  const now = options.now ?? new Date();
   const startedAt = now;
   const findings: Finding[] = [];
   let outcome: AgentOutcome = "error";
   let summary = "The shift ended without saying anything.";
   let metrics: AgentMetrics = {};
+  let data: unknown;
 
   try {
     const [rank, paused] = await Promise.all([agentRank(agent.key, db), isPaused(agent.key, db)]);
@@ -192,6 +200,7 @@ export async function runAgent(key: string, trigger: AgentTrigger, now: Date = n
         now,
         rank,
         trigger,
+        input: options.input ?? null,
         handbook: handbookText(agent.curriculum),
         lessons,
         previous: previous?.metrics ?? null,
@@ -204,6 +213,7 @@ export async function runAgent(key: string, trigger: AgentTrigger, now: Date = n
       outcome = result.outcome;
       summary = result.summary.slice(0, MAX_SUMMARY);
       metrics = result.metrics;
+      data = result.data;
     }
   } catch (error) {
     outcome = "error";
@@ -241,7 +251,7 @@ export async function runAgent(key: string, trigger: AgentTrigger, now: Date = n
     await logServerError(`agent-${agent.key}-archive`, error);
   }
 
-  return { ok: true, run: { id, ...record } };
+  return { ok: true, run: { id, ...record }, data };
 }
 
 export type { Agent };
