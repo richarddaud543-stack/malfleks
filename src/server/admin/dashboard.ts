@@ -2,6 +2,7 @@ import { getPrisma } from "@/server/db/client";
 import { listActivatablePartners } from "@/server/partners/activation";
 import { seriesByDay, type DayPoint } from "@/lib/charts";
 import { moneyTotals, moneyWork } from "@/server/money/payouts";
+import { deliveryProblemWork } from "@/server/orders/delivery-code";
 
 /**
  * Everything the admin Overview shows, read in one place.
@@ -37,6 +38,7 @@ const OVERDUE_AFTER_HOURS: Record<string, number> = {
   submissions: 72,
   payouts: 7 * 24, // partners are paid weekly at the latest
   refunds: 24, // a customer whose order was cancelled is waiting on their money
+  deliveries: 12, // goods handed over (or not), nobody paid, and only an admin can settle it
 };
 
 function toneFor(key: string, count: number, oldest: Date | null, now: Date): Tone {
@@ -61,16 +63,18 @@ export interface NavCounts {
 
 export async function getNavCounts(): Promise<NavCounts> {
   const db = getPrisma();
-  const [orders, applications, submissions, payments, work, city] = await Promise.all([
+  const [orders, applications, submissions, payments, work, city, deliveries] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.partnerApplication.count({ where: { status: "pending" } }),
     db.productSubmission.count({ where: { status: "pending" } }),
     db.orderPayment.count({ where: { status: "pending" } }),
     moneyWork(db),
     db.agentHelpRequest.count({ where: { status: "open" } }),
+    deliveryProblemWork(db),
   ]);
   return {
-    orders,
+    // Orders to confirm, plus deliveries only an admin can settle.
+    orders: orders + deliveries.count,
     applications,
     submissions,
     payments,
@@ -129,6 +133,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     errors24h,
     errors7d,
     work,
+    deliveries,
   ] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.order.findFirst({ where: { status: "pending" }, orderBy: { createdAt: "asc" }, select: { createdAt: true } }),
@@ -152,6 +157,7 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     db.serverErrorLog.count({ where: { createdAt: { gte: new Date(now.getTime() - DAY) } } }),
     db.serverErrorLog.count({ where: { createdAt: { gte: new Date(now.getTime() - 7 * DAY) } } }),
     moneyWork(db),
+    deliveryProblemWork(db),
   ]);
 
   const oldestGoLive = activatable.reduce<Date | null>(
@@ -165,7 +171,8 @@ export async function getOverview(now = new Date()): Promise<Overview> {
     { key: "applications", label: "Partner applications", hint: "Approve or reject", count: pendingApplications, oldest: oldestApplication?.createdAt ?? null, href: "/admin/applications" },
     { key: "golive", label: "Approved, not yet live", hint: "Put them on the map or in the routing", count: activatable.length, oldest: oldestGoLive, href: "/admin/applications" },
     { key: "submissions", label: "Product submissions", hint: "Publish or send back", count: pendingSubmissions, oldest: oldestSubmission?.createdAt ?? null, href: "/admin/submissions" },
-    { key: "payouts", label: "Partners to pay", hint: "Send from ClickPesa, then record it", count: work.payeesOwed + work.pendingBatches, oldest: work.oldestPayout, href: "/admin/payouts" },
+    { key: "deliveries", label: "Deliveries to settle", hint: "The code could not confirm them — ring the customer", count: deliveries.count, oldest: deliveries.oldest, href: deliveries.count === 1 ? `/admin/orders/${deliveries.orders[0].orderId}` : "/admin/orders?status=confirmed&payment=captured" },
+    { key: "payouts", label: "Partners to pay", hint: "Sent automatically when that is on; otherwise send from ClickPesa and record it", count: work.payeesOwed + work.pendingBatches, oldest: work.oldestPayout, href: "/admin/payouts" },
     { key: "refunds", label: "Refunds to send", hint: "Cancelled orders still holding money", count: work.refundsDue.length, oldest: work.refundsDue.reduce<Date | null>((min, r) => (r.cancelledAt && (!min || r.cancelledAt < min) ? r.cancelledAt : min), null), href: work.refundsDue.length === 1 ? `/admin/orders/${work.refundsDue[0].orderId}` : "/admin/orders?status=cancelled&payment=captured" },
   ];
   const queues: Queue[] = queueSpecs.map((q) => ({ ...q, tone: toneFor(q.key, q.count, q.oldest, now) }));

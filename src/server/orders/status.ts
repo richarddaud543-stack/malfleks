@@ -1,3 +1,5 @@
+import type { Prisma } from "@prisma/client";
+
 import { getPrisma } from "@/server/db/client";
 import { accruePayouts } from "@/server/money/payouts";
 import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
@@ -30,9 +32,13 @@ import { partnerScopeWhere, type PartnerOrderScope } from "./tracking";
  * who actually know the answer to, the partners themselves:
  *
  * - The owner's call on 6 Sep 2026: the branch or courier fulfilling an order
- *   may mark it `fulfilled`, from `/partner/orders`, through
- *   `markOrderFulfilledByPartner` below. "Who actually delivered it" is known
- *   by the partner; admin marking it from a phone call is transcription.
+ *   may mark it `fulfilled`, from `/partner/orders`. "Who actually delivered
+ *   it" is known by the partner; admin marking it from a phone call is
+ *   transcription.
+ * - Changed on 5 Oct 2026: the partner still does it, but only by entering
+ *   the **delivery code the customer holds** (`delivery-code.ts`). Delivery is
+ *   what makes a partner payable, so it is confirmed by the two people who see
+ *   the goods change hands, not by the one who is paid for saying so.
  * - The owner's call on 3 Oct 2026: the **branch** an order was sent to may
  *   answer a `pending` order itself — confirm it, or decline it with a reason
  *   — through `src/server/orders/branch-decisions.ts`. Until then `confirmed`
@@ -161,53 +167,75 @@ async function writeTransition(
     (status) => !onlyFrom || onlyFrom.includes(status)
   );
 
-  return db.$transaction(async (tx) => {
-    // Re-read inside the transaction so the event records the status the row
-    // was *actually* in when it moved, rather than the one the pre-check saw.
-    // Those can differ under the two-tabs race, and the event has to be true.
-    const current = await tx.order.findUnique({
-      where: { id: orderId },
-      select: { status: true },
-    });
+  return db.$transaction((tx) => moveOrderInTx(tx, orderId, target, adminUid, note, sources, unpaidOnly));
+}
 
-    const { count } = await tx.order.updateMany({
-      where: {
-        id: orderId,
-        status: { in: sources },
-        ...(unpaidOnly ? { payments: { none: { status: "captured" } } } : {}),
-      },
-      data: {
-        status: target,
-        decidedBy: adminUid,
-        decidedAt: new Date(),
-        decisionNote: note,
-      },
-    });
-
-    if (count === 0) {
-      return { ok: false, reason: "invalid-transition" } as const;
-    }
-
-    await tx.orderEvent.create({
-      data: {
-        orderId,
-        fromStatus: current?.status ?? null,
-        toStatus: target,
-        actorUid: adminUid,
-        note,
-      },
-    });
-
-    // Delivered and paid: split the held money into what the branch, the
-    // courier and MalFleks are each owed, in the same transaction, so an order
-    // can never be fulfilled-and-paid with its payouts unrecorded. An unpaid
-    // order (every pre-escrow one, or a payment still outstanding) simply
-    // records nothing here; `settle.ts` does it if the money lands later.
-    // Fulfilment is never refused over this -- the goods were delivered.
-    if (target === "fulfilled") await accruePayouts(tx, orderId);
-
-    return { ok: true } as const;
+/**
+ * The guarded write itself, for a caller that already holds a transaction.
+ *
+ * `writeTransition` is this plus a pre-check for the message. It is exported
+ * for one caller, `delivery-code.ts`, which has to check the customer's code
+ * and move the order to `fulfilled` as one atomic step: a code that matched
+ * but an order that did not move (or the reverse) must not be a state the
+ * database can be left in.
+ *
+ * `sources` defaults to every status `target` may legally be reached from.
+ */
+export async function moveOrderInTx(
+  tx: Prisma.TransactionClient,
+  orderId: string,
+  target: OrderTarget,
+  actorUid: string,
+  note: string | null,
+  sources: readonly string[] = sourceStatusesFor(target),
+  unpaidOnly = false,
+): Promise<TransitionOutcome> {
+  // Re-read inside the transaction so the event records the status the row
+  // was *actually* in when it moved, rather than the one the pre-check saw.
+  // Those can differ under the two-tabs race, and the event has to be true.
+  const current = await tx.order.findUnique({
+    where: { id: orderId },
+    select: { status: true },
   });
+  if (!current) return { ok: false, reason: "not-found" };
+
+  const { count } = await tx.order.updateMany({
+    where: {
+      id: orderId,
+      status: { in: [...sources] },
+      ...(unpaidOnly ? { payments: { none: { status: "captured" } } } : {}),
+    },
+    data: {
+      status: target,
+      decidedBy: actorUid,
+      decidedAt: new Date(),
+      decisionNote: note,
+    },
+  });
+
+  if (count === 0) {
+    return { ok: false, reason: "invalid-transition" };
+  }
+
+  await tx.orderEvent.create({
+    data: {
+      orderId,
+      fromStatus: current.status,
+      toStatus: target,
+      actorUid,
+      note,
+    },
+  });
+
+  // Delivered and paid: split the held money into what the branch, the
+  // courier and MalFleks are each owed, in the same transaction, so an order
+  // can never be fulfilled-and-paid with its payouts unrecorded. An unpaid
+  // order (every pre-escrow one, or a payment still outstanding) simply
+  // records nothing here; `settle.ts` does it if the money lands later.
+  // Fulfilment is never refused over this -- the goods were delivered.
+  if (target === "fulfilled") await accruePayouts(tx, orderId);
+
+  return { ok: true };
 }
 
 /**
@@ -298,75 +326,55 @@ export function cancelOrderByCustomer(
   return writeTransition(orderId, "cancelled", customerUid, CUSTOMER_CANCEL_NOTE, ["pending", "confirmed"], true);
 }
 
-/** Delivered / handed off, request complete. Only valid from `confirmed`. Terminal. */
+/**
+ * What is written on the order when MalFleks marks it delivered itself, with
+ * no code entered -- the fallback for a delivery the code could not confirm.
+ */
+export const ADMIN_DELIVERED_NOTE = "Marked delivered by MalFleks, without the customer's code";
+
+/**
+ * Delivered / handed off, request complete. Only valid from `confirmed`. Terminal.
+ *
+ * **Admin only.** Since 5 Oct 2026 a branch or courier cannot mark their own
+ * delivery: an order becomes `fulfilled` when the customer's delivery code is
+ * entered (`confirmDeliveryWithCode` in `delivery-code.ts`), because the same
+ * step makes the partner payable and nobody should be paid on their own word.
+ * This function is what is left for the cases the code cannot cover -- the
+ * customer's phone is dead, the code is lost, an order settled outside
+ * MalFleks -- and it is the owner's decision each time. The note says so, in
+ * the order's own history.
+ */
 export function markOrderFulfilled(
   orderId: string,
   adminUid: string
 ): Promise<TransitionOutcome> {
-  return writeTransition(orderId, "fulfilled", adminUid, null);
-}
-
-/**
- * The partner fulfilling this order — the branch on a brand-fleet route, the
- * courier on an agent route — marks it delivered themselves.
- *
- * Ownership first, transition second, exactly the order `postDeliveryPing`
- * already uses: `partnerScopeWhere` (shared with `tracking.ts`) puts the
- * caller's own `branchId`/`agentId` in the `WHERE`, so an `orderId` that is
- * real but belongs to someone else's branch or courier reads as `not-found`
- * before `writeTransition` ever runs — a partner cannot even learn whether an
- * id they don't own exists, let alone move it. Only then does the ordinary
- * `pending`/`confirmed` guard in `writeTransition` decide whether `fulfilled`
- * is reachable from wherever the order actually is; nothing here loosens that
- * check for a partner caller.
- *
- * `actorUid` is stamped into `Order.decidedBy` and `OrderEvent.actorUid`
- * exactly like an admin's uid would be — both columns are a bare uid with no
- * role attached, so a reader who needs to know *which* kind of person moved an
- * order still has to cross-reference `PartnerUser`/the admin allowlist. That
- * is an acceptable gap for a single new transition kept this narrow, not an
- * oversight to fix in the same change that adds it.
- *
- * **Paid first (4 Oct 2026).** A partner may only mark an order delivered once
- * MalFleks holds the customer's money for it. The promise on the site is "the
- * shop is paid after delivery" -- which is only true if nothing is delivered
- * before it is paid for. Before this check a confirmed order with no payment
- * could be marked delivered from `/partner/orders`, leaving the branch owed
- * money MalFleks never collected. An unpaid order reads as `not-paid` and
- * nothing moves. An admin can still mark one fulfilled from the console
- * (`markOrderFulfilled`), for the rare order settled outside MalFleks.
- */
-export type PartnerFulfilOutcome =
-  | TransitionOutcome
-  | { ok: false; reason: "not-paid" };
-
-export async function markOrderFulfilledByPartner(
-  orderId: string,
-  scope: PartnerOrderScope,
-  actorUid: string,
-): Promise<PartnerFulfilOutcome> {
-  const own = await partnerOwnedOrder(orderId, scope);
-  if (!own) return { ok: false, reason: "not-found" };
-  if (!own.paid) return { ok: false, reason: "not-paid" };
-  return markOrderFulfilled(own.id, actorUid);
+  return writeTransition(orderId, "fulfilled", adminUid, ADMIN_DELIVERED_NOTE);
 }
 
 /**
  * Resolves `orderId` only if it belongs to this partner's own scope, and says
  * whether any payment for it has been captured.
+ *
+ * Ownership first, anything else second: `partnerScopeWhere` (shared with
+ * `tracking.ts`) puts the caller's own `branchId`/`agentId` in the `WHERE`, so
+ * an `orderId` that is real but belongs to someone else's branch or courier
+ * reads as not found -- a partner cannot even learn whether an id they don't
+ * own exists, let alone act on it.
  */
-async function partnerOwnedOrder(
+export async function partnerOwnedOrder(
   orderId: string,
   scope: PartnerOrderScope,
-): Promise<{ id: string; paid: boolean } | null> {
+): Promise<{ id: string; status: string; reference: string; paid: boolean } | null> {
   const where = partnerScopeWhere(orderId, scope);
   if (!where) return null;
   const order = await getPrisma().order.findFirst({
     where,
     select: {
       id: true,
+      status: true,
+      reference: true,
       payments: { where: { status: "captured" }, select: { id: true }, take: 1 },
     },
   });
-  return order ? { id: order.id, paid: order.payments.length > 0 } : null;
+  return order ? { id: order.id, status: order.status, reference: order.reference, paid: order.payments.length > 0 } : null;
 }

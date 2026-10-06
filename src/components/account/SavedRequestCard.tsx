@@ -7,6 +7,7 @@ import { deliveryRouteLabel, formatPhone } from "@/lib/order";
 import type { AccountOrderStatus } from "@/server/orders/checkout";
 import type { SavedOrderRequest } from "@/server/orders/saved-requests";
 import CancelOrderButton from "./CancelOrderButton";
+import DeliveryCodePanel from "./DeliveryCodePanel";
 import DeleteSavedRequest from "./DeleteSavedRequest";
 
 /**
@@ -24,9 +25,16 @@ import DeleteSavedRequest from "./DeleteSavedRequest";
 export default function SavedRequestCard({
   request,
   status = null,
+  deliveryCode = null,
   locale = "en",
 }: {
   request: SavedOrderRequest;
+  /**
+   * The six digits this customer gives at the door, when their order is paid
+   * for and on its way. Read by the page for the signed-in customer's own
+   * orders only -- see `deliveryCodesForCustomer`.
+   */
+  deliveryCode?: string | null;
   /**
    * Where the order behind this request stands: waiting on the branch, ready
    * to pay, paid, delivered or cancelled. `null` when MalFleks holds no order
@@ -158,6 +166,8 @@ export default function SavedRequestCard({
           )}
         </p>
       )}
+
+      {state === "paid" && deliveryCode && <DeliveryCodePanel code={deliveryCode} locale={locale} />}
 
       <div className="mt-5 flex flex-wrap items-center gap-4">
         {state === "ready" && (

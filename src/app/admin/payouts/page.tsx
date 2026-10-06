@@ -1,12 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
-import { cancelPayoutAction, createPayoutAction, markPayoutPaidAction } from "@/app/actions/admin-console";
+import {
+  cancelPayoutAction,
+  compareBalanceAction,
+  createPayoutAction,
+  markPayoutPaidAction,
+  runAutoPayoutsAction,
+  setAutoPayoutsPausedAction,
+} from "@/app/actions/admin-console";
 import ActionForm from "@/components/admin/ActionForm";
 import { Badge, Card, Empty, inputClass, labelClass, Notice, PageHeader, plural, Section, Tile, Tiles } from "@/components/admin/ui";
 import { ageLabel, formatTZS, formatWhen } from "@/lib/charts";
 import { formatPhone } from "@/lib/order";
 import { requireAdmin } from "@/server/auth/dal";
+import { autoPayoutStatus } from "@/server/money/auto-payouts";
 import { listOwed, listPayoutBatches, moneyTotals, moneyWork } from "@/server/money/payouts";
 import { MIN_MOBILE_PAYOUT_TZS } from "@/server/money/payout-rules";
 
@@ -17,8 +25,22 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+// A payout run can follow an action on this page (see
+// src/server/money/auto-payouts.ts): a balance preview, one send and a few
+// status checks against ClickPesa. Sixty seconds is well over what that takes
+// and stops the platform cutting it off part-way.
+export const maxDuration = 60;
+
 /**
- * Paying partners what they're owed, by hand.
+ * Paying partners what they're owed.
+ *
+ * Since 5 Oct 2026 this can happen without anyone here: once a delivery is
+ * confirmed by the customer's code, `auto-payouts.ts` sends the partner's
+ * share through ClickPesa. The "Automatic payouts" section shows whether that
+ * is on, lets an admin pause it, and lists any payout still waiting on
+ * ClickPesa's answer. Everything below it is the by-hand flow, which remains
+ * for whatever the automatic run leaves (no mobile number, under the minimum,
+ * over a ceiling) and for when it is off.
  *
  * When an order is delivered, the money held for it is split into the
  * branch's share, the courier's share and MalFleks's fees. This page groups
@@ -32,16 +54,23 @@ export const dynamic = "force-dynamic";
 export default async function AdminPayoutsPage() {
   await requireAdmin("/admin/payouts");
 
-  const [owed, batches, totals, work] = await Promise.all([listOwed(), listPayoutBatches(), moneyTotals(), moneyWork()]);
   const now = new Date();
+  const [owed, batches, totals, work, auto] = await Promise.all([listOwed(), listPayoutBatches(), moneyTotals(), moneyWork(), autoPayoutStatus(now)]);
   const toSend = batches.filter((b) => b.status === "pending");
-  const history = batches.filter((b) => b.status !== "pending");
+  // Sent by MalFleks itself and not yet answered by ClickPesa. Never re-sent
+  // automatically; settled by ClickPesa's answer or by an admin below.
+  const sending = batches.filter((b) => b.status === "sending");
+  const history = batches.filter((b) => b.status !== "pending" && b.status !== "sending");
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
         title="Payouts"
-        description="What branches and couriers are owed for delivered orders. Nothing here sends money — you send each payout from the ClickPesa dashboard, then record it here."
+        description={
+          auto.active
+            ? "What branches and couriers are owed for delivered orders. Automatic payouts are on: once a delivery is confirmed, the partner's share is sent through ClickPesa without you. Anything it can't send is left here for you."
+            : "What branches and couriers are owed for delivered orders. Automatic payouts are not running, so nothing here sends money — you send each payout from the ClickPesa dashboard, then record it here."
+        }
         actions={
           <a
             href="https://merchant.clickpesa.com/"
@@ -60,6 +89,104 @@ export default async function AdminPayoutsPage() {
         <Tile label="Sent so far" value={formatTZS(totals.paidOutTZS)} note={plural(history.filter((b) => b.status === "paid").length, "payout")} />
         <Tile label="MalFleks fees earned" value={formatTZS(totals.feesEarnedTZS)} note="Kept from delivered orders" />
       </Tiles>
+
+      <Section
+        id="automatic"
+        title="Automatic payouts"
+        note={
+          !auto.armed
+            ? "Switched off for this site. To switch on, set AUTO_PAYOUTS=on in the hosting settings — do it only once the ClickPesa account is verified."
+            : auto.paused
+              ? "Paused by you. Payouts already sent are not affected."
+              : `On. Up to ${formatTZS(auto.maxPerPayoutTZS)} per payout and ${formatTZS(auto.maxPerDayTZS)} a day; ${formatTZS(auto.sentTodayTZS)} sent today.`
+        }
+      >
+        <Card className="mt-3 p-4">
+          <div className="flex flex-wrap items-start gap-x-6 gap-y-4">
+            <p className="flex items-center gap-2 text-sm font-medium">
+              <Badge status={auto.active ? "paid" : auto.armed ? "pending" : "failed"} label={auto.active ? "on" : auto.armed ? "paused" : "off"} />
+              {auto.active ? "Confirmed deliveries are paid without you." : auto.armed ? "Nothing is sent until you resume." : "Payouts are sent by hand."}
+            </p>
+            {auto.armed && (
+              <ActionForm
+                action={setAutoPayoutsPausedAction}
+                hidden={{ paused: auto.paused ? "false" : "true" }}
+                label={auto.paused ? "Resume automatic payouts" : "Pause automatic payouts"}
+                tone={auto.paused ? "primary" : "danger"}
+                confirm={auto.paused ? "Owed shares will be sent through ClickPesa again without you." : "Nothing more is sent automatically until you resume. You can still pay by hand."}
+                confirmLabel={auto.paused ? "Yes, resume" : "Yes, pause"}
+              />
+            )}
+            <ActionForm
+              action={runAutoPayoutsAction}
+              label={auto.active ? "Run now" : "Check payouts on their way"}
+              pendingLabel="Asking ClickPesa…"
+              confirm={auto.active ? "Sends one owed payout through ClickPesa now, and checks any still on their way." : undefined}
+              confirmLabel="Yes, run"
+            />
+            <ActionForm action={compareBalanceAction} label="Compare with ClickPesa balance" pendingLabel="Asking ClickPesa…" />
+          </div>
+          <p className="mt-3 text-xs text-muted">
+            A payout is only sent after the customer&apos;s delivery code was entered (or you marked the order delivered yourself). Mobile-money
+            payouts can&apos;t be pulled back, so this never sends the same payout twice: one it gets no clear answer for is held below as
+            &ldquo;on its way&rdquo; until ClickPesa says what happened.
+          </p>
+        </Card>
+      </Section>
+
+      {sending.length > 0 && (
+        <Section id="sending" title="On their way" note="Sent to ClickPesa by MalFleks; waiting for ClickPesa to confirm. Do not send these again by hand without checking ClickPesa first.">
+          <ul className="mt-3 grid gap-3 lg:grid-cols-2">
+            {sending.map((b) => (
+              <li key={b.id}>
+                <Card className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{b.name}</p>
+                      <p className="text-xs text-muted">
+                        {b.detail} · to {b.payoutPhone ?? "—"} · asked {b.sendStartedAt ? `${ageLabel(b.sendStartedAt, now)} ago` : ""}
+                      </p>
+                    </div>
+                    <p className="text-xl font-semibold tabular-nums">{formatTZS(b.totalTZS)}</p>
+                  </div>
+                  <p className="mt-2 text-xs text-muted">
+                    Look it up in ClickPesa under reference <span className="select-all font-mono">{b.sendRef}</span>. Covers {b.orderReferences.join(", ")}.
+                  </p>
+                  <ActionForm
+                    className="mt-3"
+                    action={markPayoutPaidAction}
+                    hidden={{ batchId: b.id }}
+                    label="ClickPesa shows it was sent"
+                    confirm="Record it as sent, with the reference ClickPesa shows."
+                    confirmLabel="Record as sent"
+                    tone="primary"
+                  >
+                    <label className={labelClass} htmlFor={`sref-${b.id}`}>
+                      ClickPesa payout reference
+                    </label>
+                    <input id={`sref-${b.id}`} name="reference" required autoComplete="off" defaultValue={b.sendRef ?? ""} className={inputClass} />
+                  </ActionForm>
+                  <ActionForm
+                    className="mt-3 border-t border-border/60 pt-3"
+                    action={cancelPayoutAction}
+                    hidden={{ batchId: b.id }}
+                    label="ClickPesa shows it was NOT sent"
+                    size="xs"
+                    tone="danger"
+                    confirm="Only if ClickPesa has no such payout, or shows it failed. What it covers becomes owed again and can be sent again — if it did go out, the partner would be paid twice."
+                    confirmLabel="Yes, it was not sent"
+                  >
+                    <label className={labelClass} htmlFor={`swhy-${b.id}`}>
+                      What does ClickPesa show?
+                    </label>
+                    <input id={`swhy-${b.id}`} name="reason" required maxLength={200} className={inputClass} />
+                  </ActionForm>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       {work.refundsDue.length > 0 && (
         <Notice tone="danger">
@@ -232,7 +359,7 @@ export default async function AdminPayoutsPage() {
                   <span className="font-medium">{b.name}</span>
                   <span className="block text-xs text-muted">
                     {b.status === "paid"
-                      ? `Sent ${b.paidAt ? formatWhen(b.paidAt) : ""} · ref ${b.reference}`
+                      ? `Sent ${b.paidAt ? formatWhen(b.paidAt) : ""}${b.automatic ? " automatically" : ""} · ref ${b.reference}${b.feeTZS ? ` · ClickPesa fee ${formatTZS(b.feeTZS)}` : ""}`
                       : `Cancelled ${b.failedAt ? formatWhen(b.failedAt) : ""}${b.failureNote ? ` — ${b.failureNote}` : ""}`}
                   </span>
                 </span>

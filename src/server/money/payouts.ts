@@ -13,11 +13,12 @@ import {
  * Escrow out: working out what partners are owed, grouping it into payouts,
  * and recording refunds.
  *
- * **Nothing in this module sends money.** MalFleks pays partners by hand from
- * the ClickPesa merchant dashboard (Payout → Create Payout) and then records
- * the payout here with the reference ClickPesa gave it. That is decision 4 of
- * `malfleks-escrow-ledger-design.md` ("admin-triggered, not a cron job") and
- * the owner's 1 Oct instruction that money only ever moves automatically *in*.
+ * **Nothing in this module sends money.** It keeps the books. A payout is
+ * sent either by hand from the ClickPesa merchant dashboard (Payout → Create
+ * Payout) and then recorded here with the reference ClickPesa gave it, or --
+ * since 5 Oct 2026, when the owner asked for delivered orders to be paid
+ * without him touching anything -- by `auto-payouts.ts`, which uses the
+ * functions here to draw the payout up and to record what happened to it.
  *
  * The ledger stays append-only. A payout batch is created by stamping
  * `payoutBatchId` onto existing entries; a refund is a new `refund` entry; a
@@ -127,9 +128,16 @@ export interface MoneyTotals {
   feesEarnedTZS: number;
   /** Owed to partners on delivered orders, not yet put into a payout. */
   owedTZS: number;
-  /** In payouts drawn up but not yet recorded as sent. */
+  /** In payouts drawn up (or being sent) but not yet recorded as sent. */
   inPayoutsTZS: number;
 }
+
+/**
+ * A payout that has been drawn up and has no final answer yet: `pending`
+ * (waiting to be sent by hand) or `sending` (MalFleks asked ClickPesa to send
+ * it and is waiting to hear). Both still hold their ledger entries.
+ */
+export const OPEN_BATCH_STATUSES = ["pending", "sending"] as const;
 
 export async function moneyTotals(db: Db = getPrisma()): Promise<MoneyTotals> {
   const [byKind, owed, paid, pending] = await Promise.all([
@@ -139,7 +147,7 @@ export async function moneyTotals(db: Db = getPrisma()): Promise<MoneyTotals> {
       _sum: { amountTZS: true },
     }),
     db.payoutBatch.aggregate({ where: { status: "paid" }, _sum: { totalTZS: true } }),
-    db.payoutBatch.aggregate({ where: { status: "pending" }, _sum: { totalTZS: true } }),
+    db.payoutBatch.aggregate({ where: { status: { in: [...OPEN_BATCH_STATUSES] } }, _sum: { totalTZS: true } }),
   ]);
   const sum = (kind: string) => byKind.find((g) => g.kind === kind)?._sum.amountTZS ?? 0;
 
@@ -384,7 +392,9 @@ export async function markPayoutPaid(batchId: string, rawReference: string, admi
   if (!reference) return { ok: false, reason: "bad-reference" };
   try {
     const { count } = await getPrisma().payoutBatch.updateMany({
-      where: { id: batchId, status: "pending" },
+      // `sending` too: a payout MalFleks sent itself and never heard back about
+      // is settled by an admin reading the reference off the ClickPesa dashboard.
+      where: { id: batchId, status: { in: [...OPEN_BATCH_STATUSES] } },
       data: { status: "paid", providerRef: reference, paidAt: new Date(), paidBy: adminUid },
     });
     return count === 1 ? { ok: true } : { ok: false, reason: "not-pending" };
@@ -404,7 +414,7 @@ export type CancelBatchOutcome = { ok: true; released: number } | { ok: false; r
 export async function cancelPayoutBatch(batchId: string, reason: string, adminUid: string): Promise<CancelBatchOutcome> {
   return getPrisma().$transaction(async (tx) => {
     const { count } = await tx.payoutBatch.updateMany({
-      where: { id: batchId, status: "pending" },
+      where: { id: batchId, status: { in: [...OPEN_BATCH_STATUSES] } },
       data: { status: "failed", failedAt: new Date(), failureNote: `${reason.trim() || "Cancelled"} (by ${adminUid})` },
     });
     if (count === 0) return { ok: false, reason: "not-pending" } as const;
@@ -424,6 +434,12 @@ export interface BatchRow extends PayeeInfo {
   reference: string | null;
   entryCount: number;
   orderReferences: string[];
+  /** Set when MalFleks sent (or tried to send) this one itself. */
+  sendRef: string | null;
+  sendStartedAt: Date | null;
+  feeTZS: number | null;
+  /** True when it was sent by MalFleks itself, not recorded by a person. */
+  automatic: boolean;
 }
 
 export async function listPayoutBatches(limit = 50, db: Db = getPrisma()): Promise<BatchRow[]> {
@@ -442,12 +458,15 @@ export async function listPayoutBatches(limit = 50, db: Db = getPrisma()): Promi
       failedAt: true,
       failureNote: true,
       providerRef: true,
+      sendRef: true,
+      sendStartedAt: true,
+      feeTZS: true,
       entries: { select: { order: { select: { reference: true } } } },
     },
   });
   const keys = batches.map((b) => ({ payeeType: b.payeeType as PayeeType, payeeId: b.payeeId }));
   const info = await payeeInfo(db, keys);
-  const rank: Record<string, number> = { pending: 0, paid: 1, failed: 2 };
+  const rank: Record<string, number> = { sending: 0, pending: 0, paid: 1, failed: 2 };
   return batches
     .map((b) => ({
       ...(info.get(`${b.payeeType}:${b.payeeId}`) ?? fallbackPayee(b.payeeType as PayeeType, b.payeeId)),
@@ -461,6 +480,10 @@ export async function listPayoutBatches(limit = 50, db: Db = getPrisma()): Promi
       reference: b.providerRef,
       entryCount: b.entries.length,
       orderReferences: [...new Set(b.entries.map((e) => e.order.reference))],
+      sendRef: b.sendRef,
+      sendStartedAt: b.sendStartedAt,
+      feeTZS: b.feeTZS,
+      automatic: b.sendRef !== null,
     }))
     .sort((a, b) => (rank[a.status] ?? 9) - (rank[b.status] ?? 9) || b.createdAt.getTime() - a.createdAt.getTime());
 }
@@ -472,7 +495,7 @@ export async function payeeTotals(payee: { payeeType: PayeeType; payeeId: string
   const [owed, paid, pending] = await Promise.all([
     db.ledgerEntry.aggregate({ where: { kind, payoutBatchId: null, order: orderWhere }, _sum: { amountTZS: true } }),
     db.payoutBatch.aggregate({ where: { ...payee, status: "paid" }, _sum: { totalTZS: true } }),
-    db.payoutBatch.aggregate({ where: { ...payee, status: "pending" }, _sum: { totalTZS: true } }),
+    db.payoutBatch.aggregate({ where: { ...payee, status: { in: [...OPEN_BATCH_STATUSES] } }, _sum: { totalTZS: true } }),
   ]);
   return {
     owedTZS: owed._sum.amountTZS ?? 0,
@@ -551,7 +574,7 @@ export async function moneyWork(db: Db = getPrisma()): Promise<MoneyWork> {
       select: { kind: true, createdAt: true, order: { select: { branchId: true, agentId: true } } },
       orderBy: { createdAt: "asc" },
     }),
-    db.payoutBatch.findMany({ where: { status: "pending" }, select: { createdAt: true }, orderBy: { createdAt: "asc" } }),
+    db.payoutBatch.findMany({ where: { status: { in: [...OPEN_BATCH_STATUSES] } }, select: { createdAt: true }, orderBy: { createdAt: "asc" } }),
     db.order.findMany({
       where: { status: "cancelled", payments: { some: { status: "captured" } } },
       select: { id: true, reference: true, decidedAt: true },

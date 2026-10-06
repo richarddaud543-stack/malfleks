@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import PartnerOrderCard from "@/components/partner/PartnerOrderCard";
+import { getPrisma } from "@/server/db/client";
+import { deliveryCodeState } from "@/server/orders/delivery-code";
 import { listOrders } from "@/server/orders/list-orders";
 import { latestPingsForOrders } from "@/server/orders/tracking";
 import { requirePartner } from "@/server/partners/portal";
@@ -16,6 +18,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 /** Never prerendered, for the reason stated on `/partner`. */
 export const dynamic = "force-dynamic";
+
+// A payout run can follow an action on this page (see
+// src/server/money/auto-payouts.ts): a balance preview, one send and a few
+// status checks against ClickPesa. Sixty seconds is well over what that takes
+// and stops the platform cutting it off part-way.
+export const maxDuration = 60;
 
 /**
  * The orders a customer sent to *this* branch.
@@ -62,6 +70,20 @@ export default async function PartnerOrdersPage({ params }: Props) {
   const lastPings = await latestPingsForOrders(confirmedIds).catch(
     () => new Map(),
   );
+
+  // Where each delivery code stands -- paused, locked, reported -- and nothing
+  // else. The `select` names the three columns it needs and `code` is not one
+  // of them: the person who has to be *told* the code must not be able to read
+  // it off their own page.
+  const codeRows = confirmedIds.length
+    ? await getPrisma()
+        .deliveryCode.findMany({
+          where: { orderId: { in: confirmedIds } },
+          select: { orderId: true, wrongAttempts: true, lockedUntil: true, problemAt: true },
+        })
+        .catch(() => [])
+    : [];
+  const codeStates = new Map(codeRows.map((row) => [row.orderId, deliveryCodeState(row)]));
 
   return (
     <div className="mx-auto max-w-3xl px-5 py-16">
@@ -124,6 +146,7 @@ export default async function PartnerOrdersPage({ params }: Props) {
               canDecide={canDecide}
               viewer={isCourier ? "courier" : "branch"}
               locale={locale}
+              codeState={codeStates.get(order.id)}
             />
           ))}
         </ul>

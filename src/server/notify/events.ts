@@ -4,6 +4,8 @@ import { logServerError } from "@/server/error-log";
 import {
   applicationApprovedMessage,
   applicationRejectedMessage,
+  autoPayoutAttentionAdminMessage,
+  deliveryProblemAdminMessage,
   branchNewOrderMessage,
   orderCancelledMessage,
   orderDeliveredMessage,
@@ -471,5 +473,52 @@ export function notifyPayoutSent(batchId: string): Promise<void> {
       siteUrl: resolveSiteUrl(),
     });
     await logIfUndelivered("notify-payout-sent", `partner ${contact.partnerId} about payout ${batchId}`, await sendPartnerEmail(contact.email, subject, body));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Things only MalFleks can settle
+// ---------------------------------------------------------------------------
+
+/**
+ * A delivery the customer's code could not confirm: the partner reported a
+ * problem, or the order locked after too many wrong codes. MalFleks's inbox is
+ * told, because until an admin acts nobody is paid and the customer's money
+ * stays held.
+ */
+export function notifyDeliveryNeedsAdmin(orderId: string, why: "reported" | "locked"): Promise<void> {
+  return afterCommit("notify-delivery-needs-admin", async () => {
+    const order = await getPrisma().order.findUnique({
+      where: { id: orderId },
+      select: { reference: true, productName: true, deliveryCode: { select: { problemNote: true } } },
+    });
+    if (!order) return;
+    const { subject, body } = deliveryProblemAdminMessage({
+      reference: order.reference,
+      productName: order.productName,
+      why,
+      note: order.deliveryCode?.problemNote ?? null,
+      adminUrl: resolveAdminUrl(),
+    });
+    await logIfUndelivered("notify-delivery-needs-admin", `MalFleks that ${order.reference} needs settling`, await sendNotification(subject, body));
+  });
+}
+
+/** An automatic payout that came back: tell MalFleks's inbox, with what ClickPesa said. */
+export function notifyAutoPayoutNeedsAttention(batchId: string): Promise<void> {
+  return afterCommit("notify-auto-payout-attention", async () => {
+    const batch = await getPrisma().payoutBatch.findUnique({
+      where: { id: batchId },
+      select: { payeeType: true, payeeId: true, totalTZS: true, failureNote: true },
+    });
+    if (!batch) return;
+    const contact = await partnerContact(batch.payeeType === "agent" ? { agentId: batch.payeeId } : { branchId: batch.payeeId });
+    const { subject, body } = autoPayoutAttentionAdminMessage({
+      payee: contact?.displayName ?? (batch.payeeType === "agent" ? "a courier" : "a branch"),
+      amountTZS: batch.totalTZS,
+      note: batch.failureNote,
+      adminUrl: resolveAdminUrl(),
+    });
+    await logIfUndelivered("notify-auto-payout-attention", `MalFleks about payout ${batchId}`, await sendNotification(subject, body));
   });
 }

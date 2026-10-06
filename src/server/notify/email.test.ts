@@ -28,6 +28,8 @@ import {
   refundRecordedMessage,
   sendPartnerEmail,
   stuckOrdersDigestMessage,
+  autoPayoutAttentionAdminMessage,
+  deliveryProblemAdminMessage,
 } from "./email";
 
 /**
@@ -322,6 +324,61 @@ describe("customer emails", () => {
     expect(body).toContain("TSh 5,574");
     expect(body).toContain("6274489582750774");
     expect(body).toContain("https://malfleks.vercel.app/track/ORA-DOD-N6CD");
+  });
+
+  it("the receipt gives the delivery code in both languages, and says when to hand it over", () => {
+    const { body } = paymentReceivedMessage({
+      firstName: "Asha",
+      reference: "ORA-DOD-N6CD",
+      productName: "head sets",
+      amountTZS: 5574,
+      paymentReference: "6274489582750774",
+      deliveryCode: "048291",
+      siteUrl: "https://malfleks.vercel.app",
+    });
+    expect(body).toContain("YOUR DELIVERY CODE: 048291");
+    expect(body).toContain("NAMBA YAKO YA KUPOKEA MZIGO: 048291");
+    expect(body).toMatch(/only once the goods are in your hands/);
+    expect(body).toMatch(/MalFleks will never ask you for it/);
+  });
+
+  it("the receipt says nothing about a code when there is none to give", () => {
+    const { body } = paymentReceivedMessage({
+      firstName: null,
+      reference: "ORA-DOD-N6CD",
+      productName: "head sets",
+      amountTZS: 5574,
+      paymentReference: "6274489582750774",
+      deliveryCode: null,
+      siteUrl: "https://malfleks.vercel.app",
+    });
+    expect(body).not.toMatch(/DELIVERY CODE|KUPOKEA MZIGO/);
+  });
+
+  it("tells whoever delivers to ask for the customer's code, and no longer to mark it delivered themselves", () => {
+    for (const role of ["deliver", "collect"] as const) {
+      const { body } = orderPaidPartnerMessage({ role, reference: "ORA-DOD-N6CD", productName: "head sets", quantity: 2, branchName: "oraimo Dodoma", carrier: "MR RICKYY", siteUrl: "https://malfleks.vercel.app" });
+      expect(body).toMatch(/delivery code/);
+      expect(body).toMatch(/tarakimu\s+6|tarakimu 6/);
+      expect(body).not.toMatch(/once you mark/);
+    }
+  });
+
+  it("tells MalFleks when a delivery could not be confirmed, with the partner's words and where to settle it", () => {
+    const reported = deliveryProblemAdminMessage({ reference: "ORA-DOD-N6CD", productName: "head sets", why: "reported", note: "Phone off, code forgotten", adminUrl: "https://admin.example" });
+    expect(reported.subject).toContain("ORA-DOD-N6CD");
+    expect(reported.body).toContain("Phone off, code forgotten");
+    expect(reported.body).toContain("https://admin.example/admin/orders");
+    const locked = deliveryProblemAdminMessage({ reference: "ORA-DOD-N6CD", productName: "head sets", why: "locked", note: null, adminUrl: null });
+    expect(locked.body).toMatch(/wrong delivery code/);
+  });
+
+  it("tells MalFleks when an automatic payout came back", () => {
+    const { subject, body } = autoPayoutAttentionAdminMessage({ payee: "oraimo — Dodoma", amountTZS: 4574, note: "ClickPesa reported REVERSED", adminUrl: "https://admin.example" });
+    expect(subject).toContain("TSh 4,574");
+    expect(subject).toContain("oraimo — Dodoma");
+    expect(body).toContain("ClickPesa reported REVERSED");
+    expect(body).toContain("https://admin.example/admin/payouts");
   });
 });
 

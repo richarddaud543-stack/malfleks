@@ -22,7 +22,7 @@ export default function PrivacySw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Faragha</h1>
-      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 4 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 5 Oktoba 2026.</p>
       <EnglishDecides path="/privacy" />
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -80,6 +80,12 @@ export default function PrivacySw() {
             huduma ya barua pepe, ambayo kwa hiyo hushughulikia anwani yako ya barua pepe na maandishi ya ujumbe huo.
             Google hushughulikia kuingia kwako; hutuambia jina lako, anwani ya barua pepe na picha ya wasifu, na si
             kingine chochote.
+          </p>
+          <p className="mt-2">
+            Tunapokutumia kwa ujumbe mfupi namba ya kupokea mzigo ya oda uliyoilipia, ujumbe hutumwa kupitia Beem,
+            huduma ya ujumbe mfupi, ambayo kwa hiyo hushughulikia namba yako ya simu na maandishi ya ujumbe huo.
+            MalFleks inapolilipa tawi au msafirishaji, ClickPesa hupokea namba ya pesa ya simu ya mshirika huyo na
+            kiasi.
           </p>
           <p className="mt-2">
             Tunahesabu matembezi kwa Vercel Web Analytics, ili tuone kurasa zipi zinatumika na kwa aina gani ya kifaa.

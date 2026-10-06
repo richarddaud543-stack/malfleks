@@ -232,6 +232,9 @@ export async function getOrderDetail(id: string) {
       ledgerEntries: { orderBy: { createdAt: "asc" }, include: { payoutBatch: { select: { id: true, status: true } } } },
       deliveryPings: { orderBy: { createdAt: "asc" } },
       product: { select: { id: true, slug: true, hiddenAt: true } },
+      // The admin console is the one place besides the customer's own pages
+      // that may read the code: an admin settles the deliveries it could not.
+      deliveryCode: true,
     },
   });
   if (!order) return null;

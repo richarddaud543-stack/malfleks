@@ -154,11 +154,11 @@ const SW_BUYER_STEPS: readonly Step[] = [
   },
   {
     title: "Tunashikilia pesa yako",
-    body: "Duka linaambiwa umelipa na linaandaa mzigo wako. Pesa yako inabaki kwa MalFleks wakati mzigo uko njiani.",
+    body: "Duka linaambiwa umelipa na linaandaa mzigo wako. Pesa yako inabaki kwa MalFleks wakati mzigo uko njiani, nawe unapewa namba ya kupokea mzigo yenye tarakimu 6.",
   },
   {
-    title: "Mzigo unafika, kisha duka linalipwa",
-    body: "Mzigo wako ukishafika, MalFleks inalilipa duka na msafirishaji sehemu zao. Si kabla ya hapo.",
+    title: "Mzigo unafika, unataja namba yako, kisha duka linalipwa",
+    body: "Mzigo ukiwa mikononi mwako, mtajie aliyekuletea namba yako ya kupokea mzigo. Hapo ndipo MalFleks inalilipa duka na msafirishaji sehemu zao. Si kabla ya hapo.",
   },
 ];
 
@@ -173,11 +173,11 @@ const SW_SELLER_STEPS: readonly Step[] = [
   },
   {
     title: "Fikisha kilicholipiwa",
-    body: "Unajulishwa mteja akishalipa. Fikisha mzigo mwenyewe, au kupitia msafirishaji wa mji wako, na usipokee pesa yoyote mlangoni.",
+    body: "Unajulishwa mteja akishalipa. Fikisha mzigo mwenyewe, au kupitia msafirishaji wa mji wako, na usipokee pesa yoyote mlangoni. Mwombe mteja namba yake ya kupokea mzigo unapomkabidhi.",
   },
   {
     title: "Lipwa baada ya kufikisha",
-    body: "Mzigo ukishathibitishwa kuwa umefika, MalFleks inakulipa sehemu yako. MalFleks hubaki na ada ya huduma kwa kila mauzo.",
+    body: "Namba ya mteja ya kupokea mzigo ikishaandikwa, MalFleks inakulipa sehemu yako. MalFleks hubaki na ada ya huduma kwa kila mauzo.",
   },
 ];
 
@@ -192,11 +192,11 @@ const SW_COURIER_STEPS: readonly Step[] = [
   },
   {
     title: "Usipokee pesa mlangoni",
-    body: "Mteja ameshalipa MalFleks. Fikisha mzigo, kisha uthibitishe kuwa umefika.",
+    body: "Mteja ameshalipa MalFleks. Mkabidhi mzigo, mwombe namba yake ya kupokea mzigo, kisha uiandike.",
   },
   {
     title: "Lipwa baada ya kufikisha",
-    body: "MalFleks inakulipa sehemu yako ya ada ya usafirishaji mzigo ukishafika.",
+    body: "MalFleks inakulipa sehemu yako ya ada ya usafirishaji namba ya mteja ikishathibitisha kuwa mzigo umefika.",
   },
 ];
 
@@ -223,7 +223,7 @@ const SW_QUESTIONS: readonly Question[] = [
   {
     question: "Itakuwaje mzigo wangu usipofika?",
     answer:
-      "Tuandikie pamoja na namba ya kumbukumbu ya oda yako. Duka hulipwa kwa mzigo uliofika tu, kwa hiyo pesa yako bado iko kwa MalFleks wakati tunalishughulikia.",
+      "Tuandikie pamoja na namba ya kumbukumbu ya oda yako. Duka hulipwa pale tu namba yako ya kupokea mzigo inapoandikwa, na ni wewe peke yako uliye nayo, kwa hiyo pesa yako bado iko kwa MalFleks wakati tunalishughulikia. Usimtajie mtu yeyote namba hiyo kabla mzigo haujafika mikononi mwako.",
     link: { href: "/contact", label: "Wasiliana na MalFleks" },
   },
   {

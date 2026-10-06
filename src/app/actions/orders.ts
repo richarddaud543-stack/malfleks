@@ -232,6 +232,14 @@ export async function markOrderFulfilled(
     const { notifyOrderDelivered } = await import("@/server/notify/events");
     await notifyOrderDelivered(orderId);
 
+    // Delivered and split: pay the partner now, if automatic payouts are on.
+    // After the response; never throws and cannot undo the delivery.
+    const { afterResponse } = await import("@/server/after-response");
+    await afterResponse(async () => {
+      const { runAutoPayouts } = await import("@/server/money/auto-payouts");
+      await runAutoPayouts();
+    });
+
     revalidatePath("/admin/orders", "layout");
     revalidatePath("/admin");
     return { ok: true };

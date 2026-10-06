@@ -60,7 +60,7 @@ export default async function PrivacyPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 4 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 5 October 2026.</p>
       </ScrollReveal>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -134,6 +134,13 @@ export default async function PrivacyPage({ params }: Props) {
             handles your email address and the text of that message. Google
             handles your sign-in; it tells us your name, email address and
             profile picture and nothing else.
+          </p>
+          <p className="mt-2">
+            When we text you the delivery code for an order you have paid for,
+            the message goes out through Beem, an SMS service, which therefore
+            handles your phone number and the text of that message. When
+            MalFleks pays a branch or a courier, ClickPesa receives that
+            partner&apos;s mobile money number and the amount.
           </p>
           <p className="mt-2">
             We count visits with Vercel Web Analytics, so we can see which pages

@@ -2,6 +2,7 @@ import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { accruePayouts } from "@/server/money/payouts";
 import { notifyPartnersOfPayment } from "@/server/notify/events";
+import { ensureDeliveryCode } from "@/server/orders/delivery-code";
 import { sendPaymentReceipts } from "./receipts";
 
 /**
@@ -127,6 +128,11 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
         data: { orderId: payment.orderId, fromStatus: "pending", toStatus: "confirmed", actorUid: PAYMENT_ACTOR, note: "Paid through MalFleks" },
       });
     }
+
+    // The code the customer will give at the door. Created in the same
+    // transaction as the capture, so a paid order always has one -- the
+    // receipt, the text message and the order page all read this row.
+    await ensureDeliveryCode(tx, payment.orderId);
 
     await accruePayouts(tx, payment.orderId);
     return "captured" as const;

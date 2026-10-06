@@ -4,9 +4,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import DeliveryCodePanel from "@/components/account/DeliveryCodePanel";
 import LiveTrackingPanel from "@/components/track/LiveTrackingPanel";
 import { requireSession } from "@/server/auth/dal";
 import { checkoutStatesForCustomer } from "@/server/orders/checkout";
+import { deliveryCodesForCustomer } from "@/server/orders/delivery-code";
 import { trackedOrderForCustomer } from "@/server/orders/tracking";
 
 // One person's own order. Same reasoning as /account and /order/confirmation:
@@ -59,6 +61,9 @@ export default async function TrackOrderPage({
   if (!order) notFound();
 
   const payState = (await checkoutStatesForCustomer(session.uid).catch(() => null))?.get(order.reference)?.state ?? null;
+  // Their code for the door, while the order is paid for and on its way.
+  const deliveryCode =
+    payState === "paid" ? ((await deliveryCodesForCustomer(session.uid).catch(() => null))?.get(order.reference) ?? null) : null;
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
@@ -84,6 +89,8 @@ export default async function TrackOrderPage({
           </Link>
         </div>
       )}
+
+      {payState === "paid" && deliveryCode && <DeliveryCodePanel code={deliveryCode} locale={locale} />}
 
       <LiveTrackingPanel reference={order.reference} initialOrder={order} />
     </div>

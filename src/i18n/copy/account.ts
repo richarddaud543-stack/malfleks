@@ -43,6 +43,11 @@ export const ACCOUNT = {
         rest: " Nothing is due yet — you'll pay here once they do.",
       },
       paid: { strong: "Paid.", rest: " MalFleks holds your payment until it is delivered." },
+      code: {
+        label: "Your delivery code",
+        how: "Give this code to the person who brings your order, and only once the goods are in your hands and you are happy with them. The code is what releases your money to the shop.",
+        never: "Nobody from MalFleks will ever phone you to ask for it.",
+      },
       delivered: {
         strong: "Delivered.",
         rest: " This order has been marked delivered. Thank you for buying through MalFleks.",
@@ -170,6 +175,11 @@ export const ACCOUNT = {
         rest: " Bado hudaiwi chochote — utalipa hapa wakishathibitisha.",
       },
       paid: { strong: "Imelipiwa.", rest: " MalFleks inashikilia malipo yako mpaka mzigo ufike." },
+      code: {
+        label: "Namba yako ya kupokea mzigo",
+        how: "Mtajie namba hii anayekuletea oda yako, na ni pale tu mzigo ukiwa mikononi mwako na umeridhika nao. Namba hii ndiyo inayoruhusu pesa yako kwenda kwa duka.",
+        never: "Hakuna mtu wa MalFleks atakayekupigia simu kuiomba.",
+      },
       delivered: {
         strong: "Umefika.",
         rest: " Oda hii imethibitishwa kuwa imefika. Asante kwa kununua kupitia MalFleks.",

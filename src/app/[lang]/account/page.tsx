@@ -8,6 +8,7 @@ import {
   type SavedOrderRequest,
 } from "@/server/orders/saved-requests";
 import { checkoutStatesForCustomer, type AccountOrderStatus } from "@/server/orders/checkout";
+import { deliveryCodesForCustomer } from "@/server/orders/delivery-code";
 import { partnerForUser } from "@/server/partners/portal";
 import SavedRequestCard from "@/components/account/SavedRequestCard";
 
@@ -65,6 +66,10 @@ export default async function AccountPage({ params }: Props) {
   const orderStates = await checkoutStatesForCustomer(session.uid).catch(
     () => new Map<string, AccountOrderStatus>(),
   );
+  // The code each paid, undelivered order is confirmed with at the door. Only
+  // ever this customer's own; if it cannot be read the cards show without it
+  // and the code is still in their receipt email.
+  const deliveryCodes = await deliveryCodesForCustomer(session.uid).catch(() => new Map<string, string>());
   try {
     requests = await listOrderRequestsForCustomer(session.uid);
   } catch {
@@ -134,6 +139,7 @@ export default async function AccountPage({ params }: Props) {
               key={request.id}
               request={request}
               status={orderStates.get(request.reference) ?? null}
+              deliveryCode={deliveryCodes.get(request.reference) ?? null}
               locale={locale}
             />
           ))}

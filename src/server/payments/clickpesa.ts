@@ -445,3 +445,231 @@ function toPaymentRecord(value: unknown): ClickPesaPaymentRecord {
     updatedAt: str(r.updatedAt),
   };
 }
+
+// ---- Payouts ------------------------------------------------------------
+// docs.clickpesa.com/payout-api/payout-api-overview
+//
+// Money going *out*: MalFleks paying a branch or courier their share. Until
+// 5 Oct 2026 every payout was sent by hand from the ClickPesa dashboard; these
+// four calls are what lets `src/server/money/auto-payouts.ts` send one itself.
+//
+// The order ClickPesa documents, and the order they are used in:
+//   1. `getAccountBalance`        -- is there money to send?
+//   2. `previewMobilePayout`      -- would this exact payout be accepted, and
+//                                    what will it cost? Sends nothing.
+//   3. `createMobilePayout`       -- sends it. Limited by ClickPesa to ONE per
+//                                    merchant every 60 seconds.
+//   4. `queryPayoutStatus`        -- what became of it?
+//
+// The outcome types below are deliberately three-way where it matters:
+// "accepted", "refused" (definitely nothing sent) and "unknown" (the request
+// may or may not have arrived). Only the first two are safe to act on. An
+// unknown must never be retried with a new reference -- that is how a partner
+// gets paid twice.
+
+const PAYOUT_TIMEOUT_MS = 12_000;
+
+export interface PayoutRequest {
+  /** Whole shillings to arrive in the partner's wallet. */
+  amountTZS: number;
+  /** Twelve digits starting 255, no plus -- see `toPayoutPhone`. */
+  phoneNumber: string;
+  /** Alphanumeric only, unique for ever. ClickPesa refuses a repeat with 409. */
+  orderReference: string;
+}
+
+function payoutBody(input: PayoutRequest): Record<string, unknown> {
+  const body: Record<string, unknown> = {
+    amount: input.amountTZS,
+    phoneNumber: input.phoneNumber,
+    currency: "TZS",
+    orderReference: input.orderReference,
+  };
+  body.checksum = createChecksum(body);
+  return body;
+}
+
+async function tokenOrNull(): Promise<{ token: string } | { error: string }> {
+  try {
+    return { token: await getAuthToken() };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
+export type BalanceOutcome =
+  | { ok: true; balanceTZS: number }
+  | { ok: false; reason: "auth-failed" | "request-failed" | "no-account"; detail?: string };
+
+/** What ClickPesa actually holds for this merchant, in shillings. */
+export async function getAccountBalance(): Promise<BalanceOutcome> {
+  const auth = await tokenOrNull();
+  if ("error" in auth) return { ok: false, reason: "auth-failed", detail: auth.error };
+
+  let response: Response;
+  try {
+    response = await fetch(`${CLICKPESA_API_BASE}/account/balance`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${auth.token}` },
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    });
+  } catch (error) {
+    return { ok: false, reason: "request-failed", detail: error instanceof Error ? error.message : String(error) };
+  }
+  if (response.status === 404) return { ok: false, reason: "no-account" };
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    return { ok: false, reason: response.status === 401 ? "auth-failed" : "request-failed", detail: `balance returned ${response.status}: ${text.slice(0, 300)}` };
+  }
+  const data: unknown = await response.json().catch(() => null);
+  const rows = Array.isArray(data) ? data : [];
+  const tzs = rows.find((r) => (r as { currency?: unknown })?.currency === "TZS") as { balance?: unknown } | undefined;
+  const balance = Number(tzs?.balance);
+  if (!Number.isFinite(balance)) return { ok: false, reason: "request-failed", detail: "balance response had no TZS row" };
+  return { ok: true, balanceTZS: balance };
+}
+
+export type PayoutPreviewOutcome =
+  | { ok: true; feeTZS: number; totalTZS: number; balanceTZS: number | null; receiverName: string | null; provider: string | null }
+  /** ClickPesa said no. Nothing was sent, and nothing would have been. */
+  | { ok: false; reason: "refused"; status: number; detail: string }
+  | { ok: false; reason: "auth-failed" | "request-failed"; detail?: string };
+
+/** Ask ClickPesa whether this payout would go, and what it would cost. Sends nothing; not rate-limited. */
+export async function previewMobilePayout(input: PayoutRequest): Promise<PayoutPreviewOutcome> {
+  const auth = await tokenOrNull();
+  if ("error" in auth) return { ok: false, reason: "auth-failed", detail: auth.error };
+
+  let response: Response;
+  try {
+    response = await fetch(`${CLICKPESA_API_BASE}/payouts/preview-mobile-money-payout`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${auth.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payoutBody(input)),
+      signal: AbortSignal.timeout(PAYOUT_TIMEOUT_MS),
+    });
+  } catch (error) {
+    return { ok: false, reason: "request-failed", detail: error instanceof Error ? error.message : String(error) };
+  }
+  if (response.status === 401) return { ok: false, reason: "auth-failed", detail: "preview returned 401" };
+  if (response.status >= 400 && response.status < 500) {
+    const text = await response.text().catch(() => "");
+    return { ok: false, reason: "refused", status: response.status, detail: text.slice(0, 300) };
+  }
+  if (!response.ok) return { ok: false, reason: "request-failed", detail: `preview returned ${response.status}` };
+
+  const data = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+  const fee = Number(data?.fee);
+  const total = Number(data?.amount);
+  const balance = Number(data?.balance);
+  const receiver = (data?.receiver ?? {}) as Record<string, unknown>;
+  if (!data || !Number.isFinite(fee) || !Number.isFinite(total)) {
+    return { ok: false, reason: "request-failed", detail: "preview response had no fee or amount" };
+  }
+  return {
+    ok: true,
+    feeTZS: fee,
+    totalTZS: total,
+    balanceTZS: Number.isFinite(balance) ? balance : null,
+    receiverName: typeof receiver.accountName === "string" && receiver.accountName ? receiver.accountName : null,
+    provider: typeof data.channelProvider === "string" ? data.channelProvider : null,
+  };
+}
+
+/** A payout as ClickPesa reports it. Status is upper-cased; unknown shapes degrade to "UNKNOWN". */
+export interface ClickPesaPayoutRecord {
+  /** AUTHORIZED | SUCCESS | PROCESSING | PENDING | FAILED | REFUNDED | REVERSED */
+  status: string;
+  id: string | null;
+  orderReference: string | null;
+  feeTZS: number | null;
+}
+
+function toPayoutRecord(value: unknown): ClickPesaPayoutRecord {
+  const r = (value ?? {}) as Record<string, unknown>;
+  const fee = Number(r.fee);
+  return {
+    status: typeof r.status === "string" ? r.status.trim().toUpperCase() : "UNKNOWN",
+    id: typeof r.id === "string" && r.id ? r.id : null,
+    orderReference: typeof r.orderReference === "string" && r.orderReference ? r.orderReference : null,
+    feeTZS: Number.isFinite(fee) ? fee : null,
+  };
+}
+
+export type CreatePayoutOutcome =
+  | { ok: true; record: ClickPesaPayoutRecord }
+  /** A 4xx that is not a duplicate: ClickPesa refused it, so nothing was sent. */
+  | { ok: false; reason: "refused"; status: number; detail: string }
+  /** 409: this reference has been used -- an earlier request DID arrive. Look it up; never resend. */
+  | { ok: false; reason: "duplicate-reference" }
+  /** Could not even ask: no token. Nothing was sent. */
+  | { ok: false; reason: "auth-failed"; detail?: string }
+  /**
+   * A timeout, a dropped connection or a 5xx. The request may have arrived and
+   * the payout may be on its way. The caller must treat the money as possibly
+   * sent until `queryPayoutStatus` says otherwise.
+   */
+  | { ok: false; reason: "unknown"; detail?: string };
+
+/** Send a mobile-money payout. One per merchant every 60 seconds (ClickPesa's limit). */
+export async function createMobilePayout(input: PayoutRequest): Promise<CreatePayoutOutcome> {
+  const auth = await tokenOrNull();
+  if ("error" in auth) return { ok: false, reason: "auth-failed", detail: auth.error };
+
+  let response: Response;
+  try {
+    response = await fetch(`${CLICKPESA_API_BASE}/payouts/create-mobile-money-payout`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${auth.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payoutBody(input)),
+      signal: AbortSignal.timeout(PAYOUT_TIMEOUT_MS),
+    });
+  } catch (error) {
+    return { ok: false, reason: "unknown", detail: error instanceof Error ? error.message : String(error) };
+  }
+
+  if (response.status === 409) return { ok: false, reason: "duplicate-reference" };
+  if (response.status >= 400 && response.status < 500) {
+    const text = await response.text().catch(() => "");
+    return { ok: false, reason: "refused", status: response.status, detail: text.slice(0, 300) };
+  }
+  if (!response.ok) return { ok: false, reason: "unknown", detail: `create payout returned ${response.status}` };
+
+  const data: unknown = await response.json().catch(() => null);
+  // A 2xx we cannot read still means ClickPesa accepted the request.
+  if (!data || typeof data !== "object") return { ok: false, reason: "unknown", detail: "create payout answered 2xx with an unreadable body" };
+  return { ok: true, record: toPayoutRecord(data) };
+}
+
+export type PayoutStatusOutcome =
+  | { ok: true; found: true; record: ClickPesaPayoutRecord }
+  /** ClickPesa has no payout under this reference. */
+  | { ok: true; found: false }
+  | { ok: false; reason: "auth-failed" | "request-failed"; detail?: string };
+
+/** Ask ClickPesa what became of a payout, by the reference it was sent under. */
+export async function queryPayoutStatus(orderReference: string): Promise<PayoutStatusOutcome> {
+  const auth = await tokenOrNull();
+  if ("error" in auth) return { ok: false, reason: "auth-failed", detail: auth.error };
+
+  let response: Response;
+  try {
+    response = await fetch(`${CLICKPESA_API_BASE}/payouts/${encodeURIComponent(orderReference)}`, {
+      method: "GET",
+      headers: { Authorization: `Bearer ${auth.token}` },
+      signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
+    });
+  } catch (error) {
+    return { ok: false, reason: "request-failed", detail: error instanceof Error ? error.message : String(error) };
+  }
+  if (response.status === 404) return { ok: true, found: false };
+  if (!response.ok) {
+    const text = await response.text().catch(() => "");
+    if (response.status === 400 && /invalid or missing payout/i.test(text)) return { ok: true, found: false };
+    return { ok: false, reason: response.status === 401 ? "auth-failed" : "request-failed", detail: `payouts/${orderReference} returned ${response.status}: ${text.slice(0, 300)}` };
+  }
+  const data: unknown = await response.json().catch(() => null);
+  const first = Array.isArray(data) ? data[0] : data;
+  if (!first || typeof first !== "object") return { ok: true, found: false };
+  return { ok: true, found: true, record: toPayoutRecord(first) };
+}

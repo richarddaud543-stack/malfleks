@@ -21,7 +21,7 @@ export default function TermsSw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Masharti ya matumizi</h1>
-      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 4 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 5 Oktoba 2026.</p>
       <EnglishDecides path="/terms" />
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -58,6 +58,14 @@ export default function TermsSw() {
             tawi na msafirishaji sehemu zao na kubaki na ada ya huduma, ambayo tayari imo ndani ya kiasi
             ulichoonyeshwa: hutozwi chochote cha ziada juu yake. Kama ulilipa kupitia MalFleks, usililipe tena tawi
             wala msafirishaji mlangoni.
+          </p>
+          <p className="mt-2">
+            <strong>Namba yako ya kupokea mzigo.</strong> Unapolipa, unapewa namba ya kupokea mzigo yenye tarakimu
+            sita: kwenye ukurasa wa oda yako, kwenye risiti yako na, pale tunapoweza, kwa ujumbe mfupi wa simu. Mtajie
+            anayekuletea oda yako pale tu mzigo ukiwa mikononi mwako. Kuandikwa kwa namba hiyo ndiko kunakorekodi kuwa
+            oda imefika na kuruhusu malipo yako kwenda kwa tawi na msafirishaji, kwa hiyo usiitaje kabla ya hapo, na
+            hakuna mtu wa MalFleks atakayekuomba. Kama oda haiwezi kuthibitishwa kwa namba hiyo, MalFleks huwasiliana
+            nawe kabla mtu yeyote hajalipwa.
           </p>
           <p className="mt-2">
             Tawi au MalFleks ikighairi oda uliyoilipia — kwa mfano kwa sababu tawi limebainika kutokuwa na bidhaa hiyo

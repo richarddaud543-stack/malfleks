@@ -11,9 +11,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkChecksum,
   createChecksum,
+  createMobilePayout,
   generateCheckoutLink,
+  getAccountBalance,
   normalizeCustomerPhone,
+  previewMobilePayout,
   queryPaymentStatus,
+  queryPayoutStatus,
   resetAuthTokenCache,
   verifyChecksum,
 } from "./clickpesa";
@@ -415,5 +419,113 @@ describe("queryPaymentStatus", () => {
     vi.stubGlobal("fetch", fetchMock);
     await expect(queryPaymentStatus("ORADODN6CD")).resolves.toMatchObject({ ok: false, reason: "auth-failed" });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ---- Payouts ------------------------------------------------------------
+
+describe("payouts", () => {
+  const TOKEN = () => new Response(JSON.stringify({ success: true, token: "Bearer tok" }), { status: 200 });
+  const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
+  const REQUEST = { amountTZS: 94_000, phoneNumber: "255754000111", orderReference: "PABC123" };
+
+  /** First call is always the token; the second is the call under test. */
+  function stub(second: Response | Error) {
+    const fetchMock = vi.fn().mockResolvedValueOnce(TOKEN());
+    if (second instanceof Error) fetchMock.mockRejectedValueOnce(second);
+    else fetchMock.mockResolvedValueOnce(second);
+    vi.stubGlobal("fetch", fetchMock);
+    return fetchMock;
+  }
+
+  describe("createMobilePayout", () => {
+    it("posts a signed request in shillings and returns what ClickPesa said", async () => {
+      const fetchMock = stub(json({ id: "CP1", status: "success", fee: 1500, orderReference: "PABC123" }));
+
+      const outcome = await createMobilePayout(REQUEST);
+
+      expect(outcome).toEqual({ ok: true, record: { status: "SUCCESS", id: "CP1", orderReference: "PABC123", feeTZS: 1500 } });
+      const [url, init] = fetchMock.mock.calls[1];
+      expect(url).toBe("https://api.clickpesa.com/third-parties/payouts/create-mobile-money-payout");
+      const body = JSON.parse(init.body);
+      expect(body).toMatchObject({ amount: 94_000, phoneNumber: "255754000111", currency: "TZS", orderReference: "PABC123" });
+      const { checksum, ...signed } = body;
+      expect(checksum).toBe(createChecksum(signed));
+    });
+
+    it("calls a 4xx a refusal: nothing was sent", async () => {
+      stub(json({ message: "Insufficient balance" }, 400));
+      await expect(createMobilePayout(REQUEST)).resolves.toMatchObject({ ok: false, reason: "refused", status: 400 });
+    });
+
+    it("keeps a repeated reference apart from a refusal: an earlier request did arrive", async () => {
+      stub(json({ message: "Order reference PABC123 already used" }, 409));
+      await expect(createMobilePayout(REQUEST)).resolves.toEqual({ ok: false, reason: "duplicate-reference" });
+    });
+
+    // The three answers that must never be mistaken for "not sent".
+    it.each([
+      ["a timeout", new Error("The operation was aborted due to timeout")],
+      ["a 502", new Response("bad gateway", { status: 502 })],
+      ["a 200 it cannot read", new Response("<html>", { status: 200 })],
+    ])("reports %s as unknown, not as a refusal", async (_name, second) => {
+      stub(second);
+      await expect(createMobilePayout(REQUEST)).resolves.toMatchObject({ ok: false, reason: "unknown" });
+    });
+
+    it("sends nothing when it cannot get a token", async () => {
+      const fetchMock = vi.fn().mockResolvedValueOnce(new Response("", { status: 403 }));
+      vi.stubGlobal("fetch", fetchMock);
+      await expect(createMobilePayout(REQUEST)).resolves.toMatchObject({ ok: false, reason: "auth-failed" });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("previewMobilePayout", () => {
+    it("returns the fee, the total and the balance", async () => {
+      const fetchMock = stub(json({ amount: 95_500, balance: 500_000, fee: 1_500, channelProvider: "MPESA TANZANIA", receiver: { accountName: "TOYOTA DAR" } }));
+      await expect(previewMobilePayout(REQUEST)).resolves.toEqual({ ok: true, feeTZS: 1_500, totalTZS: 95_500, balanceTZS: 500_000, receiverName: "TOYOTA DAR", provider: "MPESA TANZANIA" });
+      expect(fetchMock.mock.calls[1][0]).toBe("https://api.clickpesa.com/third-parties/payouts/preview-mobile-money-payout");
+    });
+
+    it("passes on ClickPesa's reason when it would not send", async () => {
+      stub(json({ message: "Insufficient balance: available balance is 100 TZS" }, 400));
+      const outcome = await previewMobilePayout(REQUEST);
+      expect(outcome).toMatchObject({ ok: false, reason: "refused", status: 400 });
+      expect(outcome.ok === false && outcome.reason === "refused" && outcome.detail).toContain("Insufficient balance");
+    });
+  });
+
+  describe("queryPayoutStatus", () => {
+    it("reads the first payout under the reference", async () => {
+      stub(json([{ id: "CP1", status: "REVERSED", orderReference: "PABC123", fee: "1500.00" }]));
+      await expect(queryPayoutStatus("PABC123")).resolves.toEqual({ ok: true, found: true, record: { status: "REVERSED", id: "CP1", orderReference: "PABC123", feeTZS: 1500 } });
+    });
+
+    it.each([
+      ["a 404", json({ message: "Invalid or missing payout: PABC123" }, 404)],
+      ["a 400 saying the same", json({ message: "Invalid or missing payout:  PABC123" }, 400)],
+      ["an empty list", json([])],
+    ])("reads %s as 'no such payout', not as an error", async (_name, response) => {
+      stub(response);
+      await expect(queryPayoutStatus("PABC123")).resolves.toEqual({ ok: true, found: false });
+    });
+
+    it("reports a server error as a failed check", async () => {
+      stub(new Response("oops", { status: 500 }));
+      await expect(queryPayoutStatus("PABC123")).resolves.toMatchObject({ ok: false, reason: "request-failed" });
+    });
+  });
+
+  describe("getAccountBalance", () => {
+    it("returns the shilling balance", async () => {
+      stub(json([{ currency: "USD", balance: 3 }, { currency: "TZS", balance: 10_000.5 }]));
+      await expect(getAccountBalance()).resolves.toEqual({ ok: true, balanceTZS: 10_000.5 });
+    });
+
+    it("says when the merchant has no balance account yet", async () => {
+      stub(json({ message: "No balance account is linked to this merchant yet." }, 404));
+      await expect(getAccountBalance()).resolves.toEqual({ ok: false, reason: "no-account" });
+    });
   });
 });

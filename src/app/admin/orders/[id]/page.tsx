@@ -11,6 +11,7 @@ import OrderTrackingMap from "@/components/locator/OrderTrackingMap";
 import { ageLabel, formatTZS, formatWhen } from "@/lib/charts";
 import { displayPhone, formatPhone } from "@/lib/order";
 import { getOrderDetail, type TimelineItem } from "@/server/admin/orders";
+import { WRONG_BEFORE_LOCK } from "@/server/orders/delivery-code";
 import { requireAdmin } from "@/server/auth/dal";
 
 export const metadata: Metadata = {
@@ -19,6 +20,12 @@ export const metadata: Metadata = {
 };
 
 export const dynamic = "force-dynamic";
+
+// A payout run can follow an action on this page (see
+// src/server/money/auto-payouts.ts): a balance preview, one send and a few
+// status checks against ClickPesa. Sixty seconds is well over what that takes
+// and stops the platform cutting it off part-way.
+export const maxDuration = 60;
 
 const PAYMENT_LABEL: Record<string, string> = { captured: "paid", pending: "link sent", failed: "payment failed" };
 const KIND_LABEL: Record<string, string> = {
@@ -47,6 +54,11 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
   const paymentForActions = captured ?? latestPayment;
   const goodsOnly = order.quoteOrderTotalTZS == null;
   const heldForOrder = money.collectedTZS - money.refundedTZS;
+  const code = order.deliveryCode;
+  // Paid, not yet delivered, and the code cannot settle it: a reported
+  // problem, or fifteen wrong codes. Only an admin can move it from here.
+  const deliveryNeedsAdmin =
+    order.status === "confirmed" && Boolean(captured) && Boolean(code) && !code?.usedAt && (Boolean(code?.problemAt) || (code?.wrongAttempts ?? 0) >= WRONG_BEFORE_LOCK);
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -74,6 +86,15 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
           Send the refund from ClickPesa, then record it below so the books match.
         </Notice>
       )}
+      {deliveryNeedsAdmin && (
+        <Notice tone="danger">
+          <strong>
+            {code?.problemAt ? "The shop or courier could not enter the customer's delivery code." : "Too many wrong delivery codes were entered, so entry is locked."}
+          </strong>{" "}
+          Nobody has been paid. Ring the customer on {formatPhone(order.customerPhone)}: if they have the goods, mark the order delivered below; if
+          not, cancel it and refund them.
+        </Notice>
+      )}
       {order.status === "fulfilled" && captured && !money.split && (
         <Notice tone="warn">
           <strong>Delivered and paid, but the payouts haven&apos;t been worked out.</strong> Use &ldquo;Work out payouts&rdquo; in
@@ -90,7 +111,7 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                 {order.status === "pending"
                   ? "Ring the branch: is it in stock at this price? Then confirm — that opens the customer's checkout and emails them the link — or cancel with the reason."
                   : captured
-                    ? "Paid. Once it is delivered, mark it fulfilled — the branch or courier can also do that themselves."
+                    ? "Paid. The shop or courier confirms delivery by entering the customer's delivery code — that is what marks it delivered and makes them payable. Mark it fulfilled yourself only when the code can't be used and you have checked with the customer."
                     : latestPayment
                       ? `Confirmed, and the customer's checkout is open${order.customerEmail ? " (they were emailed the link)" : " (no email on file — they'll find it on their account page)"}. Waiting for them to pay.`
                       : "Confirmed, but no payment link exists yet. It is made when the customer opens their checkout, or use “Send payment link”."}
@@ -103,6 +124,38 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
                   payment: paymentForActions ? { status: paymentForActions.status, checkoutLink: paymentForActions.checkoutLink } : null,
                 }}
               />
+            </Card>
+          )}
+
+          {code && captured && (
+            <Card className="p-4">
+              <h2 className="text-sm font-semibold">Delivery code</h2>
+              <p className="mt-1 text-xs text-muted">
+                The customer gives this to whoever delivers, once they have the goods. Read it to the customer only if you are sure you are
+                speaking to them — never to the shop or the courier.
+              </p>
+              <div className="mt-3">
+                <Facts
+                  items={[
+                    { label: "Code", value: <span className="select-all font-mono text-base tracking-widest">{code.code}</span> },
+                    {
+                      label: "State",
+                      value: code.usedAt
+                        ? `Entered ${formatWhen(code.usedAt)}`
+                        : code.wrongAttempts >= WRONG_BEFORE_LOCK
+                          ? "Locked — too many wrong codes"
+                          : order.status === "confirmed"
+                            ? "Not entered yet"
+                            : "Not used",
+                    },
+                    { label: "Wrong codes entered", value: String(code.wrongAttempts) },
+                    { label: "Texted to the customer", value: code.smsSentAt ? formatWhen(code.smsSentAt) : "No — it is on their order page and in their receipt email" },
+                    ...(code.problemAt
+                      ? [{ label: `Problem reported ${formatWhen(code.problemAt)}`, value: code.problemNote ?? "—", wide: true }]
+                      : []),
+                  ]}
+                />
+              </div>
             </Card>
           )}
 
@@ -340,7 +393,16 @@ export default async function AdminOrderPage({ params }: { params: Promise<{ id:
               </div>
             )}
 
-            {order.status === "fulfilled" && captured && !money.split && (
+            {deliveryNeedsAdmin && (
+        <Notice tone="danger">
+          <strong>
+            {code?.problemAt ? "The shop or courier could not enter the customer's delivery code." : "Too many wrong delivery codes were entered, so entry is locked."}
+          </strong>{" "}
+          Nobody has been paid. Ring the customer on {formatPhone(order.customerPhone)}: if they have the goods, mark the order delivered below; if
+          not, cancel it and refund them.
+        </Notice>
+      )}
+      {order.status === "fulfilled" && captured && !money.split && (
               <ActionForm
                 className="mt-4 border-t border-border pt-3"
                 action={accruePayoutsAction}

@@ -51,7 +51,7 @@ export default async function TermsPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 4 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 5 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -101,6 +101,17 @@ export default async function TermsPage({ params }: Props) {
             the amount you were shown: you are not charged anything on top of it.
             If you paid through MalFleks, do not pay the branch or the courier
             again at the door.
+          </p>
+          <p className="mt-2">
+            <strong>Your delivery code.</strong> When you pay, you are given a
+            six-digit delivery code: on your order page, in your receipt and,
+            where we can, by text message. Give it to the person who brings
+            your order only once the goods are in your hands. Entering that
+            code is what records the order as delivered and releases your
+            payment to the branch and the courier, so do not share it before
+            then, and nobody from MalFleks will ask you for it. If a delivery
+            cannot be confirmed with the code, MalFleks checks with you before
+            anyone is paid.
           </p>
           <p className="mt-2">
             If the branch or MalFleks cancels an order you have paid for — for

@@ -157,11 +157,34 @@ describe("PartnerOrderCard", () => {
   // been paid drew "Mark delivered" and the location button under a sentence
   // telling the branch not to hand anything over.
   describe("delivery controls", () => {
-    const delivered = () => screen.queryByRole("button", { name: "Mark delivered" });
-
-    it("offers “Mark delivered” on a confirmed order that has been paid for", () => {
+    // Until 5 Oct 2026 this was a "Mark delivered" button: the person paid for
+    // the delivery was the only one who said it happened. Now they must type
+    // the code the customer holds.
+    it("asks for the customer's delivery code on a confirmed order that has been paid for", () => {
       render(<PartnerOrderCard order={{ ...base, status: "confirmed", payment: { status: "captured", checkoutLink: null } } as ListedOrder} />);
-      expect(delivered()).toBeVisible();
+      expect(screen.getByLabelText(`Delivery code for ${base.reference}`)).toBeVisible();
+      expect(screen.getByRole("button", { name: "Confirm delivery" })).toBeVisible();
+      expect(screen.getByRole("button", { name: "I can't enter the code" })).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Mark delivered" })).not.toBeInTheDocument();
+    });
+
+    it("never shows the code itself: the card is not given one", () => {
+      const { container } = render(
+        <PartnerOrderCard order={{ ...base, status: "confirmed", payment: { status: "captured", checkoutLink: null } } as ListedOrder} />,
+      );
+      expect(screen.getByLabelText(`Delivery code for ${base.reference}`)).toHaveValue("");
+      expect(container.textContent).not.toMatch(/\b\d{6}\b/);
+    });
+
+    it("says the order is locked, and offers no entry, after too many wrong codes", () => {
+      render(
+        <PartnerOrderCard
+          order={{ ...base, status: "confirmed", payment: { status: "captured", checkoutLink: null } } as ListedOrder}
+          codeState={{ lockedUntil: null, adminOnly: true, problemReported: false }}
+        />,
+      );
+      expect(screen.getByText(/this order is locked/)).toBeVisible();
+      expect(screen.queryByRole("button", { name: "Confirm delivery" })).not.toBeInTheDocument();
     });
 
     it("offers nothing on a confirmed order whose payment is still open, and says it is not paid", () => {

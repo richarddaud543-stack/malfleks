@@ -234,9 +234,9 @@ export default function OrderActions({ order }: { order: ActionableOrder }) {
           {mode === "fulfilling" && (
             <>
               <span className="mr-auto text-sm text-muted">
-                Mark {order.reference} as delivered / handed off?
+                Mark {order.reference} as delivered without the customer&apos;s code?
                 {order.payment?.status === "captured" &&
-                  " The money held for it is then split into what the branch and courier are owed."}
+                  " Only do this once the customer has told you they have the goods. The money held for it is then split into what the branch and courier are owed, and can't be taken back once paid out."}
               </span>
               <button
                 type="button"

@@ -11,7 +11,9 @@ import { PROMISE } from "./promise";
  * something the Terms commit to and the code carries out:
  *
  * - paying is by mobile money on ClickPesa's page, to MalFleks (`settle.ts`);
- * - the shop and the courier are paid after delivery (`payouts.ts`);
+ * - the shop and the courier are paid after delivery (`payouts.ts`), and a
+ *   delivery is confirmed by the code only the customer holds
+ *   (`delivery-code.ts`);
  * - an order the shop or MalFleks cancels is refunded in full;
  * - an unpaid order can be cancelled by the customer, a paid one is asked
  *   about (`customer-cancel.ts`);
@@ -39,11 +41,11 @@ export const BUYER_STEPS: readonly Step[] = [
   },
   {
     title: "We hold your money",
-    body: "The shop is told you have paid and gets your order ready. Your money stays with MalFleks while it is on its way.",
+    body: "The shop is told you have paid and gets your order ready. Your money stays with MalFleks while it is on its way, and you are given a 6-digit delivery code.",
   },
   {
-    title: "It arrives, then the shop is paid",
-    body: "Once your order has been delivered, MalFleks pays the shop and the courier their shares. Not before.",
+    title: "It arrives, you give your code, then the shop is paid",
+    body: "When your order is in your hands, give your delivery code to the person who brought it. Only then does MalFleks pay the shop and the courier their shares. Not before.",
   },
 ];
 
@@ -58,11 +60,11 @@ export const SELLER_STEPS: readonly Step[] = [
   },
   {
     title: "Deliver what has been paid for",
-    body: "You are told when a customer has paid. Deliver the order yourself, or through a courier in your city, and collect nothing at the door.",
+    body: "You are told when a customer has paid. Deliver the order yourself, or through a courier in your city, and collect nothing at the door. Ask the customer for their delivery code when you hand it over.",
   },
   {
     title: "Get paid after delivery",
-    body: "When the order is marked delivered, MalFleks pays you your share. MalFleks keeps a service fee from each sale.",
+    body: "When the customer's delivery code has been entered, MalFleks pays you your share. MalFleks keeps a service fee from each sale.",
   },
 ];
 
@@ -77,11 +79,11 @@ export const COURIER_STEPS: readonly Step[] = [
   },
   {
     title: "Collect nothing at the door",
-    body: "The customer has already paid MalFleks. Deliver the order and mark it delivered.",
+    body: "The customer has already paid MalFleks. Hand over the order, ask the customer for their delivery code, and enter it.",
   },
   {
     title: "Get paid after delivery",
-    body: "MalFleks pays you your share of the delivery fee once the order has been delivered.",
+    body: "MalFleks pays you your share of the delivery fee once the customer's code has confirmed the delivery.",
   },
 ];
 
@@ -111,7 +113,7 @@ export const QUESTIONS: readonly Question[] = [
   },
   {
     question: "What if my order does not arrive?",
-    answer: "Write to us with your order reference. The shop is paid only for an order that has been delivered, so your money is still with MalFleks while we sort it out.",
+    answer: "Write to us with your order reference. The shop is paid only once your delivery code has been entered, and only you have that code, so your money is still with MalFleks while we sort it out. Never give the code to anyone before the goods are in your hands.",
     link: { href: "/contact", label: "Contact MalFleks" },
   },
   {

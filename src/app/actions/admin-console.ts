@@ -175,6 +175,95 @@ export async function cancelPayoutAction(_prev: ConsoleState, formData: FormData
   }
 }
 
+/** The off switch for automatic payouts. Pausing takes effect on the next run; it recalls nothing already sent. */
+export async function setAutoPayoutsPausedAction(_prev: ConsoleState, formData: FormData): Promise<ConsoleState> {
+  const session = await adminSession();
+  if (!session) return FORBIDDEN;
+  const paused = field(formData, "paused") === "true";
+  try {
+    const { setAutoPayoutsPaused } = await import("@/server/money/auto-payouts");
+    await setAutoPayoutsPaused(paused, session.uid);
+    revalidateMoney();
+    return {
+      status: "ok",
+      message: paused ? "Paused. Nothing more is sent automatically until you resume." : "Resumed. The next confirmed delivery is paid automatically.",
+    };
+  } catch (error) {
+    await logServerError("set-auto-payouts-paused", error, session.uid);
+    return FAILED;
+  }
+}
+
+const SKIP_WORDS: Record<string, string> = {
+  "no-mobile-number": "no mobile number on file",
+  "below-minimum": "under ClickPesa's 2,500 TSh minimum",
+  "above-ceiling": "over the per-payout ceiling",
+  "daily-ceiling": "today's ceiling is reached",
+  "recently-failed": "a payout to them failed in the last 24 hours",
+};
+
+/** "Run now": settle payouts still on their way, and send one that is owed. The same pass a confirmed delivery starts. */
+export async function runAutoPayoutsAction(): Promise<ConsoleState> {
+  const session = await adminSession();
+  if (!session) return FORBIDDEN;
+  try {
+    const { runAutoPayouts } = await import("@/server/money/auto-payouts");
+    const run = await runAutoPayouts();
+    revalidateMoney();
+
+    const parts: string[] = [];
+    if (run.settled.length) parts.push(`${run.settled.length} earlier payout${run.settled.length === 1 ? "" : "s"} settled.`);
+    if (run.skipped === "off") parts.push("Automatic payouts are not switched on for this site, so nothing new was sent.");
+    else if (run.skipped === "paused") parts.push("Automatic payouts are paused, so nothing new was sent.");
+    else if (run.sent) {
+      const amount = `TSh ${run.sent.amountTZS.toLocaleString("en-US")}`;
+      const said: Record<typeof run.sent.result, string> = {
+        paid: `Sent ${amount} to ${run.sent.payee}.`,
+        sending: `${amount} to ${run.sent.payee} is on its way; ClickPesa has not confirmed it yet.`,
+        unknown: `Asked ClickPesa to send ${amount} to ${run.sent.payee} but got no clear answer. It is held as "sending" and will not be sent twice.`,
+        refused: `ClickPesa would not send ${amount} to ${run.sent.payee}. Nothing left the account; it is owed again.`,
+        "insufficient-balance": `ClickPesa's balance cannot cover ${amount} to ${run.sent.payee}. Nothing was sent.`,
+      };
+      parts.push(said[run.sent.result]);
+    } else parts.push("Nothing to send right now.");
+    for (const left of run.leftForAdmin) {
+      parts.push(`${left.payee} left for you: ${SKIP_WORDS[left.reason] ?? left.reason}.`);
+    }
+    if (!run.skipped && run.sent && (run.sent.result === "paid" || run.sent.result === "sending")) {
+      parts.push("ClickPesa allows one payout a minute, so press again in a minute if more are owed.");
+    }
+    const failed = run.sent && (run.sent.result === "refused" || run.sent.result === "insufficient-balance" || run.sent.result === "unknown");
+    return { status: failed ? "error" : "ok", message: parts.join(" ") };
+  } catch (error) {
+    await logServerError("run-auto-payouts", error, session.uid);
+    return FAILED;
+  }
+}
+
+/** What ClickPesa really holds, beside what the books say it should. One API call. */
+export async function compareBalanceAction(): Promise<ConsoleState> {
+  const session = await adminSession();
+  if (!session) return FORBIDDEN;
+  try {
+    const { compareBooksWithClickPesa } = await import("@/server/money/auto-payouts");
+    const check = await compareBooksWithClickPesa();
+    if (!check.ok) return { status: "error", message: `Couldn't read the ClickPesa balance: ${check.reason}` };
+    const tsh = (n: number) => `TSh ${Math.round(n).toLocaleString("en-US")}`;
+    const head = `ClickPesa holds ${tsh(check.clickpesaTZS)}. The books say ${tsh(check.booksTZS)} should be held.`;
+    if (check.differenceTZS === 0) return { status: "ok", message: `${head} They match.` };
+    return {
+      status: check.differenceTZS < 0 ? "error" : "ok",
+      message:
+        check.differenceTZS < 0
+          ? `${head} ClickPesa is ${tsh(-check.differenceTZS)} short of the books — ClickPesa's own fees, or money moved outside MalFleks. Find out which before paying anyone.`
+          : `${head} ClickPesa has ${tsh(check.differenceTZS)} more than the books — money added outside MalFleks, or a payment not yet recorded.`,
+    };
+  } catch (error) {
+    await logServerError("compare-balance", error, session.uid);
+    return FAILED;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Partners
 // ---------------------------------------------------------------------------

@@ -1,9 +1,16 @@
 import { logServerError } from "@/server/error-log";
 import { runAgent } from "@/agents/runtime";
+import { runAutoPayouts } from "@/server/money/auto-payouts";
 import { runStuckOrderSafetyNet } from "@/server/orders/stuck";
 import { reconcileDue } from "@/server/payments/reconcile";
 
 export const dynamic = "force-dynamic";
+
+// A payout run can follow an action on this page (see
+// src/server/money/auto-payouts.ts): a balance preview, one send and a few
+// status checks against ClickPesa. Sixty seconds is well over what that takes
+// and stops the platform cutting it off part-way.
+export const maxDuration = 60;
 
 /**
  * The daily payment check, called by Vercel Cron (see `vercel.json`).
@@ -40,6 +47,13 @@ export const dynamic = "force-dynamic";
  * trigger. It cannot fail this route either: `runAgent` records its own
  * failures and never throws.
  *
+ * ## The fourth job: payouts
+ *
+ * `runAutoPayouts` settles any payout still waiting on ClickPesa's answer and,
+ * when automatic payouts are armed and not paused, sends one that is owed. The
+ * main trigger is the moment a delivery is confirmed; this daily pass is the
+ * safety net behind it.
+ *
  * ## The second job: orders that have stopped moving
  *
  * After the payment check, the same run sends MalFleks's inbox one digest of
@@ -75,6 +89,11 @@ export async function GET(request: Request): Promise<Response> {
   // its own failure and reports `null`.
   const stuck = await runStuckOrderSafetyNet();
 
+  // Payouts: ask ClickPesa about any still on their way, and (when automatic
+  // payouts are on) send one that is owed. A catch-up for anything the run
+  // straight after a delivery could not finish. Never throws.
+  const payouts = ready ? await runAutoPayouts() : null;
+
   // The city's one scheduled resident. Never throws; a crashed shift is a
   // recorded `error` the city page shows.
   const watch = await runAgent("watchman", "schedule");
@@ -89,6 +108,7 @@ export async function GET(request: Request): Promise<Response> {
     results: results.map((r) => ({ ref: r.providerRef, outcome: r.outcome, clickpesa: r.providerStatus })),
     stuckOrders: stuck.digest,
     branchReminders: stuck.branchReminders,
+    payouts: payouts ? { skipped: payouts.skipped ?? null, settled: payouts.settled.length, sent: payouts.sent?.result ?? null, leftForAdmin: payouts.leftForAdmin.length } : null,
     watchman: watch.ok ? { outcome: watch.run.outcome, summary: watch.run.summary } : { outcome: "unknown-agent" },
     ...(ready ? {} : { skipped: "ClickPesa credentials not set on this deployment" }),
   });

@@ -25,8 +25,8 @@ import { createOrder } from "./create-order";
 import {
   cancelOrder,
   confirmOrder,
+  ADMIN_DELIVERED_NOTE,
   markOrderFulfilled,
-  markOrderFulfilledByPartner,
   orderHistory,
 } from "./status";
 import type { SaveOrderRequestInput } from "./build-order-request";
@@ -334,133 +334,23 @@ describe("the OrderEvent history", () => {
   });
 });
 
-/** Records the customer's money as held for this order, the way `capturePayment` leaves it. */
-let paymentSeq = 0;
-async function markPaid(orderId: string) {
-  paymentSeq += 1;
-  await getPrisma().orderPayment.create({
-    data: { orderId, providerRef: `TESTPAID${paymentSeq}`, provider: "clickpesa", amountTZS: 68_000_000, status: "captured", capturedAt: new Date() },
-  });
-}
-
-describe("markOrderFulfilledByPartner — the one transition a partner may make", () => {
-  it("marks a confirmed, paid order fulfilled when the branch scope matches", async () => {
-    const orderId = await pendingOrder(); // toyota-dar branch
-    await confirmOrder(orderId, "admin-1");
-    await markPaid(orderId);
-
-    const outcome = await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: "toyota-dar", agentId: null },
-      "uid-partner-fulfil",
-    );
-    expect(outcome).toEqual({ ok: true });
-
-    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
-    expect(row.status).toBe("fulfilled");
-    expect(row.decidedBy).toBe("uid-partner-fulfil");
-  });
-
-  it("refuses a different branch's scope — the IDOR case", async () => {
-    const orderId = await pendingOrder(); // toyota-dar branch
-    await confirmOrder(orderId, "admin-1");
-
-    const outcome = await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: "toyota-arusha", agentId: null },
-      "uid-not-this-branch",
-    );
-    expect(outcome).toEqual({ ok: false, reason: "not-found" });
-
-    // Refused before the transition ever ran — status is untouched.
-    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
-    expect(row.status).toBe("confirmed");
-    expect(row.decidedBy).toBe("admin-1");
-  });
-
-  // The promise on the site is that the shop is paid after delivery, which is
-  // only true if nothing is delivered before it is paid for. Until 4 Oct 2026
-  // the partner page offered "Mark delivered" on exactly this order.
-  it("refuses a confirmed order the customer has not paid for, and leaves it confirmed", async () => {
-    const orderId = await pendingOrder();
-    await confirmOrder(orderId, "admin-1");
-
-    const outcome = await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: "toyota-dar", agentId: null },
-      "uid-partner-fulfil",
-    );
-    expect(outcome).toEqual({ ok: false, reason: "not-paid" });
-
-    const row = await getPrisma().order.findUniqueOrThrow({ where: { id: orderId } });
-    expect(row.status).toBe("confirmed");
-    expect(row.decidedBy).toBe("admin-1");
-  });
-
-  it("does not count a payment that was only attempted", async () => {
-    const orderId = await pendingOrder();
-    await confirmOrder(orderId, "admin-1");
-    await getPrisma().orderPayment.create({
-      data: { orderId, providerRef: "TESTOPEN1", provider: "clickpesa", amountTZS: 68_000_000, status: "pending", checkoutLink: "https://checkout.clickpesa.com/X" },
-    });
-
-    await expect(
-      markOrderFulfilledByPartner(orderId, { branchId: "toyota-dar", agentId: null }, "uid-partner-fulfil"),
-    ).resolves.toEqual({ ok: false, reason: "not-paid" });
-  });
-
+describe("markOrderFulfilled — the admin's fallback", () => {
+  // A partner can no longer mark their own delivery: that moved to
+  // `delivery-code.integration.test.ts` on 5 Oct 2026, where it needs the
+  // customer's code. What is left here is the admin's way through for the
+  // deliveries a code cannot confirm.
   it("still lets an admin mark an unpaid order fulfilled, for one settled outside MalFleks", async () => {
     const orderId = await pendingOrder();
     await confirmOrder(orderId, "admin-1");
     await expect(markOrderFulfilled(orderId, "admin-1")).resolves.toEqual({ ok: true });
   });
 
-  it("refuses a still-pending order — nobody has paid for it or confirmed it", async () => {
-    const orderId = await pendingOrder();
-
-    const outcome = await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: "toyota-dar", agentId: null },
-      "uid-partner-fulfil",
-    );
-    expect(outcome).toEqual({ ok: false, reason: "not-paid" });
-  });
-
-  it("cannot mark the same order delivered twice", async () => {
+  it("writes into the order's history that it was done without the customer's code", async () => {
     const orderId = await pendingOrder();
     await confirmOrder(orderId, "admin-1");
-    await markPaid(orderId);
-    const scope = { branchId: "toyota-dar", agentId: null };
-
-    await expect(markOrderFulfilledByPartner(orderId, scope, "uid-partner-fulfil")).resolves.toEqual({ ok: true });
-    await expect(markOrderFulfilledByPartner(orderId, scope, "uid-partner-fulfil")).resolves.toEqual({ ok: false, reason: "invalid-transition" });
-  });
-
-  it("refuses a scope with neither branchId nor agentId", async () => {
-    const orderId = await pendingOrder();
-    await confirmOrder(orderId, "admin-1");
-
-    const outcome = await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: null, agentId: null },
-      "uid-no-scope",
-    );
-    expect(outcome).toEqual({ ok: false, reason: "not-found" });
-  });
-
-  it("appends an OrderEvent stamped with the partner's own uid, not an admin's", async () => {
-    const orderId = await pendingOrder();
-    await confirmOrder(orderId, "admin-1");
-    await markPaid(orderId);
-    await markOrderFulfilledByPartner(
-      orderId,
-      { branchId: "toyota-dar", agentId: null },
-      "uid-partner-fulfil",
-    );
+    await markOrderFulfilled(orderId, "admin-1");
 
     const events = await orderHistory(orderId);
-    const last = events[events.length - 1];
-    expect(last.toStatus).toBe("fulfilled");
-    expect(last.actorUid).toBe("uid-partner-fulfil");
+    expect(events[events.length - 1].note).toBe(ADMIN_DELIVERED_NOTE);
   });
 });

@@ -101,12 +101,33 @@ export async function POST(request: Request): Promise<Response> {
       });
     } else if (event === "PAYMENT FAILED") {
       await failPayment(orderReference, typeof data.message === "string" ? data.message : null);
+    } else if (event.startsWith("PAYOUT ")) {
+      // A payout MalFleks sent itself (see src/server/money/auto-payouts.ts).
+      // `orderReference` is the batch's `sendRef`; one that is not ours (a
+      // payout made by hand from the dashboard) matches nothing and is ignored.
+      // The status in the body is applied by the same function the send and
+      // the status check use, so all three roads agree. For REFUNDED and
+      // REVERSED the event name itself is the status if the body has none.
+      const fromEvent = event === "PAYOUT REFUNDED" ? "REFUNDED" : event === "PAYOUT REVERSED" ? "REVERSED" : null;
+      const status = (typeof data.status === "string" && data.status.trim() ? data.status.trim().toUpperCase() : null) ?? fromEvent ?? "UNKNOWN";
+      const fee = Number(data.fee);
+      const { settlePayoutFromProvider } = await import("@/server/money/auto-payouts");
+      const { outcome, batchId } = await settlePayoutFromProvider(orderReference, {
+        status: fromEvent ?? status,
+        id: typeof data.id === "string" && data.id ? data.id : null,
+        orderReference,
+        feeTZS: Number.isFinite(fee) ? fee : null,
+      });
+      if (batchId && outcome === "paid") {
+        const { notifyPayoutSent } = await import("@/server/notify/events");
+        await notifyPayoutSent(batchId);
+      } else if (batchId && outcome === "returned") {
+        const { notifyAutoPayoutNeedsAttention } = await import("@/server/notify/events");
+        await notifyAutoPayoutNeedsAttention(batchId);
+      }
     }
-    // Every other event (PROCESSING, PAYOUT INITIATED/REFUNDED/REVERSED) is
-    // acknowledged and ignored -- MalFleks doesn't disburse payouts through
-    // this application yet (see malfleks-escrow-ledger-design.md Section 5),
-    // and a PROCESSING payment isn't a decision either side of this system
-    // needs to act on yet.
+    // Every other event (a PROCESSING payment) is acknowledged and ignored:
+    // it isn't a decision either side of this system needs to act on.
   } catch (error) {
     await logServerError("clickpesa-webhook", error);
     // Still 2xx below: the failure is logged for admin review, and returning

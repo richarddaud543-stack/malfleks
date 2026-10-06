@@ -81,7 +81,7 @@ export const PARTNER = {
       introCourier:
         "Deliveries a customer routed to you. Act on an order once it says “Paid through MalFleks”: collect it from the branch, call the customer and quote the reference, and collect nothing at the door — MalFleks has the customer's money and pays your share after delivery. An order that is not paid yet is not ready to collect.",
       introBranch:
-        "Orders for your branch. Customers pay MalFleks when they order, so act on an order once it says “Paid through MalFleks”: deliver it, collect nothing at the door, and MalFleks pays your share after delivery. If you can't supply a paid order, say so here and the customer is refunded. Keep your stock switches up to date so that rarely happens.",
+        "Orders for your branch. Customers pay MalFleks when they order, so act on an order once it says “Paid through MalFleks”: deliver it, collect nothing at the door, then enter the delivery code the customer gives you — that confirms the delivery and MalFleks pays your share. If you can't supply a paid order, say so here and the customer is refunded. Keep your stock switches up to date so that rarely happens.",
       suspended:
         "Your account is suspended, so you can see these orders but can't confirm or decline them. MalFleks is handling them for now.",
       unavailableHeading: "We can't reach your orders right now",
@@ -104,7 +104,8 @@ export const PARTNER = {
       notPaid: "Not paid yet",
       paidDeliver: "Paid — deliver now",
       each: (price: string) => `${price} each`,
-      paid: { strong: "Paid through MalFleks.", rest: " Collect nothing at the door — MalFleks pays your share after delivery." },
+      paid: { strong: "Paid through MalFleks.", rest: " Collect nothing at the door — MalFleks pays your share once the customer's delivery code is entered." },
+      courierConfirms: "The courier confirms this delivery with the customer's code. Your share is paid once they have.",
       unpaid:
         "The customer hasn't paid yet. There is nothing to do until this says “Paid through MalFleks” — don't hand anything over before then.",
       reference: "Reference to quote",
@@ -139,18 +140,34 @@ export const PARTNER = {
       yesDecline: "Yes, decline this order",
       yesDeclineLabel: (reference: string) => `Yes, decline ${reference}`,
     },
-    fulfil: {
-      already: "This order already moved — reload to see its current state.",
-      notFound: "This order can't be marked from here.",
-      notPaid:
-        "The customer hasn't paid for this order yet, so it can't be marked delivered. Don't hand anything over until it says “Paid through MalFleks”.",
-      failed: "Couldn't record that. Nothing changed — try again.",
-      done: "Marked delivered.",
-      mark: "Mark delivered",
-      confirm: "Confirm this arrived?",
+    deliver: {
+      label: "Customer's delivery code",
+      hint: "Hand over the goods, then ask the customer for their 6-digit code and enter it here. This is what marks the order delivered and releases your share.",
+      inputLabel: (reference: string) => `Delivery code for ${reference}`,
+      submit: "Confirm delivery",
+      checking: "Checking…",
+      done: "Delivered — confirmed with the customer's code. MalFleks will pay your share.",
+      wrong: (triesLeft: number) =>
+        `That is not the code for this order. Ask the customer to read it again. ${triesLeft} ${triesLeft === 1 ? "try" : "tries"} left before a 15-minute wait.`,
+      wrongLocked: (time: string) => `That is not the code. Too many wrong tries — you can try again after ${time}.`,
+      locked: (time: string) => `Too many wrong codes. You can try again after ${time}.`,
+      lockedAdmin:
+        "Too many wrong codes were entered, so this order is locked. MalFleks has been told and will settle it with the customer.",
+      badCode: "The code is 6 digits. Check it and try again.",
+      notPaid: "The customer hasn't paid for this order yet. Don't hand anything over.",
+      already: "This order already moved — reload to see where it stands.",
+      notFound: "This order can't be confirmed from here.",
+      signedOut: "Your session has expired. Sign in again.",
+      failed: "Couldn't check the code. Nothing changed — try again.",
+      cant: "I can't enter the code",
+      cantWhy: "What happened?",
+      cantHint:
+        "For example: “Delivered, but the customer's phone is off and they don't remember the code.” MalFleks will ring the customer. You are not paid until MalFleks has settled it.",
+      noteRequired: "Say what happened in a sentence, so MalFleks knows what to ask the customer.",
       back: "Back",
-      marking: "Marking…",
-      yes: "Yes, delivered",
+      send: "Tell MalFleks",
+      sending: "Sending…",
+      reported: "MalFleks has been told and will ring the customer. If the customer gives you the code in the meantime, you can still enter it above.",
     },
     ping: {
       noBrowser: "This browser can't share your location.",
@@ -401,7 +418,7 @@ export const PARTNER = {
       introCourier:
         "Mizigo ambayo mteja amekuchagua uipeleke. Shughulikia oda ikishaandikwa “Imelipwa kupitia MalFleks”: ichukue tawini, mpigie mteja na utaje namba ya kumbukumbu, na usipokee chochote mlangoni — pesa ya mteja iko MalFleks, nayo inakulipa sehemu yako baada ya kufikisha. Oda ambayo bado haijalipiwa haiko tayari kuchukuliwa.",
       introBranch:
-        "Oda za tawi lako. Wateja hulipa MalFleks wanapoagiza, kwa hiyo shughulikia oda ikishaandikwa “Imelipwa kupitia MalFleks”: ifikishe, usipokee chochote mlangoni, na MalFleks itakulipa sehemu yako baada ya kufikisha. Ukishindwa kumpatia mteja oda iliyolipiwa, sema hapa na mteja atarudishiwa pesa. Hakikisha hali ya bidhaa zako (ipo au imeisha) iko sahihi kila wakati ili hilo litokee mara chache.",
+        "Oda za tawi lako. Wateja hulipa MalFleks wanapoagiza, kwa hiyo shughulikia oda ikishaandikwa “Imelipwa kupitia MalFleks”: ifikishe, usipokee chochote mlangoni, kisha andika namba ya kupokea mzigo atakayokupa mteja — hiyo inathibitisha kuwa imefika na MalFleks itakulipa sehemu yako. Ukishindwa kumpatia mteja oda iliyolipiwa, sema hapa na mteja atarudishiwa pesa. Hakikisha hali ya bidhaa zako (ipo au imeisha) iko sahihi kila wakati ili hilo litokee mara chache.",
       suspended:
         "Akaunti yako imesimamishwa, kwa hiyo unaweza kuona oda hizi lakini huwezi kuzithibitisha wala kuzikataa. MalFleks inazishughulikia kwa sasa.",
       unavailableHeading: "Hatuwezi kufikia oda zako kwa sasa",
@@ -424,7 +441,8 @@ export const PARTNER = {
       notPaid: "Bado haijalipiwa",
       paidDeliver: "Imelipiwa — fikisha sasa",
       each: (price: string) => `${price} kila moja`,
-      paid: { strong: "Imelipwa kupitia MalFleks.", rest: " Usipokee chochote mlangoni — MalFleks itakulipa sehemu yako baada ya kufikisha." },
+      paid: { strong: "Imelipwa kupitia MalFleks.", rest: " Usipokee chochote mlangoni — MalFleks itakulipa sehemu yako namba ya mteja ya kupokea mzigo ikishaandikwa." },
+      courierConfirms: "Msafirishaji ndiye anayethibitisha oda hii kwa namba ya mteja. Sehemu yako italipwa akishafanya hivyo.",
       unpaid:
         "Mteja bado hajalipa. Hakuna cha kufanya mpaka hapa paandikwe “Imelipwa kupitia MalFleks” — usikabidhi chochote kabla ya hapo.",
       reference: "Namba ya kumbukumbu ya kutaja",
@@ -459,18 +477,34 @@ export const PARTNER = {
       yesDecline: "Ndiyo, kataa oda hii",
       yesDeclineLabel: (reference: string) => `Ndiyo, kataa ${reference}`,
     },
-    fulfil: {
-      already: "Oda hii imeshabadilika — fungua upya uone hali yake ya sasa.",
-      notFound: "Oda hii haiwezi kuwekewa alama kutoka hapa.",
-      notPaid:
-        "Mteja bado hajalipia oda hii, kwa hiyo haiwezi kuwekwa kuwa imefika. Usikabidhi chochote mpaka iandikwe “Imelipwa kupitia MalFleks”.",
-      failed: "Imeshindikana kuhifadhi. Hakuna kilichobadilika — jaribu tena.",
-      done: "Imewekwa kuwa imefika.",
-      mark: "Weka imefika",
-      confirm: "Thibitisha kuwa imefika?",
+    deliver: {
+      label: "Namba ya mteja ya kupokea mzigo",
+      hint: "Mkabidhi mteja mzigo, kisha muombe namba yake ya tarakimu 6 na uiandike hapa. Hiyo ndiyo inayoweka oda kuwa imefika na kuruhusu sehemu yako kulipwa.",
+      inputLabel: (reference: string) => `Namba ya kupokea mzigo ya ${reference}`,
+      submit: "Thibitisha imefika",
+      checking: "Inakagua…",
+      done: "Imefika — imethibitishwa kwa namba ya mteja. MalFleks itakulipa sehemu yako.",
+      wrong: (triesLeft: number) =>
+        `Hiyo si namba ya oda hii. Mwombe mteja aisome tena. Umebakiwa na majaribio ${triesLeft} kabla ya kusubiri dakika 15.`,
+      wrongLocked: (time: string) => `Hiyo si namba sahihi. Majaribio yamezidi — unaweza kujaribu tena baada ya saa ${time}.`,
+      locked: (time: string) => `Namba zisizo sahihi zimezidi. Unaweza kujaribu tena baada ya saa ${time}.`,
+      lockedAdmin:
+        "Namba zisizo sahihi zimeandikwa mara nyingi mno, kwa hiyo oda hii imefungwa. MalFleks imeambiwa na italimaliza na mteja.",
+      badCode: "Namba ina tarakimu 6. Ikague kisha ujaribu tena.",
+      notPaid: "Mteja bado hajalipia oda hii. Usikabidhi chochote.",
+      already: "Oda hii imeshabadilika — fungua upya uone ilipofikia.",
+      notFound: "Oda hii haiwezi kuthibitishwa kutoka hapa.",
+      signedOut: "Kipindi chako kimeisha. Ingia tena.",
+      failed: "Imeshindikana kukagua namba. Hakuna kilichobadilika — jaribu tena.",
+      cant: "Siwezi kuandika namba",
+      cantWhy: "Nini kimetokea?",
+      cantHint:
+        "Kwa mfano: “Nimefikisha, lakini simu ya mteja imezima na hakumbuki namba.” MalFleks itampigia mteja. Hutalipwa mpaka MalFleks imelimaliza.",
+      noteRequired: "Eleza kilichotokea kwa sentensi moja, ili MalFleks ijue cha kumuuliza mteja.",
       back: "Rudi",
-      marking: "Inaweka…",
-      yes: "Ndiyo, imefika",
+      send: "Iambie MalFleks",
+      sending: "Inatuma…",
+      reported: "MalFleks imeambiwa na itampigia mteja. Mteja akikupa namba kabla ya hapo, bado unaweza kuiandika hapo juu.",
     },
     ping: {
       noBrowser: "Kivinjari hiki hakiwezi kutuma mahali ulipo.",

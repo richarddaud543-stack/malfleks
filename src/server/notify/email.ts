@@ -381,6 +381,8 @@ function paymentReceivedMessageEn(input: {
   amountTZS: number;
   paymentReference: string;
   siteUrl: string;
+  /** The code to give at the door, or null when there is no delivery left to confirm. */
+  deliveryCode?: string | null;
 }): { subject: string; body: string } {
   return {
     subject: `Payment received for your MalFleks order ${input.reference}`,
@@ -392,6 +394,17 @@ function paymentReceivedMessageEn(input: {
       `Payment reference: ${input.paymentReference}`,
       "",
       "MalFleks holds this payment until your order is delivered.",
+      ...(input.deliveryCode
+        ? [
+            "",
+            `YOUR DELIVERY CODE: ${input.deliveryCode}`,
+            "",
+            "When your order arrives, check it, then tell this code to the person",
+            "delivering it. The code is what releases your payment to the shop, so",
+            "give it only once the goods are in your hands -- never before, and",
+            "never over the phone. MalFleks will never ask you for it.",
+          ]
+        : []),
       "",
       "Follow your delivery here:",
       `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
@@ -557,6 +570,18 @@ function branchOrderReminderMessageEn(input: {
   };
 }
 
+/** How a delivery is confirmed, for whoever is carrying it. */
+const CODE_AT_DOOR_EN = [
+  "The customer has a 6-digit delivery code. Once they have the goods, ask for",
+  "it and enter it on your orders page. That is what marks the order delivered",
+  "and releases your share -- there is no other way to mark it.",
+];
+const CODE_AT_DOOR_SW = [
+  "Mteja ana namba ya tarakimu 6 ya kupokea mzigo. Akishapokea mzigo, muombe",
+  "namba hiyo na uiandike kwenye ukurasa wako wa oda. Hiyo ndiyo inayoweka oda",
+  "kuwa imefika na kuruhusu sehemu yako kulipwa -- hakuna njia nyingine.",
+];
+
 /**
  * To whoever has to act once the customer has paid.
  *
@@ -582,10 +607,10 @@ function orderPaidPartnerMessageEn(input: {
       : `MalFleks: order ${input.reference} is paid — deliver now`;
   const next =
     input.role === "deliver"
-      ? ["Please deliver it now. Collect nothing at the door -- MalFleks holds the", "payment and pays your share once you mark the order delivered.", "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."]
+      ? ["Please deliver it now. Collect nothing at the door -- MalFleks holds the", "payment.", "", ...CODE_AT_DOOR_EN, "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."]
       : input.role === "collect"
-        ? [`Please collect it from ${input.branchName} and deliver it now. Collect nothing at`, "the door -- MalFleks holds the payment and pays your share once you mark", "the order delivered."]
-        : [`Please have it ready for ${input.carrier}, who is delivering it. MalFleks holds`, "the payment and pays your share once the courier marks the order", "delivered.", "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."];
+        ? [`Please collect it from ${input.branchName} and deliver it now. Collect nothing at`, "the door -- MalFleks holds the payment.", "", ...CODE_AT_DOOR_EN]
+        : [`Please have it ready for ${input.carrier}, who is delivering it. MalFleks holds`, "the payment and pays your share once the courier has entered the", "customer's delivery code.", "", "If you cannot supply it, press \"Can't fulfil\" on your orders page straight", "away so the customer is refunded."];
   return {
     subject,
     body: [
@@ -748,8 +773,8 @@ function orderDeliveredMessageEn(input: {
     body: [
       input.firstName ? `Hello ${input.firstName},` : "Hello,",
       "",
-      `Your order for ${input.productName} (reference ${input.reference}) has been marked`,
-      "delivered. Thank you for buying through MalFleks.",
+      `Your order for ${input.productName} (reference ${input.reference}) has been`,
+      "confirmed as delivered. Thank you for buying through MalFleks.",
       "",
       "If it has not reached you, or something is wrong with it, tell us:",
       `${input.siteUrl}/contact`,
@@ -944,6 +969,17 @@ function paymentReceivedMessageSw(input: Parameters<typeof paymentReceivedMessag
       `Kumbukumbu ya malipo: ${input.paymentReference}`,
       "",
       "MalFleks inashikilia malipo haya mpaka oda yako ifike.",
+      ...(input.deliveryCode
+        ? [
+            "",
+            `NAMBA YAKO YA KUPOKEA MZIGO: ${input.deliveryCode}`,
+            "",
+            "Mzigo wako ukifika, ukague, kisha mtajie namba hii anayekuletea. Namba",
+            "hii ndiyo inayoruhusu duka kulipwa, kwa hiyo itaje tu mzigo ukiwa",
+            "mikononi mwako -- si kabla, na si kwa simu. MalFleks haitakuomba namba",
+            "hii kamwe.",
+          ]
+        : []),
       "",
       "Fuatilia mzigo wako hapa:",
       `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
@@ -1053,20 +1089,23 @@ function orderPaidPartnerMessageSw(input: Parameters<typeof orderPaidPartnerMess
     input.role === "deliver"
       ? [
           "Tafadhali ifikishe sasa. Usipokee chochote mlangoni -- MalFleks inashikilia",
-          "malipo na itakulipa sehemu yako ukishaweka oda kuwa imefika.",
+          "malipo.",
+          "",
+          ...CODE_AT_DOOR_SW,
           "",
           ...cantSupply,
         ]
       : input.role === "collect"
         ? [
             `Tafadhali ichukue ${input.branchName} na uifikishe sasa. Usipokee chochote`,
-            "mlangoni -- MalFleks inashikilia malipo na itakulipa sehemu yako ukishaweka",
-            "oda kuwa imefika.",
+            "mlangoni -- MalFleks inashikilia malipo.",
+            "",
+            ...CODE_AT_DOOR_SW,
           ]
         : [
             `Tafadhali iandae kwa ajili ya ${input.carrier}, ambaye ndiye anayeipeleka. MalFleks`,
-            "inashikilia malipo na itakulipa sehemu yako msafirishaji akishaweka oda kuwa",
-            "imefika.",
+            "inashikilia malipo na itakulipa sehemu yako msafirishaji akishaandika namba",
+            "ya mteja ya kupokea mzigo.",
             "",
             ...cantSupply,
           ];
@@ -1269,4 +1308,62 @@ export function orderDeliveredMessage(input: Parameters<typeof orderDeliveredMes
 
 export function refundRecordedMessage(input: Parameters<typeof refundRecordedMessageEn>[0]): Message {
   return both(refundRecordedMessageSw(input), refundRecordedMessageEn(input));
+}
+
+// ---------------------------------------------------------------------------
+// To MalFleks's own inbox: deliveries and payouts that need a person
+// ---------------------------------------------------------------------------
+
+/** A partner says they cannot enter the customer's code, or the order is locked after too many wrong codes. */
+export function deliveryProblemAdminMessage(input: {
+  reference: string;
+  productName: string;
+  why: "reported" | "locked";
+  note: string | null;
+  adminUrl: string | null;
+}): Message {
+  const lines =
+    input.why === "reported"
+      ? [
+          `The partner delivering order ${input.reference} (${input.productName}) says they cannot`,
+          "enter the customer's delivery code.",
+          "",
+          `What they wrote: ${input.note ?? "(nothing)"}`,
+        ]
+      : [
+          `Order ${input.reference} (${input.productName}) is locked: the wrong delivery code was`,
+          "entered 15 times. Nobody but you can settle it now.",
+        ];
+  return {
+    subject: `MalFleks: order ${input.reference} needs you to settle the delivery`,
+    body: [
+      ...lines,
+      "",
+      "Nothing has been paid and nothing has changed. Ring the customer, then on",
+      "the order page either mark it delivered or cancel it and refund them.",
+      ...(input.adminUrl ? ["", `${input.adminUrl}/admin/orders`] : []),
+    ].join("\n"),
+  };
+}
+
+/** An automatic payout came back, or could not be confirmed. */
+export function autoPayoutAttentionAdminMessage(input: {
+  payee: string;
+  amountTZS: number;
+  note: string | null;
+  adminUrl: string | null;
+}): Message {
+  return {
+    subject: `MalFleks: a payout of ${money(input.amountTZS)} to ${input.payee} did not go through`,
+    body: [
+      `An automatic payout of ${money(input.amountTZS)} to ${input.payee} did not reach them.`,
+      "",
+      input.note ?? "ClickPesa returned the money.",
+      "",
+      "The amount is owed to them again and shows on the Payouts page. It is not",
+      "tried again automatically for 24 hours. Check the number on file, then pay it",
+      "by hand or let the next automatic run send it.",
+      ...(input.adminUrl ? ["", `${input.adminUrl}/admin/payouts`] : []),
+    ].join("\n"),
+  };
 }

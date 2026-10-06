@@ -8,7 +8,7 @@ import type { ListedOrder } from "@/server/orders/list-orders";
 import type { DeliveryPingView } from "@/server/orders/tracking";
 import BranchDecisionButtons from "./BranchDecisionButtons";
 import DeliveryPingButton from "./DeliveryPingButton";
-import MarkFulfilledButton from "./MarkFulfilledButton";
+import DeliveryCodeForm, { type DeliveryCodeFormState } from "./DeliveryCodeForm";
 
 /**
  * One customer order, as the branch that has to fulfil it needs to see it.
@@ -27,7 +27,8 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
  *   set, which the page derives from the session; a courier looking at the
  *   same order gets the label and no buttons, because whether the branch has
  *   the product is not the courier's to say.
- * - `MarkFulfilledButton` on a `confirmed` order, for whoever is delivering.
+ * - `DeliveryCodeForm` on a paid, `confirmed` order, for whoever is delivering:
+ *   the customer's six-digit code is what marks it delivered.
  *
  * - On a paid, `confirmed` order the branch also gets "Can't fulfil": the
  *   order is cancelled and MalFleks refunds the customer.
@@ -38,6 +39,8 @@ import MarkFulfilledButton from "./MarkFulfilledButton";
 
 
 /** What a courier sees: a pending order is waiting on the branch, not on them. */
+
+const NO_CODE_STATE: DeliveryCodeFormState = { lockedUntil: null, adminOnly: false, problemReported: false };
 
 const STATUS_CLASS: Record<string, string> = {
   pending: "bg-accent/15 text-accent",
@@ -52,6 +55,7 @@ export default function PartnerOrderCard({
   canDecide = false,
   viewer = "branch",
   locale = "en",
+  codeState = NO_CODE_STATE,
 }: {
   order: ListedOrder;
   /** This order's newest `DeliveryPing`, or `null` — only meaningful (and
@@ -68,6 +72,12 @@ export default function PartnerOrderCard({
   viewer?: "branch" | "courier";
   /** The language of the card. The page passes its own. */
   locale?: Locale;
+  /**
+   * Where this order's delivery code stands: paused after wrong entries,
+   * locked, or reported as a problem. Never the code -- the page that builds
+   * this cannot read it either.
+   */
+  codeState?: DeliveryCodeFormState;
 }) {
   const copy = PARTNER[locale].card;
   const labels: Record<string, string> =
@@ -173,13 +183,21 @@ export default function PartnerOrderCard({
       )}
 
       {/* Both controls only apply to a confirmed order that has been paid for —
-          see `markOrderFulfilledByPartner`, which refuses an unpaid one on the
+          see `confirmDeliveryWithCode`, which refuses an unpaid one on the
           server too. `pending`/`cancelled`/`fulfilled` and unpaid orders don't
-          get them at all, rather than a disabled version of them. */}
+          get them at all, rather than a disabled version of them. On a courier
+          route the branch hands over and the courier delivers, so only the
+          courier is asked for the customer's code. */}
       {order.status === "confirmed" && paid && (
         <>
           <DeliveryPingButton orderId={order.id} initialPing={lastPing} />
-          <MarkFulfilledButton orderId={order.id} />
+          {viewer === "branch" && !branchDelivers ? (
+            <p className="mt-4 rounded-xl border border-border bg-surface-2 px-4 py-3 text-sm text-muted">
+              {copy.courierConfirms}
+            </p>
+          ) : (
+            <DeliveryCodeForm orderId={order.id} reference={order.reference} initial={codeState} />
+          )}
         </>
       )}
 

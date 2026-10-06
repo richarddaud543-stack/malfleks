@@ -142,7 +142,6 @@ describe("the rule both languages keep", () => {
       PARTNER.sw.orders.introCourier,
       PARTNER.sw.card.unpaid,
       PARTNER.sw.decide.doneConfirmed,
-      PARTNER.sw.fulfil.notPaid,
     ]) {
       expect(sentence).toContain(paid);
     }

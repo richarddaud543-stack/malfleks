@@ -363,6 +363,9 @@ model Order {
   /// Money movements in or out of MalFleks's held balance for this order. See `LedgerEntry`.
   ledgerEntries LedgerEntry[]
 
+  /// The code the customer gives at the door. See `DeliveryCode`.
+  deliveryCode DeliveryCode?
+
   // What an admin or branch view would query by: orders waiting on a
   // decision, a branch's own orders, newest first.
   @@index([status])
@@ -556,7 +559,15 @@ model PayoutBatch {
   payeeId   String
 
   totalTZS Int
-  status   String @default("pending") // pending | paid | failed
+  // pending | sending | paid | failed
+  //
+  // `sending` (5 Oct 2026) is a payout MalFleks itself has asked ClickPesa to
+  // send and has not yet had a final answer for. It is deliberately its own
+  // state rather than `pending`: once the request has left, sending the same
+  // batch again could pay a partner twice, so nothing may re-send it until
+  // ClickPesa says what happened or an admin decides. See
+  // src/server/money/auto-payouts.ts.
+  status   String @default("pending")
 
   providerRef String?   @unique // set once the disbursement actually goes out
   paidAt      DateTime?
@@ -565,11 +576,21 @@ model PayoutBatch {
 
   createdAt DateTime @default(now())
 
-  // Admin uids: who drew the batch up, and who recorded it as sent. Payouts
-  // are sent by hand from the ClickPesa dashboard (see
-  // src/server/money/payouts.ts), so the person is the audit trail.
+  // Who drew the batch up, and who recorded it as sent: an admin uid for a
+  // payout sent by hand from the ClickPesa dashboard, or `system:auto-payout`
+  // for one MalFleks sent itself.
   createdBy String?
   paidBy    String?
+
+  // Automatic sending only. `sendRef` is the `orderReference` given to
+  // ClickPesa's payout API -- written *before* the request leaves, so a crash
+  // between "asked" and "answered" still leaves the reference to look the
+  // payout up by. Unique: ClickPesa refuses a repeated reference, and so does
+  // this column.
+  sendRef       String?   @unique
+  sendStartedAt DateTime?
+  // What ClickPesa charged to send it, when it said. Not part of `totalTZS`.
+  feeTZS        Int?
 
   entries LedgerEntry[]
 
@@ -896,6 +917,69 @@ model SavedOrderRequest {
   // The only read path: one customer's requests, newest first.
   @@index([customerId, requestedAt])
   @@index([customerId, reference])
+}
+
+// ---------------------------------------------------------------------------
+// Delivery confirmed by the customer (5 Oct 2026)
+// ---------------------------------------------------------------------------
+
+// The code a customer gives the person at their door, and the record of how
+// the delivery was confirmed.
+//
+// Until 5 Oct 2026 an order became "delivered" on the seller's word alone, and
+// that same press made the seller payable. The owner's call that day: the two
+// people who see the goods change hands confirm it -- the customer holds a
+// code, tells it to whoever delivers, and the order is only delivered when
+// that code is entered. Nobody is paid on their own say-so.
+//
+// **Its own table, not columns on `Order`, on purpose.** Every partner-facing
+// read of an order (`listOrders`, the tracking queries) loads `Order` rows
+// whole. A `deliveryCode` column there would ride along into the page of the
+// one person who must never see it before the customer says it. Here it is
+// only ever read by the customer's own pages, the admin console and the check
+// itself.
+//
+// One row per order, created when the order is paid for.
+model DeliveryCode {
+  orderId String @id
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // Six digits, kept readable because the customer has to be shown it again
+  // every time they open their order. It unlocks one delivery of goods they
+  // have already paid for, and is useless once used.
+  code String
+
+  // Wrong codes entered since the last correct one. Five wrong entries lock
+  // the order for a quarter of an hour; fifteen lock it until an admin looks.
+  wrongAttempts Int       @default(0)
+  lockedUntil   DateTime?
+
+  createdAt DateTime  @default(now())
+  // When the code was texted to the customer, if an SMS provider is set up.
+  smsSentAt DateTime?
+
+  // Set once, by the entry that matched: when, and which partner uid typed it.
+  usedAt DateTime?
+  usedBy String?
+
+  // "The customer has the goods but I can't enter the code" -- reported by the
+  // partner, decided by an admin. Reporting moves no money and changes no
+  // status.
+  problemAt   DateTime?
+  problemBy   String?
+  problemNote String?
+
+  @@index([problemAt])
+}
+
+// A handful of switches an admin can flip from the console without a deploy.
+// Today: `autoPayoutsPaused`. Environment variables arm a feature; a row here
+// can only ever make the site do *less* than the environment allows.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+  updatedBy String?
 }
 
 // ---------------------------------------------------------------------------
