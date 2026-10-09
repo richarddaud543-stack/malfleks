@@ -43,6 +43,46 @@ const MIN_REASON_LENGTH = 3;
 // See server/auth/admin-session.ts for why it lives in one place now.
 const requireAdminSession = adminSession;
 
+export type ViewDocumentResult =
+  | { ok: true; url: string }
+  | { ok: false; reason: "forbidden" | "not-found" | "unavailable" };
+
+/**
+ * A short-lived link to one uploaded document, for an admin to open.
+ *
+ * Fetched on click rather than rendered into the queue page. A signed URL baked
+ * into server-rendered HTML is a trading licence sitting in a browser cache and
+ * in every proxy log on the way; one minted when the admin presses "Open" and
+ * dead five minutes later is not. The link is also never returned for an
+ * application nobody asked about, so a leaked page source carries no URLs at
+ * all.
+ */
+export async function viewApplicationDocument(
+  documentId: string
+): Promise<ViewDocumentResult> {
+  const session = await requireAdminSession();
+  if (!session) return { ok: false, reason: "forbidden" };
+
+  try {
+    const { getPrisma } = await import("@/server/db/client");
+    const document = await getPrisma().partnerDocument.findUnique({
+      where: { id: documentId },
+      select: { storagePath: true },
+    });
+    if (!document) return { ok: false, reason: "not-found" };
+
+    const { signedDocumentUrl } = await import("@/server/partners/documents");
+    const url = await signedDocumentUrl(document.storagePath);
+    // Null here almost always means the bucket's select policy does not allow
+    // MalFleks's own admin accounts -- see the bucket note in that module.
+    if (!url) return { ok: false, reason: "unavailable" };
+    return { ok: true, url };
+  } catch (error) {
+    await logServerError("view-application-document", error, session.uid);
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
 export async function approvePartnerApplication(
   applicationId: string
 ): Promise<ReviewResult> {

@@ -3,6 +3,16 @@
 import { useId, useRef, useState } from "react";
 import Link from "next/link";
 import { submitPartnerApplication } from "@/app/actions/partner-applications";
+import { attachApplicationDocuments } from "@/app/actions/partner-documents";
+import PartnerDocumentFields, { type PickedFiles } from "@/components/apply/PartnerDocumentFields";
+import { uploadPartnerDocuments } from "@/lib/partner-document-upload";
+import {
+  checkDocumentFile,
+  DOCUMENT_KINDS,
+  REQUIRED_DOCUMENT_KINDS,
+  type DocumentKind,
+} from "@/lib/partner-document";
+import { DELIVERY_MODES, type DeliveryMode } from "@/lib/fees/tables";
 import { useSessionState } from "@/components/auth/session-state";
 import { usePartnerStatus } from "@/components/apply/partner-status";
 import { useLocale } from "@/i18n/client";
@@ -40,8 +50,19 @@ const FIELD_ORDER: PartnerApplicationField[] = [
   "city",
   "brandId",
   "address",
+  "deliveryMode",
   "notes",
 ];
+
+/** Which copy key describes each delivery answer. */
+const DELIVERY_COPY: Record<
+  DeliveryMode,
+  { title: "deliveryCustomer" | "deliverySplit" | "deliveryShop"; blurb: "deliveryCustomerBlurb" | "deliverySplitBlurb" | "deliveryShopBlurb" }
+> = {
+  customer_pays: { title: "deliveryCustomer", blurb: "deliveryCustomerBlurb" },
+  split: { title: "deliverySplit", blurb: "deliverySplitBlurb" },
+  shop_delivers: { title: "deliveryShop", blurb: "deliveryShopBlurb" },
+};
 
 export default function PartnerApplicationForm({
   brands,
@@ -66,6 +87,18 @@ export default function PartnerApplicationForm({
   const [done, setDone] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
 
+  // The documents are picked here and uploaded after the application exists,
+  // because a document's storage path contains the application's id.
+  const [files, setFiles] = useState<PickedFiles>({});
+  const [docProblems, setDocProblems] = useState<Partial<Record<DocumentKind, string>>>({});
+  /**
+   * Set when the application saved but its documents did not. The applicant is
+   * NOT asked to fill the form again -- the id is held here and the retry
+   * attaches to the same application.
+   */
+  const [orphanedId, setOrphanedId] = useState<string | null>(null);
+  const [attaching, setAttaching] = useState(false);
+
   const brandIds = brands.map((b) => b.id);
   const isBrand = input.kind === "brand";
 
@@ -76,6 +109,82 @@ export default function PartnerApplicationForm({
       const result = validatePartnerApplication(next, brandIds, locale);
       setErrors(result.ok ? {} : result.errors);
     }
+  }
+
+  const DOC_PROBLEM: Record<"wrong-type" | "too-big" | "empty" | "failed", string> = {
+    "wrong-type": copy.documentWrongType,
+    "too-big": copy.documentTooBig,
+    empty: copy.documentEmpty,
+    failed: copy.documentFailed,
+  };
+
+  function pickDocument(kind: DocumentKind, file: File | null) {
+    setFiles((current) => {
+      const next = { ...current };
+      if (file) next[kind] = file;
+      else delete next[kind];
+      return next;
+    });
+    setDocProblems((current) => {
+      const next = { ...current };
+      delete next[kind];
+      if (file) {
+        const check = checkDocumentFile(file);
+        if (!check.ok) next[kind] = DOC_PROBLEM[check.reason];
+      }
+      return next;
+    });
+  }
+
+  /** Every required document chosen and none of them refused. */
+  function documentsReady(): Partial<Record<DocumentKind, string>> | null {
+    const problems: Partial<Record<DocumentKind, string>> = { ...docProblems };
+    for (const kind of REQUIRED_DOCUMENT_KINDS) {
+      if (!files[kind]) problems[kind] = copy.documentMissing;
+    }
+    return DOCUMENT_KINDS.some((kind) => problems[kind]) ? problems : null;
+  }
+
+  /**
+   * Upload the picked documents and attach them to `applicationId`.
+   *
+   * Returns true when the applicant can be shown the plain "received" screen.
+   * False means the application is saved but its paperwork is not, which is the
+   * one case where the done screen says something extra and offers a retry.
+   */
+  async function sendDocuments(applicationId: string): Promise<boolean> {
+    const picked = REQUIRED_DOCUMENT_KINDS.flatMap((kind) => {
+      const file = files[kind];
+      return file ? [{ kind, file }] : [];
+    });
+    if (picked.length === 0) return false;
+
+    const uploaded = await uploadPartnerDocuments(applicationId, picked);
+    if (uploaded.unavailable) {
+      setDocProblems({ licence: copy.documentUnavailable });
+      return false;
+    }
+    if (uploaded.failed.length > 0) {
+      setDocProblems((current) => {
+        const next = { ...current };
+        for (const failure of uploaded.failed) next[failure.kind] = DOC_PROBLEM[failure.reason];
+        return next;
+      });
+    }
+    if (uploaded.sent.length === 0) return false;
+
+    const attached = await attachApplicationDocuments(applicationId, uploaded.sent);
+    // A refusal here is not shown as a per-document problem: it is about the
+    // application, not the file. The done screen's note covers it.
+    return attached.attached && uploaded.failed.length === 0;
+  }
+
+  async function retryDocuments() {
+    if (!orphanedId) return;
+    setAttaching(true);
+    const ok = await sendDocuments(orphanedId);
+    setAttaching(false);
+    if (ok) setOrphanedId(null);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -93,15 +202,36 @@ export default function PartnerApplicationForm({
       return;
     }
 
+    // Checked before anything is sent: an application saved without its
+    // paperwork is a worse place to be than a form that would not submit.
+    // Couriers are not asked for documents at all.
+    if (isBrand) {
+      const docProblem = documentsReady();
+      if (docProblem) {
+        setErrors({});
+        setDocProblems(docProblem);
+        const firstBroken = DOCUMENT_KINDS.find((kind) => docProblem[kind]);
+        formRef.current
+          ?.querySelector<HTMLElement>(`[data-field="document-${firstBroken}"]`)
+          ?.focus();
+        return;
+      }
+    }
+
     setErrors({});
     setSubmitting(true);
     const outcome = await submitPartnerApplication(input);
-    setSubmitting(false);
 
     if (outcome.submitted) {
+      // The application is saved from here on. Nothing below may show the
+      // applicant a failure that suggests otherwise.
+      const sent = isBrand ? await sendDocuments(outcome.id) : true;
+      setSubmitting(false);
+      if (!sent) setOrphanedId(outcome.id);
       setDone(true);
       return;
     }
+    setSubmitting(false);
     setFailure(
       outcome.reason === "signed-out"
         ? copy.failSignedOut
@@ -154,6 +284,19 @@ export default function PartnerApplicationForm({
           <strong>{copy.doneBody.strong}</strong>
           {copy.doneBody.after}
         </p>
+        {orphanedId && (
+          <div className="mt-4 rounded-xl border border-border bg-surface-2 p-4">
+            <p className="text-sm text-muted">{copy.documentsLate}</p>
+            <button
+              type="button"
+              onClick={retryDocuments}
+              disabled={attaching}
+              className="mt-3 rounded-full border border-border px-4 py-2 text-sm font-medium disabled:opacity-60"
+            >
+              {attaching ? copy.documentsSending : copy.documentsLateRetry}
+            </button>
+          </div>
+        )}
         <Link
           href="/"
           className="btn-pill btn-ink mt-8 inline-block px-6 py-2.5 text-sm"
@@ -482,6 +625,61 @@ export default function PartnerApplicationForm({
                 className={fieldClass(Boolean(errors.address))}
               />
             </Field>
+
+            {/* Who pays for delivery. One answer, asked once, and it sets what
+                every customer of this shop is charged -- so the options are
+                written as what the customer will see, not as policy names. */}
+            {/* The error is tied to the group, not to each radio: `aria-invalid`
+                is not a supported property of role="radio", and a screen reader
+                announcing "invalid" three times tells the listener nothing about
+                which answer to give. */}
+            <fieldset
+              className="border-0 p-0"
+              aria-describedby={
+                errors.deliveryMode
+                  ? `${fieldId}-deliveryMode-hint ${fieldId}-deliveryMode-error`
+                  : `${fieldId}-deliveryMode-hint`
+              }
+            >
+              <legend className="text-sm font-medium">{copy.deliveryLegend}</legend>
+              <p id={`${fieldId}-deliveryMode-hint`} className="mt-1 text-sm text-muted">
+                {copy.deliveryHint}
+              </p>
+              <div className="mt-3 grid gap-2">
+                {DELIVERY_MODES.map((mode) => {
+                  const words = DELIVERY_COPY[mode];
+                  return (
+                    <label
+                      key={mode}
+                      className={`flex cursor-pointer gap-3 rounded-xl border p-3 ${
+                        input.deliveryMode === mode
+                          ? "border-accent bg-surface-2"
+                          : "border-border"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryMode"
+                        data-field={input.deliveryMode === "" && mode === DELIVERY_MODES[0] ? "deliveryMode" : undefined}
+                        value={mode}
+                        checked={input.deliveryMode === mode}
+                        onChange={() => update({ deliveryMode: mode })}
+                        className="mt-1"
+                      />
+                      <span>
+                        <span className="block text-sm font-medium">{copy[words.title]}</span>
+                        <span className="mt-0.5 block text-sm text-muted">{copy[words.blurb]}</span>
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.deliveryMode && (
+                <p id={`${fieldId}-deliveryMode-error`} className="mt-1.5 text-sm text-danger">
+                  {errors.deliveryMode}
+                </p>
+              )}
+            </fieldset>
           </>
         )}
 
@@ -510,6 +708,17 @@ export default function PartnerApplicationForm({
           />
         </Field>
       </div>
+
+      {isBrand && (
+        <div className="mt-6">
+          <PartnerDocumentFields
+            files={files}
+            problems={docProblems}
+            onChange={pickDocument}
+            disabled={submitting}
+          />
+        </div>
+      )}
 
       {/* One announced summary rather than relying on the per-field messages,
           which are only reached through aria-describedby as focus moves. */}

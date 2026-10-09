@@ -36,6 +36,7 @@ export const APPLY = {
       brandMissing: "Choose the brand you sell, or name it if it isn't listed.",
       brandUnknown: "That brand isn't one we know. Name it instead.",
       address: "Enter the street and area the branch trades from.",
+      deliveryMode: "Choose who pays for delivery on your orders.",
       notes: (max: number) => `Keep this under ${max} characters.`,
     },
     form: {
@@ -88,6 +89,50 @@ export const APPLY = {
       anotherBrand: "Another brand",
       brandOther: "Name the brand",
       address: "Street and area the branch trades from",
+
+      // Who pays for delivery. The shop answers once, here, and it sets what
+      // every one of its customers is charged -- so the labels say the
+      // consequence, not the policy name.
+      deliveryLegend: "Who pays for delivery?",
+      deliveryHint:
+        "Delivery is charged per city. Whatever you choose, the delivery person is paid in full \u2014 this only decides who covers it.",
+      deliveryCustomer: "The customer pays it",
+      deliveryCustomerBlurb: "The delivery fee is added to what the customer pays at checkout. You receive the full price of your goods.",
+      deliverySplit: "We split it with the customer",
+      deliverySplitBlurb: "The customer pays half at checkout; your half comes out of your payout. A cheaper price on the page, slightly less to you.",
+      deliveryShop: "We deliver it ourselves",
+      deliveryShopBlurb: "The customer pays nothing for delivery. If a MalFleks courier ends up doing the run, the fee comes out of your payout.",
+
+      // The documents. Three, and the reason for each, because a shopkeeper
+      // asked for paperwork with no reason given assumes the worst.
+      documentsHeading: "Your paperwork",
+      documentsIntro:
+        "Customers pay before they receive their goods, and MalFleks holds that money until they confirm delivery. So we check that every shop is a real registered business before it can sell. Three files, read by our system and then by a person.",
+      documentsPrivate: "These are stored privately. They are never shown on your shop page, to customers, or to anyone outside MalFleks.",
+      documentLicence: "Business licence (leseni ya biashara)",
+      documentLicenceHint: "A photo or scan of your trading licence. It should show the business name and still be in date.",
+      documentTin: "TIN certificate",
+      documentTinHint: "Your TRA taxpayer certificate. We check the name and TIN match your licence.",
+      documentShopfront: "Photo of your shop front",
+      documentShopfrontHint: "A picture of the outside of your shop, with the signage if you have it.",
+      documentAdd: "Choose file",
+      documentReplace: "Replace",
+      documentRemove: "Remove",
+      documentPreparing: "Preparing\u2026",
+      documentUploading: "Uploading\u2026",
+      documentDone: "Attached",
+      documentRetry: "Try again",
+      documentMissing: "Attach this one before sending.",
+      documentWrongType: "We can read photos (JPG, PNG, WebP) and PDFs. Convert it and try again.",
+      documentTooBig: "That file is too large. A phone photo of the page is enough.",
+      documentEmpty: "That file is empty.",
+      documentUnavailable: "Uploads aren't available right now. Try again in a few minutes.",
+      documentFailed: "That upload didn't finish. Your file is still here \u2014 try again.",
+      documentsSending: "Attaching your documents\u2026",
+      documentsLate:
+        "Your application is saved, but the documents didn't upload. Nothing is lost \u2014 press 'Try again' and they will attach to the same application.",
+      documentsLateRetry: "Try the documents again",
+
       notes: "Anything else? (optional)",
       notesHintBrand: "How many branches you run, what you stock, whether you deliver yourself.",
       notesHintCourier: "How many riders, what you carry, which areas you know best.",
@@ -127,6 +172,7 @@ export const APPLY = {
       brandMissing: "Chagua chapa unayouza, au itaje kama haipo kwenye orodha.",
       brandUnknown: "Chapa hiyo hatuijui. Itaje kwa jina badala yake.",
       address: "Andika mtaa na eneo ambako tawi linafanyia biashara.",
+      deliveryMode: "Chagua ni nani analipia usafirishaji kwa oda zako.",
       notes: (max: number) => `Usizidi herufi ${max}.`,
     },
     form: {
@@ -179,6 +225,45 @@ export const APPLY = {
       anotherBrand: "Chapa nyingine",
       brandOther: "Taja chapa",
       address: "Mtaa na eneo ambako tawi linafanyia biashara",
+
+      deliveryLegend: "Nani analipia usafirishaji?",
+      deliveryHint:
+        "Usafirishaji unalipwa kwa kila jiji. Chaguo lolote, msafirishaji analipwa kamili \u2014 hili linaamua tu ni nani anagharamia.",
+      deliveryCustomer: "Mteja analipa",
+      deliveryCustomerBlurb: "Gharama ya usafirishaji inaongezwa kwenye malipo ya mteja. Wewe unapokea bei kamili ya bidhaa zako.",
+      deliverySplit: "Tunagawana na mteja",
+      deliverySplitBlurb: "Mteja analipa nusu; nusu yako inatolewa kwenye malipo yako. Bei nafuu kwenye ukurasa, kidogo pungufu kwako.",
+      deliveryShop: "Tunasafirisha wenyewe",
+      deliveryShopBlurb: "Mteja hagharamii usafirishaji. Kama msafirishaji wa MalFleks atafanya safari, gharama inatolewa kwenye malipo yako.",
+
+      documentsHeading: "Nyaraka zako",
+      documentsIntro:
+        "Wateja wanalipa kabla ya kupokea mzigo, na MalFleks inashika pesa hiyo hadi wathibitishe. Kwa hiyo tunahakikisha kila duka ni biashara iliyosajiliwa kabla ya kuuza. Faili tatu, zinasomwa na mfumo wetu kisha na mtu.",
+      documentsPrivate: "Zinatunzwa kwa siri. Haziwekwi kwenye ukurasa wa duka lako, hazionekani kwa wateja, wala kwa mtu yeyote nje ya MalFleks.",
+      documentLicence: "Leseni ya biashara",
+      documentLicenceHint: "Picha au skani ya leseni yako. Ionyeshe jina la biashara na iwe bado hai.",
+      documentTin: "Cheti cha TIN",
+      documentTinHint: "Cheti chako cha TRA. Tunakagua jina na namba ya TIN zinalingana na leseni.",
+      documentShopfront: "Picha ya mbele ya duka lako",
+      documentShopfrontHint: "Picha ya nje ya duka lako, na bango kama unalo.",
+      documentAdd: "Chagua faili",
+      documentReplace: "Badilisha",
+      documentRemove: "Ondoa",
+      documentPreparing: "Inatayarisha\u2026",
+      documentUploading: "Inatuma\u2026",
+      documentDone: "Imeambatishwa",
+      documentRetry: "Jaribu tena",
+      documentMissing: "Ambatisha hii kabla ya kutuma.",
+      documentWrongType: "Tunasoma picha (JPG, PNG, WebP) na PDF. Badilisha muundo na ujaribu tena.",
+      documentTooBig: "Faili ni kubwa mno. Picha ya simu ya ukurasa inatosha.",
+      documentEmpty: "Faili hii haina kitu.",
+      documentUnavailable: "Kutuma faili hakupatikani kwa sasa. Jaribu baada ya dakika kadhaa.",
+      documentFailed: "Kutuma hakukamilika. Faili lako lipo \u2014 jaribu tena.",
+      documentsSending: "Inaambatisha nyaraka zako\u2026",
+      documentsLate:
+        "Maombi yako yamehifadhiwa, lakini nyaraka hazijatumwa. Hakuna kilichopotea \u2014 bonyeza 'Jaribu tena' na zitaambatana na maombi hayo hayo.",
+      documentsLateRetry: "Jaribu nyaraka tena",
+
       notes: "Kuna kingine? (si lazima)",
       notesHintBrand: "Una matawi mangapi, unauza nini, na kama unaleta mwenyewe.",
       notesHintCourier: "Una waendeshaji wangapi, unabeba nini, na maeneo unayoyajua zaidi.",

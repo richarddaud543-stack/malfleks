@@ -175,7 +175,10 @@ describe("the three worked examples in docs/marketplace-model.md §2", () => {
     expect(q.doorPaymentTZS).toBe(996_000);
     expect(q.orderTotalTZS).toBe(1_015_000);
     expect(q.branchPayoutTZS).toBe(981_000);
-    expect(q.courierPayoutTZS).toBe(15_000);
+    // The carrier's share, not the whole fee: since 6 Oct 2026 the quote states
+    // what the courier is actually paid, which is the fee less MalFleks's
+    // delivery rung -- the same figure `splitForFulfilment` hands out.
+    expect(q.courierPayoutTZS).toBe(13_500);
     expect(q.deliveryRungTZS).toBe(1_500);
     expect(q.malfleksEarnsTZS).toBe(20_500);
     expect(q.securedShare).toBeCloseTo(0.93, 2);
@@ -241,7 +244,9 @@ describe("reconciliation, across the whole real catalogue", () => {
         { goodsTotalTZS: product.priceTZS, city, routeKind },
         TEST_CITY_FEES,
       );
-      expect(q.branchPayoutTZS + q.courierPayoutTZS).toBe(q.doorPaymentTZS);
+      expect(q.branchPayoutTZS + q.courierPayoutTZS + q.malfleksEarnsTZS).toBe(
+          q.orderTotalTZS,
+        );
     }
   });
 
@@ -252,7 +257,9 @@ describe("reconciliation, across the whole real catalogue", () => {
         TEST_CITY_FEES,
       );
       for (const [key, value] of Object.entries(q)) {
-        if (key === "securedShare") continue;
+        // `securedShare` is a fraction by design; `deliveryMode` is the
+        // shop's answer echoed back, not a figure.
+        if (key === "securedShare" || key === "deliveryMode") continue;
         expect(Number.isInteger(value as number), `${key} = ${value}`).toBe(true);
       }
     }
@@ -281,7 +288,9 @@ describe("reconciliation, across the whole real catalogue", () => {
           TEST_CITY_FEES,
         );
         expect(q.depositTZS + q.doorPaymentTZS).toBe(q.orderTotalTZS);
-        expect(q.branchPayoutTZS + q.courierPayoutTZS).toBe(q.doorPaymentTZS);
+        expect(q.branchPayoutTZS + q.courierPayoutTZS + q.malfleksEarnsTZS).toBe(
+          q.orderTotalTZS,
+        );
       }
     }
   });

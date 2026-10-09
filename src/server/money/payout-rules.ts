@@ -35,6 +35,13 @@ export interface SplitInput {
   quoteDeliveryFeeTZS: number | null;
   quoteDeliveryRungTZS: number | null;
   quoteOrderTotalTZS: number | null;
+  /**
+   * The share of the delivery fee the SHOP agreed to carry, frozen on the order
+   * at order time. Null on every order created before 6 Oct 2026, and on any
+   * shop that answered `"customer_pays"` -- both read as zero, which is what
+   * they were.
+   */
+  quoteShopDeliveryShareTZS?: number | null;
 }
 
 export interface PayoutSplit {
@@ -61,10 +68,15 @@ export function splitForFulfilment(order: SplitInput, capturedTZS: number): Spli
 
   if (goodsRung == null || total == null) return { ok: false, reason: "no-quote" };
 
-  const goodsShare = order.lineTotalTZS - goodsRung;
+  // The shop's share of delivery comes out of the shop's own money. The
+  // carrier is paid the whole fee less MalFleks's rung either way -- a deal
+  // between the shop and the customer is not the delivery person's problem.
+  const shopDelivery = order.quoteShopDeliveryShareTZS ?? 0;
+  const goodsShare = order.lineTotalTZS - goodsRung - shopDelivery;
   const carrierShare = deliveryFee - deliveryRung;
   const feeTZS = goodsRung + deliveryRung;
 
+  if (shopDelivery < 0) return { ok: false, reason: "bad-quote" };
   if (goodsShare < 0 || carrierShare < 0 || feeTZS < 0) return { ok: false, reason: "bad-quote" };
   if (goodsShare + carrierShare + feeTZS !== total) return { ok: false, reason: "bad-quote" };
   if (total !== capturedTZS) return { ok: false, reason: "amount-mismatch" };

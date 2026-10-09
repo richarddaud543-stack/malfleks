@@ -10,17 +10,28 @@
  *
  * ## The money loop, in one place
  *
- * The customer pays a **deposit** at order time by mobile money, equal to the
- * goods rung and nothing else. Everything after that settles at the door, in
- * cash or direct mobile money, between the customer, the branch and the
- * courier — MalFleks never touches it. Afterwards the courier owes MalFleks its
- * delivery rung, accruing on their partner page.
+ * The customer pays the **whole order** at order time by mobile money —
+ * the goods plus their share of the delivery fee — and MalFleks holds it until
+ * the customer's delivery code is entered. Then it is split: the branch, the
+ * courier, and MalFleks's two rungs. `depositTZS` and `doorPaymentTZS` below are
+ * left from the older cash-at-the-door design and are still computed, but
+ * nothing collects or pays by them; `src/server/money/payout-rules.ts` is what
+ * actually moves the money.
+ *
+ * How much of the delivery fee the customer pays is the shop's own answer at
+ * registration — see `DELIVERY_MODES` in `./tables.ts`.
  *
  * Two invariants hold for every quote this module produces, and both are
  * asserted as properties across the whole catalogue:
  *
  *   deposit + doorPayment === orderTotal
- *   branchPayout + courierPayout === doorPayment
+ *   branchPayout + courierPayout + malfleksEarns === orderTotal
+ *
+ * The second one is the load-bearing one since MalFleks started collecting the
+ * whole order at order time: every shilling the customer paid is accounted for
+ * as somebody's money. It replaced `branchPayout + courierPayout ===
+ * doorPayment`, which stopped being true on 6 Oct 2026 when the shop could
+ * start carrying part of the delivery fee -- see `customerDeliveryTZS`.
  *
  * Exactly, to the shilling. There is no tolerance because there is no rounding:
  * every figure is a whole number of Tanzanian shillings and every band edge is
@@ -38,10 +49,13 @@
 import {
   BRAND_FLEET_EARNS_DELIVERY_RUNG,
   CITY_DELIVERY_FEES,
+  DEFAULT_DELIVERY_MODE,
   DELIVERY_FEE_LADDER,
   GOODS_FEE_LADDER,
   MINIMUM_ORDER_VALUE_TZS,
+  splitDeliveryFee,
   type DeliveryCity,
+  type DeliveryMode,
   type FeeBand,
   type TZS,
 } from "./tables";
@@ -50,11 +64,16 @@ export {
   assertTablesCoherent,
   BRAND_FLEET_EARNS_DELIVERY_RUNG,
   CITY_DELIVERY_FEES,
+  DEFAULT_DELIVERY_MODE,
   DELIVERY_CITIES,
   DELIVERY_FEE_LADDER,
+  DELIVERY_MODES,
   GOODS_FEE_LADDER,
+  isDeliveryMode,
   MINIMUM_ORDER_VALUE_TZS,
+  splitDeliveryFee,
   type DeliveryCity,
+  type DeliveryMode,
   type FeeBand,
   type TZS,
 } from "./tables";
@@ -73,6 +92,12 @@ export interface QuoteInput {
   city: DeliveryCity;
   /** `"brand"` for the brand's own fleet, `"agent"` for a local courier. */
   routeKind: FeeRouteKind;
+  /**
+   * What the shop answered at registration about who pays for delivery. Omitted
+   * means `DEFAULT_DELIVERY_MODE` -- see the note there on why that is
+   * `"customer_pays"` and not something gentler.
+   */
+  deliveryMode?: DeliveryMode;
 }
 
 export interface Quote {
@@ -83,10 +108,30 @@ export interface Quote {
   goodsRungTZS: TZS;
 
   /**
-   * What the customer pays the courier at the door for delivery. Zero on a
-   * brand route, where the brand carries it and no delivery fee is charged.
+   * What this delivery is worth in total -- the city's fee. Zero on a brand
+   * route, where the brand's own fleet carries it and no fee arises.
+   *
+   * This is the *size of the delivery bill*, not who pays it. Since 6 Oct 2026
+   * the customer and the shop divide it between them according to the shop's
+   * `deliveryMode`; see `customerDeliveryTZS` and `shopDeliveryShareTZS`, which
+   * always add up to exactly this.
    */
   deliveryFeeTZS: TZS;
+
+  /**
+   * The part of `deliveryFeeTZS` the customer is charged, included in
+   * `orderTotalTZS` and collected with the goods at order time.
+   */
+  customerDeliveryTZS: TZS;
+
+  /**
+   * The part of `deliveryFeeTZS` the shop carries, deducted from
+   * `branchPayoutTZS` when the money is released.
+   */
+  shopDeliveryShareTZS: TZS;
+
+  /** The mode this quote was computed under, echoed back so an order can freeze it. */
+  deliveryMode: DeliveryMode;
 
   /**
    * What the courier owes MalFleks for this delivery, accruing on their partner
@@ -188,7 +233,7 @@ export function cityDeliveryFee(
  *   agent route — the city has no delivery fee set yet.
  */
 export function quoteOrder(
-  { goodsTotalTZS, city, routeKind }: QuoteInput,
+  { goodsTotalTZS, city, routeKind, deliveryMode = DEFAULT_DELIVERY_MODE }: QuoteInput,
   fees: CityFeeTable = CITY_DELIVERY_FEES,
 ): Quote {
   if (!Number.isInteger(goodsTotalTZS) || goodsTotalTZS <= 0) {
@@ -233,22 +278,53 @@ export function quoteOrder(
     }
   }
 
-  const orderTotalTZS = goodsTotalTZS + deliveryFeeTZS;
+  // Who pays the delivery bill. Exactly a partition of it: the two always add
+  // back up to `deliveryFeeTZS`, which is what makes the reconciliation below
+  // hold to the shilling for all three modes.
+  const { customerTZS: customerDeliveryTZS, shopTZS: shopDeliveryShareTZS } =
+    splitDeliveryFee(deliveryFeeTZS, deliveryMode);
+
+  const orderTotalTZS = goodsTotalTZS + customerDeliveryTZS;
   const depositTZS = goodsRungTZS;
   const doorPaymentTZS = orderTotalTZS - depositTZS;
 
-  // The branch keeps the goods payment less the rung the customer already paid
-  // MalFleks; the courier collects the delivery fee whole and settles its rung
-  // afterwards, out of band. Together these are exactly the cash at the door.
-  const branchPayoutTZS = goodsTotalTZS - goodsRungTZS;
-  const courierPayoutTZS = deliveryFeeTZS;
+  // Whoever actually carried the goods is paid the delivery fee less MalFleks's
+  // delivery rung: the courier on an agent route, the branch itself on a brand
+  // route. Exactly the rule `splitForFulfilment` applies when the money is
+  // released, stated here so the quote and the release cannot drift apart.
+  const carrierShareTZS = deliveryFeeTZS - deliveryRungTZS;
+  const courierPayoutTZS = routeKind === "agent" ? carrierShareTZS : 0;
 
-  const malfleksEarnsTZS = depositTZS + deliveryRungTZS;
+  // The branch keeps the goods payment less MalFleks's rung, less whatever share
+  // of delivery it agreed to carry -- plus the carrier share when the branch is
+  // itself the carrier. The shop's share is settled against the shop and is
+  // never withheld from the delivery person.
+  const branchPayoutTZS =
+    goodsTotalTZS -
+    goodsRungTZS -
+    shopDeliveryShareTZS +
+    (routeKind === "agent" ? 0 : carrierShareTZS);
+
+  // A shop cannot be paid a negative amount, and the ledger has no way to say
+  // "the shop owes us". Refusing is the honest answer: the order is created
+  // unquoted and the owner sees it, exactly as an unset city fee behaves.
+  if (branchPayoutTZS < 0) {
+    throw new FeeQuoteError(
+      `A ${deliveryFeeTZS} TZS delivery on a ${goodsTotalTZS} TZS order would leave the shop ` +
+        `owing ${-branchPayoutTZS} TZS under "${deliveryMode}". Raise the order minimum for ` +
+        `this city or move the shop to "customer_pays".`,
+    );
+  }
+
+  const malfleksEarnsTZS = goodsRungTZS + deliveryRungTZS;
 
   return {
     goodsTotalTZS,
     goodsRungTZS,
     deliveryFeeTZS,
+    customerDeliveryTZS,
+    shopDeliveryShareTZS,
+    deliveryMode,
     deliveryRungTZS,
     depositTZS,
     doorPaymentTZS,

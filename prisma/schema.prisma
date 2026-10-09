@@ -323,6 +323,19 @@ model Order {
   quoteDoorPaymentTZS  Int?
   quoteOrderTotalTZS   Int?
 
+  // Who paid for delivery on THIS order, frozen here at order time. A shop
+  // that changes its answer tomorrow must not re-price an order that is
+  // already paid for, so the release path reads these columns and never the
+  // shop's current setting. Null together with the six above.
+  //
+  //   quoteCustomerDeliveryTZS + quoteShopDeliveryShareTZS === quoteDeliveryFeeTZS
+  //
+  // exactly -- `splitDeliveryFee()` guarantees it, and
+  // `splitForFulfilment` relies on it.
+  quoteCustomerDeliveryTZS Int?
+  quoteShopDeliveryShareTZS Int?
+  quoteDeliveryMode         String?
+
   // Read aloud to a branch on the phone (see `generateOrderReference` in
   // src/lib/order.ts), so it has to be unambiguous — and now that it
   // outlives a browser tab, it also has to be unique. The alphabet is 28
@@ -642,6 +655,23 @@ model PartnerApplication {
   address    String?
   notes      String?
 
+  /// Who pays for delivery, as the shop answered it -- one of
+  /// `DELIVERY_MODES` in `src/lib/fees/tables.ts`. Null on a courier
+  /// application (a courier is not asked) and on any application filed before
+  /// 6 Oct 2026.
+  deliveryMode String?
+
+  /// What the AI reader made of the uploaded documents: "pass", "concerns" or
+  /// "unreadable", plus its reasons in the applicant's own terms. Advisory
+  /// ONLY. It never approves anything -- `Partner` rows are still created by an
+  /// admin pressing approve, and a clean verdict on a forged licence must not
+  /// be able to let itself in. Null until the screening has run.
+  aiVerdict   String?
+  aiNotes     String?
+  aiCheckedAt DateTime?
+
+  documents PartnerDocument[]
+
   createdAt    DateTime  @default(now())
   reviewedAt   DateTime?
   /// The admin uid that decided. Null while pending.
@@ -651,6 +681,52 @@ model PartnerApplication {
 
   // The admin queue reads pending-first, oldest-first.
   @@index([status, createdAt])
+  @@index([uid])
+}
+
+// One supporting document a shop uploaded with its application.
+//
+// Added 6 Oct 2026, when the owner decided a shop must prove it is a real
+// registered business before it can take a customer's money. Three kinds are
+// asked for -- see `DOCUMENT_KINDS` in `src/lib/partner-document.ts`.
+//
+// **The bytes are not here.** `storagePath` points into the PRIVATE
+// `partner-documents` Supabase Storage bucket, under the applicant's own uid,
+// and nothing in the public site can read it: a trading licence carries a
+// person's name, address and signature, and `product-photos` is a public
+// bucket for a reason that does not apply here. Only an admin, through a
+// short-lived signed URL, ever sees one.
+//
+// `aiVerdict`/`aiNotes` are what the reader made of THIS document; the
+// application-level verdict beside them is the whole picture. Both are
+// advisory, and neither approves anything.
+model PartnerDocument {
+  id String @id @default(cuid())
+
+  applicationId String
+  application   PartnerApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  /// The uid that uploaded it, copied from the application so the storage path
+  /// can be checked without a join.
+  uid String
+
+  /// "licence" | "tin" | "shopfront". Text, not an enum -- see PartnerApplication.
+  kind String
+
+  /// Object path inside the private bucket: `<uid>/<applicationId>/<kind>-<n>.<ext>`.
+  storagePath String @unique
+  mimeType    String
+  byteSize    Int
+
+  uploadedAt DateTime @default(now())
+
+  /// "pass" | "concerns" | "unreadable", and why, in words an applicant could
+  /// be shown. Null until the screening has run.
+  aiVerdict   String?
+  aiNotes     String?
+  aiCheckedAt DateTime?
+
+  @@index([applicationId])
   @@index([uid])
 }
 
@@ -680,6 +756,13 @@ model Partner {
 
   brandId String?
   address String?
+
+  /// Who pays for delivery on this shop's orders -- one of `DELIVERY_MODES` in
+  /// `src/lib/fees/tables.ts`. Carried over from the application on approval.
+  /// Defaulted rather than nullable because every order asks it: a partner
+  /// approved before 6 Oct 2026 reads as "customer_pays", which is how its
+  /// orders were already priced.
+  deliveryMode String @default("customer_pays")
 
   /// The catalogue rows this partner maps to, once wired up. Null until then.
   branchId String?

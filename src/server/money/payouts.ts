@@ -79,6 +79,7 @@ export async function accruePayouts(tx: Tx, orderId: string): Promise<AccrueOutc
       quoteGoodsRungTZS: true,
       quoteDeliveryFeeTZS: true,
       quoteDeliveryRungTZS: true,
+      quoteShopDeliveryShareTZS: true,
       quoteOrderTotalTZS: true,
     },
   });

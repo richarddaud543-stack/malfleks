@@ -1,4 +1,5 @@
 import { APPLY } from "@/i18n/copy/apply";
+import { DELIVERY_MODES, type DeliveryMode } from "@/lib/fees/tables";
 import type { Locale } from "@/i18n/locale";
 import { normalizePhone } from "./order";
 
@@ -33,6 +34,13 @@ export function isServedCity(value: string): value is ServedCity {
   return (SERVED_CITIES as readonly string[]).includes(value);
 }
 
+/** The three delivery answers, in the order the form offers them. */
+export const DELIVERY_MODE_CHOICES = DELIVERY_MODES;
+
+function isDeliveryModeAnswer(value: string): value is DeliveryMode {
+  return (DELIVERY_MODES as readonly string[]).includes(value);
+}
+
 export interface PartnerApplicationInput {
   kind: PartnerKind;
   businessName: string;
@@ -45,6 +53,12 @@ export interface PartnerApplicationInput {
   brandOther: string;
   /** Branch applications only — a courier serves a city, not an address. */
   address: string;
+  /**
+   * Who pays for delivery, as the shop answers it. Branch applications only —
+   * a courier is not asked, because a courier is not the one deciding. `""`
+   * until they choose, and a brand application will not validate without it.
+   */
+  deliveryMode: string;
   notes: string;
 }
 
@@ -57,6 +71,7 @@ export const emptyPartnerApplication: PartnerApplicationInput = {
   brandId: "",
   brandOther: "",
   address: "",
+  deliveryMode: "",
   notes: "",
 };
 
@@ -77,6 +92,8 @@ export interface ValidatedPartnerApplication {
   brandId: string | null;
   brandOther: string | null;
   address: string | null;
+  /** Set on a brand application, null on a courier's. */
+  deliveryMode: DeliveryMode | null;
   notes: string | null;
 }
 
@@ -148,6 +165,15 @@ export function validatePartnerApplication(
     errors.address = words.address;
   }
 
+  // A shop must say who pays for delivery before it can sell: the answer sets
+  // what every one of its customers is charged, and there is no safe guess to
+  // make on its behalf. A courier is not asked -- it is not the one deciding --
+  // and a stray answer from one is dropped rather than refused.
+  const deliveryMode = input.deliveryMode.trim();
+  if (input.kind === "brand" && !isDeliveryModeAnswer(deliveryMode)) {
+    errors.deliveryMode = words.deliveryMode;
+  }
+
   const notes = input.notes.trim();
   if (notes.length > MAX_NOTES) {
     errors.notes = words.notes(MAX_NOTES);
@@ -174,6 +200,7 @@ export function validatePartnerApplication(
       brandId: isBrand && brandId !== "" ? brandId : null,
       brandOther: isBrand && brandId === "" && brandOther !== "" ? brandOther : null,
       address: isBrand ? address : null,
+      deliveryMode: isBrand && isDeliveryModeAnswer(deliveryMode) ? deliveryMode : null,
       notes: notes === "" ? null : notes,
     },
   };

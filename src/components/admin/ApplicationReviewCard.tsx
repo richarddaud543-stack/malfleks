@@ -5,6 +5,8 @@ import {
   approvePartnerApplication,
   rejectPartnerApplication,
 } from "@/app/actions/partner-review";
+import { viewApplicationDocument } from "@/app/actions/partner-review";
+import { REQUIRED_DOCUMENT_KINDS } from "@/lib/partner-document";
 import type { ReviewableApplication } from "@/server/partners/review";
 
 /**
@@ -19,6 +21,120 @@ import type { ReviewableApplication } from "@/server/partners/review";
  */
 /** Mirrors the check in `rejectPartnerApplication`, which is the one that counts. */
 const MIN_REASON_LENGTH = 3;
+
+/** How the shop answered the delivery question, in the owner's words. */
+const DELIVERY_LABELS: Record<string, string> = {
+  customer_pays: "Customer pays the fee",
+  split: "Split with the customer",
+  shop_delivers: "Shop delivers it itself",
+};
+
+/** The reader's verdict, and how worried to be about it. */
+const VERDICT_STYLE: Record<string, { label: string; className: string }> = {
+  pass: { label: "Documents read cleanly", className: "border-border bg-surface-2" },
+  concerns: { label: "Something does not line up", className: "border-amber-400 bg-amber-50" },
+  unreadable: { label: "Could not be read", className: "border-border bg-surface-2" },
+};
+
+const DOCUMENT_LABELS: Record<string, string> = {
+  licence: "Business licence",
+  tin: "TIN certificate",
+  shopfront: "Shop front",
+};
+
+/**
+ * What the shop uploaded, and what the AI reader made of it.
+ *
+ * Three deliberate choices here:
+ *
+ *   * The verdict is a **note beside an approve button**, never a gate on one.
+ *     An admin can approve an application the reader flagged and reject one it
+ *     passed; this panel exists to tell them where to look.
+ *   * A missing verdict says "not screened" rather than nothing, because an
+ *     absent verdict and a clean one must never look alike.
+ *   * The document link is fetched on click rather than rendered into the page.
+ *     A signed URL in server-rendered HTML is a licence sitting in a browser
+ *     cache and in every log between here and there; one that lasts five
+ *     minutes from the moment it is asked for is not.
+ */
+function PaperworkPanel({ application }: { application: ReviewableApplication }) {
+  const [opening, setOpening] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+
+  const verdict = application.aiVerdict ? VERDICT_STYLE[application.aiVerdict] : null;
+  const missing = REQUIRED_DOCUMENT_KINDS.filter(
+    (kind) => !application.documents.some((document) => document.kind === kind),
+  );
+
+  async function open(documentId: string) {
+    setOpening(documentId);
+    setLinkError(null);
+    const outcome = await viewApplicationDocument(documentId);
+    setOpening(null);
+    if (!outcome.ok) {
+      setLinkError(
+        outcome.reason === "unavailable"
+          ? "That link could not be created. Check the partner-documents bucket allows admin reads."
+          : "That document is no longer there.",
+      );
+      return;
+    }
+    window.open(outcome.url, "_blank", "noopener,noreferrer");
+  }
+
+  if (application.kind !== "brand") return null;
+
+  return (
+    <section className="mt-4 rounded-xl border border-border p-4">
+      <h3 className="text-sm font-medium">Paperwork</h3>
+
+      <p
+        className={`mt-2 rounded-lg border px-3 py-2 text-sm ${
+          verdict ? verdict.className : "border-border bg-surface-2"
+        }`}
+      >
+        <strong className="font-medium">{verdict ? verdict.label : "Not screened"}</strong>
+        {application.aiNotes ? <span className="block mt-1 text-muted">{application.aiNotes}</span> : null}
+        {!verdict ? (
+          <span className="block mt-1 text-muted">
+            Read these yourself. The reader either has no key configured or could not reach the files.
+          </span>
+        ) : null}
+      </p>
+
+      {missing.length > 0 && (
+        <p className="mt-2 text-sm text-amber-700">
+          Missing: {missing.map((kind) => DOCUMENT_LABELS[kind] ?? kind).join(", ")}.
+        </p>
+      )}
+
+      <ul className="mt-3 grid gap-2">
+        {application.documents.map((document) => (
+          <li key={document.id} className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="font-medium">{DOCUMENT_LABELS[document.kind] ?? document.kind}</span>
+            {document.aiVerdict && document.aiVerdict !== "pass" ? (
+              <span className="text-amber-700">{document.aiNotes || document.aiVerdict}</span>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => open(document.id)}
+              disabled={opening === document.id}
+              className="ml-auto rounded-full border border-border px-3 py-1 text-xs font-medium disabled:opacity-60"
+            >
+              {opening === document.id ? "Opening…" : "Open"}
+            </button>
+          </li>
+        ))}
+      </ul>
+
+      {linkError && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {linkError}
+        </p>
+      )}
+    </section>
+  );
+}
 
 export default function ApplicationReviewCard({
   application,
@@ -130,6 +246,12 @@ export default function ApplicationReviewCard({
             <dd className="mt-0.5">{application.address}</dd>
           </div>
         )}
+        {application.deliveryMode && (
+          <div>
+            <dt className="text-muted">Delivery</dt>
+            <dd className="mt-0.5">{DELIVERY_LABELS[application.deliveryMode] ?? application.deliveryMode}</dd>
+          </div>
+        )}
         {application.notes && (
           <div className="sm:col-span-2">
             <dt className="text-muted">Their notes</dt>
@@ -139,6 +261,8 @@ export default function ApplicationReviewCard({
           </div>
         )}
       </dl>
+
+      <PaperworkPanel application={application} />
 
       {error && (
         <p role="alert" className="mt-4 text-sm text-red-600">

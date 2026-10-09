@@ -23,10 +23,28 @@ export interface ReviewableApplication {
   brandId: string | null;
   brandOther: string | null;
   address: string | null;
+  deliveryMode: string | null;
   notes: string | null;
+  aiVerdict: string | null;
+  aiNotes: string | null;
   createdAt: string;
+  aiCheckedAt: string | null;
   reviewedAt: string | null;
   decisionNote: string | null;
+  /** The uploaded paperwork, newest first, with the reader's line on each. */
+  documents: ReviewableDocument[];
+}
+
+/** One uploaded document as the admin queue shows it. Never the bytes. */
+export interface ReviewableDocument {
+  id: string;
+  kind: string;
+  storagePath: string;
+  mimeType: string;
+  byteSize: number;
+  uploadedAt: string;
+  aiVerdict: string | null;
+  aiNotes: string | null;
 }
 
 export type ApproveBlocker =
@@ -76,15 +94,34 @@ function serialise(row: {
   brandId: string | null;
   brandOther: string | null;
   address: string | null;
+  deliveryMode: string | null;
   notes: string | null;
+  aiVerdict: string | null;
+  aiNotes: string | null;
   createdAt: Date;
+  aiCheckedAt: Date | null;
   reviewedAt: Date | null;
   decisionNote: string | null;
+  documents?: {
+    id: string;
+    kind: string;
+    storagePath: string;
+    mimeType: string;
+    byteSize: number;
+    uploadedAt: Date;
+    aiVerdict: string | null;
+    aiNotes: string | null;
+  }[];
 }): ReviewableApplication {
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),
+    aiCheckedAt: row.aiCheckedAt ? row.aiCheckedAt.toISOString() : null,
     reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
+    documents: (row.documents ?? []).map((document) => ({
+      ...document,
+      uploadedAt: document.uploadedAt.toISOString(),
+    })),
   };
 }
 
@@ -93,6 +130,7 @@ export async function listPendingApplications(): Promise<ReviewableApplication[]
   const rows = await getPrisma().partnerApplication.findMany({
     where: { status: "pending" },
     orderBy: { createdAt: "asc" },
+    include: { documents: { orderBy: { uploadedAt: "desc" } } },
   });
   return rows.map(serialise);
 }
@@ -105,6 +143,7 @@ export async function listReviewedApplications(
     where: { status: { not: "pending" } },
     orderBy: { reviewedAt: "desc" },
     take: limit,
+    include: { documents: { orderBy: { uploadedAt: "desc" } } },
   });
   return rows.map(serialise);
 }
@@ -169,6 +208,11 @@ export async function approveApplication(
           city: application.city,
           brandId: application.brandId,
           address: application.address,
+          // The shop's own answer about who pays for delivery, carried over so
+          // its orders are priced the way it agreed. A courier application has
+          // none, and an application filed before 6 Oct 2026 has none either --
+          // both fall back to the column's default, "customer_pays".
+          ...(application.deliveryMode ? { deliveryMode: application.deliveryMode } : {}),
           applicationId: application.id,
           approvedBy: adminUid,
         },

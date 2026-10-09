@@ -8,6 +8,7 @@ import {
   type SaveOrderRequestInput,
 } from "./build-order-request";
 import { quoteForOrder } from "./quote-order";
+import { DEFAULT_DELIVERY_MODE, isDeliveryMode, type DeliveryMode } from "@/lib/fees";
 
 /**
  * Persisting an order request as a real, queryable backend record.
@@ -113,7 +114,7 @@ async function insertOrder(
   // on `Order`'s quote columns. `null` when the owner hasn't set this city's
   // delivery fee yet (true for every agent route today); the order is still
   // created exactly as it always was, just without a fee snapshot attached.
-  const quote = quoteForOrder(order);
+  const quote = quoteForOrder(order, await deliveryModeForBranch(order.branch.id));
 
   const row = await getPrisma().order.create({
     data: {
@@ -149,6 +150,9 @@ async function insertOrder(
       quoteDepositTZS: quote?.depositTZS ?? null,
       quoteDoorPaymentTZS: quote?.doorPaymentTZS ?? null,
       quoteOrderTotalTZS: quote?.orderTotalTZS ?? null,
+      quoteCustomerDeliveryTZS: quote?.customerDeliveryTZS ?? null,
+      quoteShopDeliveryShareTZS: quote?.shopDeliveryShareTZS ?? null,
+      quoteDeliveryMode: quote?.deliveryMode ?? null,
       reference: order.reference,
       requestedAt: new Date(order.requestedAt),
     },
@@ -160,6 +164,31 @@ async function insertOrder(
     status: row.status,
     createdAt: row.createdAt,
   };
+}
+
+/**
+ * What the shop that owns this branch answered about who pays for delivery.
+ *
+ * Read from the `Partner` row rather than passed in, because the browser must
+ * not get a say in it: a client that could name its own delivery mode could
+ * name `"shop_delivers"` and get free delivery. Same trust boundary as the fee
+ * table itself.
+ *
+ * A branch with no partner row -- seed catalogue data, or a branch an admin
+ * has not wired up -- reads as `DEFAULT_DELIVERY_MODE`, which is how its orders
+ * were already priced. A database hiccup here must not stop an order being
+ * taken, so a failure falls back to the same default rather than throwing.
+ */
+async function deliveryModeForBranch(branchId: string): Promise<DeliveryMode> {
+  try {
+    const partner = await getPrisma().partner.findFirst({
+      where: { branchId, kind: "brand", status: "active" },
+      select: { deliveryMode: true },
+    });
+    return isDeliveryMode(partner?.deliveryMode) ? partner.deliveryMode : DEFAULT_DELIVERY_MODE;
+  } catch {
+    return DEFAULT_DELIVERY_MODE;
+  }
 }
 
 function isUniqueConstraintViolation(error: unknown): boolean {

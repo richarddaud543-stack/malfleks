@@ -4,6 +4,7 @@ import {
   quoteOrder,
   type CityFeeTable,
   type DeliveryCity,
+  type DeliveryMode,
   type Quote,
 } from "@/lib/fees";
 import type { OrderRequest } from "@/lib/order";
@@ -23,6 +24,10 @@ import type { OrderRequest } from "@/lib/order";
  * sets a city's fee, orders into that city start getting a real quote with no
  * further code change.
  *
+ * `deliveryMode` is the shop's own answer about who pays for delivery, read
+ * from its `Partner` row by the caller. Omitted means `DEFAULT_DELIVERY_MODE`,
+ * which prices the order exactly as it was priced before that question existed.
+ *
  * `fees` defaults to the live table and exists so tests can exercise the
  * computable branch without waiting on the owner's numbers — the same
  * trust-boundary pattern `quoteOrder` itself documents. **Production callers
@@ -30,6 +35,7 @@ import type { OrderRequest } from "@/lib/order";
  */
 export function quoteForOrder(
   order: Pick<OrderRequest, "lineTotalTZS" | "route" | "branch">,
+  deliveryMode?: DeliveryMode,
   fees?: CityFeeTable
 ): Quote | null {
   if (!isDeliveryCity(order.branch.city)) return null;
@@ -40,6 +46,7 @@ export function quoteForOrder(
         goodsTotalTZS: order.lineTotalTZS,
         city: order.branch.city,
         routeKind: order.route.kind,
+        deliveryMode,
       },
       fees
     );

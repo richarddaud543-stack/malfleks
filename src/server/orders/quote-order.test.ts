@@ -43,7 +43,7 @@ describe("quoteForOrder", () => {
       city: "Dar es Salaam",
       routeKind: "agent",
     });
-    const quote = quoteForOrder(order, fees);
+    const quote = quoteForOrder(order, undefined, fees);
     expect(quote).not.toBeNull();
     expect(quote!.deliveryFeeTZS).toBe(4_000);
     expect(quote!.depositTZS + quote!.doorPaymentTZS).toBe(quote!.orderTotalTZS);

@@ -129,6 +129,7 @@ async function application(uid: string, email: string) {
     brandId: "",
     brandOther: "Kariakoo Electronics",
     address: "Kariakoo, Dar es Salaam",
+    deliveryMode: "customer_pays",
     notes: "",
   });
   if (!outcome.submitted) throw new Error(`application not submitted: ${outcome.reason}`);

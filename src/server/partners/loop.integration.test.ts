@@ -91,6 +91,7 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
         brandId: "",
         brandOther: "Kariakoo Electronics",
         address: "Kariakoo, Dar es Salaam",
+        deliveryMode: "customer_pays",
         notes: "We sell phones and laptops.",
       },
     );
@@ -231,6 +232,7 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
         brandId: "",
         brandOther: "",
         address: "",
+        deliveryMode: "",
         notes: "Two riders, same-day across the city.",
       },
     );
@@ -317,6 +319,7 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
       // the form enforces. A blank one silently produced no application at all
       // here, which is exactly the kind of thing this file exists to notice.
       address: "Nyerere Road, Mwanza",
+      deliveryMode: "customer_pays",
       notes: "",
     });
     const otherPending = await db.partnerApplication.findFirst({
@@ -463,9 +466,12 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
     );
 
     expect(quote.depositTZS + quote.doorPaymentTZS).toBe(quote.orderTotalTZS);
-    expect(quote.branchPayoutTZS + quote.courierPayoutTZS).toBe(
-      quote.doorPaymentTZS,
-    );
+    // Every shilling the customer paid is somebody's money. This replaced
+    // `branchPayout + courierPayout === doorPayment` on 6 Oct 2026, when the
+    // quote started stating the courier's real share rather than the whole fee.
+    expect(
+      quote.branchPayoutTZS + quote.courierPayoutTZS + quote.malfleksEarnsTZS,
+    ).toBe(quote.orderTotalTZS);
     // And what the courier would owe after ten of these, accruing per delivery
     // rather than per settlement batch.
     expect(

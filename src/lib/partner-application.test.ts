@@ -32,6 +32,9 @@ function input(
     city: "Arusha",
     brandId: A_REAL_BRAND,
     address: "Sokoine Road, near the clock tower",
+    // A brand application must answer this since 6 Oct 2026 -- see the
+    // "requires an answer about delivery" tests below.
+    deliveryMode: "customer_pays",
     ...overrides,
   };
 }
@@ -129,6 +132,49 @@ describe("validatePartnerApplication — a courier", () => {
   });
 });
 
+describe("validatePartnerApplication — who pays for delivery", () => {
+  it("requires an answer from a brand branch", () => {
+    const result = validatePartnerApplication(input({ deliveryMode: "" }), BRAND_IDS);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.deliveryMode).toBeTruthy();
+  });
+
+  it("accepts each of the three answers and keeps it", () => {
+    for (const mode of ["customer_pays", "split", "shop_delivers"] as const) {
+      const result = validatePartnerApplication(input({ deliveryMode: mode }), BRAND_IDS);
+      expect(result.ok, mode).toBe(true);
+      if (result.ok) expect(result.value.deliveryMode).toBe(mode);
+    }
+  });
+
+  it("refuses an answer that is not one of the three", () => {
+    // A hand-edited form could name anything. "free" is not a delivery policy.
+    for (const mode of ["free", "SPLIT", "shop", "customer"]) {
+      const result = validatePartnerApplication(input({ deliveryMode: mode }), BRAND_IDS);
+      expect(result.ok, mode).toBe(false);
+    }
+  });
+
+  it("does not ask a courier, and drops a stray answer from one", () => {
+    const result = validatePartnerApplication(
+      input({ kind: "courier", address: "", brandId: "", deliveryMode: "shop_delivers" }),
+      BRAND_IDS,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.deliveryMode).toBeNull();
+  });
+
+  it("accepts a courier that answered nothing", () => {
+    const result = validatePartnerApplication(
+      input({ kind: "courier", address: "", brandId: "", deliveryMode: "" }),
+      BRAND_IDS,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value.deliveryMode).toBeNull();
+  });
+});
+
 describe("validatePartnerApplication — shared rules", () => {
   it("accepts every city MalFleks serves", () => {
     for (const city of SERVED_CITIES) {
@@ -161,7 +207,7 @@ describe("validatePartnerApplication — shared rules", () => {
 
   it("collects every problem at once rather than one at a time", () => {
     const result = validatePartnerApplication(
-      input({ businessName: "", contactName: "", phone: "", city: "" }),
+      input({ businessName: "", contactName: "", phone: "", city: "", deliveryMode: "" }),
       BRAND_IDS
     );
     expect(result.ok).toBe(false);
@@ -170,6 +216,7 @@ describe("validatePartnerApplication — shared rules", () => {
       "businessName",
       "city",
       "contactName",
+      "deliveryMode",
       "phone",
     ]);
   });

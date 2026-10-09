@@ -30,7 +30,16 @@ const APPLICATION_RATE_LIMIT = {
  */
 
 export type ApplyResult =
-  | { submitted: true }
+  | {
+      submitted: true;
+      /**
+       * The new application's id. The form needs it because a document's
+       * storage path is `<uid>/<applicationId>/...`, so the documents can only
+       * be uploaded once this row exists -- see
+       * `src/app/actions/partner-documents.ts`.
+       */
+      id: string;
+    }
   | {
       submitted: false;
       reason: "signed-out" | "unavailable" | "rejected" | "quota" | "rate-limited";
@@ -73,7 +82,7 @@ export async function submitPartnerApplication(
     // applicant must never see a failure because a mail API was down.
     await notifyOfApplication(input);
 
-    return { submitted: true };
+    return { submitted: true, id: outcome.id };
   } catch (error) {
     // Unlike an order request, there is no browser-side copy to fall back on —
     // if this fails the application does not exist anywhere. Say so, and keep

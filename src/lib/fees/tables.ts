@@ -115,6 +115,75 @@ export const CITY_DELIVERY_FEES: Readonly<Record<DeliveryCity, TZS | null>> = {
 };
 
 /**
+ * Who pays for getting the goods to the door.
+ *
+ * DECIDED 6 Oct 2026 by the owner. Every shop answers this once, at
+ * registration (`PartnerApplication.deliveryMode`), and the answer travels to
+ * its `Partner` row on approval. The order freezes the resulting figures at
+ * order time, so a shop that changes its mind later never re-prices an order
+ * that was already paid for.
+ *
+ *   "customer_pays"  -- the customer pays the city delivery fee in full. The
+ *                       default, and what every order did before this existed.
+ *   "split"          -- the customer pays half; the other half comes out of the
+ *                       shop's payout. The courier is still paid the whole fee,
+ *                       because a split between the shop and the customer is
+ *                       not the delivery person's problem.
+ *   "shop_delivers"  -- the shop carries delivery itself. The customer pays
+ *                       nothing for it. If a MalFleks courier ends up doing the
+ *                       run anyway, the shop foots the whole fee, because that
+ *                       is what it promised the customer.
+ *
+ * All three are the same thing: a partition of one delivery fee between the
+ * customer and the shop. `splitDeliveryFee()` below is that partition, and it
+ * is the only place the rule lives.
+ */
+export const DELIVERY_MODES = ["customer_pays", "split", "shop_delivers"] as const;
+
+export type DeliveryMode = (typeof DELIVERY_MODES)[number];
+
+/**
+ * What a shop is taken to have answered when nobody asked it.
+ *
+ * Every shop approved before 6 Oct 2026 has no answer on file, and so does any
+ * order whose branch is not wired to a `Partner` row yet. `"customer_pays"`
+ * keeps those orders priced exactly as they were priced yesterday, which is the
+ * only default that cannot quietly move money.
+ */
+export const DEFAULT_DELIVERY_MODE: DeliveryMode = "customer_pays";
+
+export function isDeliveryMode(value: unknown): value is DeliveryMode {
+  return typeof value === "string" && (DELIVERY_MODES as readonly string[]).includes(value);
+}
+
+/**
+ * How one delivery fee divides between the customer and the shop.
+ *
+ * Exact: `customerTZS + shopTZS === feeTZS`, always, for every mode and every
+ * fee. On an odd fee under `"split"` the extra shilling goes to the **shop**,
+ * never the customer -- a customer who is quoted 2,500 and charged 2,501 has
+ * been lied to, and a shop that gives up one shilling has not.
+ */
+export function splitDeliveryFee(
+  feeTZS: TZS,
+  mode: DeliveryMode,
+): { customerTZS: TZS; shopTZS: TZS } {
+  if (!Number.isInteger(feeTZS) || feeTZS < 0) {
+    throw new Error(`splitDeliveryFee: feeTZS must be a whole number of shillings, got ${feeTZS}`);
+  }
+  switch (mode) {
+    case "customer_pays":
+      return { customerTZS: feeTZS, shopTZS: 0 };
+    case "shop_delivers":
+      return { customerTZS: 0, shopTZS: feeTZS };
+    case "split": {
+      const customerTZS = Math.floor(feeTZS / 2);
+      return { customerTZS, shopTZS: feeTZS - customerTZS };
+    }
+  }
+}
+
+/**
  * Does a brand-fleet order carry a delivery rung?
  *
  * OWNER_DEFAULT — open question 5 in `docs/marketplace-model.md` §5: "Does the
