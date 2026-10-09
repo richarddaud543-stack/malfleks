@@ -159,7 +159,17 @@ export default function PartnerApplicationForm({
     });
     if (picked.length === 0) return false;
 
-    const uploaded = await uploadPartnerDocuments(applicationId, picked);
+    let uploaded;
+    try {
+      uploaded = await uploadPartnerDocuments(applicationId, picked);
+    } catch {
+      // Belt and braces. The upload helper already turns a dropped connection
+      // into a per-document failure, but this is called AFTER the application
+      // has saved: an exception escaping here would leave the applicant looking
+      // at a frozen button with their application already in. Returning false
+      // puts them on the done screen with the retry instead.
+      return false;
+    }
     if (uploaded.unavailable) {
       setDocProblems({ licence: copy.documentUnavailable });
       return false;
@@ -173,18 +183,30 @@ export default function PartnerApplicationForm({
     }
     if (uploaded.sent.length === 0) return false;
 
-    const attached = await attachApplicationDocuments(applicationId, uploaded.sent);
-    // A refusal here is not shown as a per-document problem: it is about the
-    // application, not the file. The done screen's note covers it.
-    return attached.attached && uploaded.failed.length === 0;
+    try {
+      const attached = await attachApplicationDocuments(applicationId, uploaded.sent);
+      // A refusal here is not shown as a per-document problem: it is about the
+      // application, not the file. The done screen's note covers it.
+      return attached.attached && uploaded.failed.length === 0;
+    } catch {
+      // The files are in the bucket; only the row-writing call failed. The
+      // retry re-uploads under a fresh timestamp and attaches both, which the
+      // admin queue shows as two attempts rather than losing either.
+      return false;
+    }
   }
 
   async function retryDocuments() {
     if (!orphanedId) return;
     setAttaching(true);
-    const ok = await sendDocuments(orphanedId);
-    setAttaching(false);
-    if (ok) setOrphanedId(null);
+    try {
+      const ok = await sendDocuments(orphanedId);
+      if (ok) setOrphanedId(null);
+    } finally {
+      // `finally`: a stuck "Attaching…" button with no way out is the one
+      // outcome this screen must not produce.
+      setAttaching(false);
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -224,9 +246,15 @@ export default function PartnerApplicationForm({
 
     if (outcome.submitted) {
       // The application is saved from here on. Nothing below may show the
-      // applicant a failure that suggests otherwise.
-      const sent = isBrand ? await sendDocuments(outcome.id) : true;
-      setSubmitting(false);
+      // applicant a failure that suggests otherwise, and `finally` guarantees
+      // the button is released even if the document step throws — a frozen
+      // form over an application that DID save is the worst of both.
+      let sent = true;
+      try {
+        if (isBrand) sent = await sendDocuments(outcome.id);
+      } finally {
+        setSubmitting(false);
+      }
       if (!sent) setOrphanedId(outcome.id);
       setDone(true);
       return;

@@ -74,8 +74,17 @@ export async function uploadPartnerDocuments(
   // only uid that can possibly work is this one — and asking for it here means
   // no caller can pass the wrong one by mistake. `/api/auth/session` does not
   // expose the uid to the client, which is also why there is nothing to pass.
-  const { data: user } = await supabase.auth.getUser();
-  const uid = user?.user?.id;
+  //
+  // Wrapped: the Supabase client returns `{ error }` for an API refusal but
+  // *throws* when the request never completes — a dropped connection mid-upload
+  // on mobile data, which is the common case here, not the exotic one.
+  let uid: string | undefined;
+  try {
+    const { data: user } = await supabase.auth.getUser();
+    uid = user?.user?.id;
+  } catch {
+    return { sent: [], failed: [], unavailable: true };
+  }
   if (!uid) return { sent: [], failed: [], unavailable: true };
 
   const sent: SentDocument[] = [];
@@ -99,19 +108,33 @@ export async function uploadPartnerDocuments(
       continue;
     }
 
-    const upload = await supabase.storage
-      .from(PARTNER_DOCUMENT_BUCKET)
-      // `upsert: false` — the path carries a timestamp, so a collision means
-      // something is wrong rather than that the applicant is replacing a file.
-      .upload(storagePath, file, { contentType: file.type, upsert: false });
+    let upload: { error: unknown };
+    try {
+      upload = await supabase.storage
+        .from(PARTNER_DOCUMENT_BUCKET)
+        // `upsert: false` — the path carries a timestamp, so a collision means
+        // something is wrong rather than that the applicant is replacing a file.
+        .upload(storagePath, file, { contentType: file.type, upsert: false });
+    } catch {
+      // A dropped connection partway through a 3 MB upload on mobile data. One
+      // document failing is a per-document failure, not the end of the batch:
+      // the other two may well land, and the caller offers a retry for this one.
+      failed.push({ kind, reason: "failed" });
+      continue;
+    }
     if (upload.error) {
       failed.push({ kind, reason: "failed" });
       continue;
     }
 
-    const signed = await supabase.storage
-      .from(PARTNER_DOCUMENT_BUCKET)
-      .createSignedUrl(storagePath, SIGNED_URL_SECONDS);
+    let signed: { error: unknown; data: { signedUrl?: string } | null };
+    try {
+      signed = await supabase.storage
+        .from(PARTNER_DOCUMENT_BUCKET)
+        .createSignedUrl(storagePath, SIGNED_URL_SECONDS);
+    } catch {
+      signed = { error: new Error("signing failed"), data: null };
+    }
     if (signed.error || !signed.data?.signedUrl) {
       // The file is in the bucket; only the reader's link failed. Record it
       // anyway with no URL so the admin still sees the document — it just will
