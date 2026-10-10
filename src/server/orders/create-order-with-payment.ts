@@ -1,6 +1,7 @@
 import { getPrisma } from "@/server/db/client";
 import { resolveSiteUrl } from "@/lib/site-url";
 import { generateCheckoutLink } from "@/server/payments/clickpesa";
+import { gatewayIsDown } from "@/server/payments/gateway-state";
 import { logServerError } from "@/server/error-log";
 import { createOrder, type CreateOrderFailure } from "./create-order";
 import type { SaveOrderRequestInput } from "./build-order-request";
@@ -212,6 +213,16 @@ export async function requestPaymentForOrder(
 
   if (order.quoteOrderTotalTZS == null) {
     return { ok: false, reason: "unquotable" };
+  }
+
+  // ClickPesa is known to be refusing this deployment (the rulebook saw it
+  // fail twice running, minutes ago): asking again would fail the same way and
+  // spend one of the day's API calls doing it. The pay page shows "payment is
+  // not available right now", and when ClickPesa answers again the rulebook
+  // opens this order's checkout and emails the customer -- see
+  // `src/server/rules/rules/gateway.ts`.
+  if (await gatewayIsDown()) {
+    return { ok: false, reason: "checkout-link-failed" };
   }
 
   // The webhook route matches by `OrderPayment.providerRef`, not

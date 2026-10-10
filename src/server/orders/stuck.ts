@@ -33,6 +33,11 @@ import { partnerContact } from "@/server/notify/events";
  * should lapse after some number of days, or an unpaid one be released, is a
  * policy decision the owner has not made, and a job that quietly cancelled
  * orders would be making it for him. This only makes sure a person sees them.
+ *
+ * (10 Oct 2026: the owner has since made that decision, and the rules that
+ * carry it out are in `src/server/rules/rules/orders.ts`. This file is still
+ * what it says above -- a list for a person, and one reminder -- and still
+ * cancels nothing.)
  */
 
 const HOUR_MS = 60 * 60_000;

@@ -59,11 +59,13 @@ export interface NavCounts {
   payouts: number;
   /** Questions agents are waiting for the owner to answer. */
   city: number;
+  /** Things the rulebook could not settle by itself and has brought to the owner. */
+  rules: number;
 }
 
 export async function getNavCounts(): Promise<NavCounts> {
   const db = getPrisma();
-  const [orders, applications, submissions, payments, work, city, deliveries] = await Promise.all([
+  const [orders, applications, submissions, payments, work, city, deliveries, rules] = await Promise.all([
     db.order.count({ where: { status: "pending" } }),
     db.partnerApplication.count({ where: { status: "pending" } }),
     db.productSubmission.count({ where: { status: "pending" } }),
@@ -71,6 +73,7 @@ export async function getNavCounts(): Promise<NavCounts> {
     moneyWork(db),
     db.agentHelpRequest.count({ where: { status: "open" } }),
     deliveryProblemWork(db),
+    db.ownerAlert.count({ where: { status: "open" } }),
   ]);
   return {
     // Orders to confirm, plus deliveries only an admin can settle.
@@ -80,6 +83,7 @@ export async function getNavCounts(): Promise<NavCounts> {
     payments,
     payouts: work.payeesOwed + work.pendingBatches + work.refundsDue.length,
     city,
+    rules,
   };
 }
 

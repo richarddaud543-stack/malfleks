@@ -241,7 +241,9 @@ describe("when nobody knows whether the request arrived", () => {
     expect((await batches())[0]).toMatchObject({ status: "paid", providerRef: "CPFOUNDBYHAND", paidBy: "admin-1" });
 
     await deliveredOrder();
-    await runAutoPayouts(NOW, ON);
+    // Two minutes on: ClickPesa takes one payout request a minute, so a run in
+    // the same minute as the last send waits (see `sentJustNow`).
+    await runAutoPayouts(new Date(NOW.getTime() + 2 * 60_000), ON);
     const second = (await batches()).find((b) => b.status === "sending")!;
     await expect(cancelPayoutBatch(second.id, "ClickPesa shows no such payout", "admin-1")).resolves.toMatchObject({ ok: true });
     expect(await owedTotal()).toBe(94_000);

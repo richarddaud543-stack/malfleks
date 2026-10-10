@@ -327,6 +327,36 @@ export function cancelOrderByCustomer(
 }
 
 /**
+ * Who "decided" an order the rulebook moved (`src/server/rules/`). Not a uid;
+ * shown as "MalFleks's rules" in the admin timeline.
+ */
+export const RULES_ACTOR = "system:rules";
+
+/**
+ * The rulebook cancelling an order nobody paid for.
+ *
+ * The same guarded write the customer's own cancel uses: `unpaidOnly` is in
+ * the WHERE, so a payment that lands in the moment between the rule reading
+ * the order and cancelling it wins, and the order stays alive. `note` is
+ * stored as the reason and is what the customer's email quotes.
+ */
+export function cancelUnpaidOrderByRule(orderId: string, note: string): Promise<TransitionOutcome> {
+  return writeTransition(orderId, "cancelled", RULES_ACTOR, note, ["pending", "confirmed"], true);
+}
+
+/**
+ * The rulebook cancelling a **paid** order the shop did not deliver in time.
+ *
+ * Only from `confirmed`: an order delivered in the meantime (`fulfilled`) or
+ * already cancelled matches nothing. Cancelling is all this does -- the refund
+ * that follows is `src/server/money/refund-send.ts`'s, which recognises this
+ * actor as one whose cancellations need no further decision.
+ */
+export function cancelPaidOrderByRule(orderId: string, note: string): Promise<TransitionOutcome> {
+  return writeTransition(orderId, "cancelled", RULES_ACTOR, note, ["confirmed"]);
+}
+
+/**
  * What is written on the order when MalFleks marks it delivered itself, with
  * no code entered -- the fallback for a delivery the code could not confirm.
  */

@@ -33,6 +33,27 @@ import { createHmac } from "node:crypto";
 
 const CLICKPESA_API_BASE = "https://api.clickpesa.com/third-parties";
 
+/**
+ * How many requests this process has made to ClickPesa. Every one, token
+ * requests included, counts against the account's daily allowance, and until
+ * 10 Oct 2026 nothing kept count -- so nothing could decide to stop before
+ * the allowance ran out and left customers unable to get a pay link.
+ *
+ * The rulebook (`src/server/rules/engine.ts`) reads this before and after a
+ * pass and stores the difference, which is how it stays inside a budget.
+ * Process-wide and never reset: only differences are meaningful.
+ */
+let callCount = 0;
+
+export function clickPesaCallCount(): number {
+  return callCount;
+}
+
+function counted(input: string, init?: RequestInit): Promise<Response> {
+  callCount += 1;
+  return fetch(input, init);
+}
+
 function requireEnv(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) {
@@ -209,7 +230,7 @@ async function getAuthToken(): Promise<string> {
     return cachedToken.token;
   }
 
-  const response = await fetch(`${CLICKPESA_API_BASE}/generate-token`, {
+  const response = await counted(`${CLICKPESA_API_BASE}/generate-token`, {
     method: "POST",
     headers: {
       "client-id": requireEnv("CLICKPESA_CLIENT_ID"),
@@ -235,6 +256,44 @@ async function getAuthToken(): Promise<string> {
   const bare = data.token.trim().replace(/^Bearer\s+/i, "");
   cachedToken = { token: bare, expiresAt: Date.now() + 55 * 60_000 };
   return bare;
+}
+
+/** How long the reachability check below may take before it counts as a failure. */
+const GATEWAY_CHECK_TIMEOUT_MS = 10_000;
+
+/**
+ * Can this deployment talk to ClickPesa at all, right now?
+ *
+ * Asks for a fresh token and nothing else: it moves no money, creates nothing
+ * and costs one API call. The cached token is dropped first on purpose -- a
+ * token fetched fifty minutes ago proves ClickPesa was reachable fifty minutes
+ * ago, and the question the rulebook asks (`src/server/rules/`) is about now.
+ *
+ * It exists because of 8 Oct 2026: ClickPesa began answering the token request
+ * with 404, every payment check failed for two days, and the only record was a
+ * line in the error log nobody had a reason to open. Never throws.
+ */
+export async function checkGateway(options: { reuseToken?: boolean } = {}): Promise<{ ok: true; asked: boolean } | { ok: false; detail: string }> {
+  // `reuseToken` is for a caller about to do real work with ClickPesa anyway:
+  // a token this process already holds is used as it is (`asked: false`, which
+  // proves nothing new and costs nothing), and only a process without one
+  // asks -- for a token the work would have needed regardless.
+  if (options.reuseToken && cachedToken && cachedToken.expiresAt > Date.now()) return { ok: true, asked: false };
+  cachedToken = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      getAuthToken(),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`ClickPesa did not answer within ${GATEWAY_CHECK_TIMEOUT_MS / 1000} seconds`)), GATEWAY_CHECK_TIMEOUT_MS);
+      }),
+    ]);
+    return { ok: true, asked: true };
+  } catch (error) {
+    return { ok: false, detail: (error instanceof Error ? error.message : String(error)).slice(0, 300) };
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
 }
 
 // ---- Checkout link ------------------------------------------------------
@@ -289,7 +348,7 @@ export async function generateCheckoutLink(
 
   let response: Response;
   try {
-    response = await fetch(`${CLICKPESA_API_BASE}/checkout-link/generate-checkout-url`, {
+    response = await counted(`${CLICKPESA_API_BASE}/checkout-link/generate-checkout-url`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${token}`,
@@ -340,6 +399,12 @@ export interface ClickPesaPaymentRecord {
   collectedAmount: number | null;
   message: string | null;
   updatedAt: string | null;
+  /**
+   * The wallet that paid (`paymentPhoneNumber`), as ClickPesa gave it. Only
+   * present for mobile-money payments, and only when ClickPesa says. It is
+   * where an automatic refund goes -- see `src/server/money/refund-send.ts`.
+   */
+  payerPhone?: string | null;
 }
 
 export type PaymentStatusOutcome =
@@ -388,7 +453,7 @@ export async function queryPaymentStatus(
 
   let response: Response;
   try {
-    response = await fetch(
+    response = await counted(
       `${CLICKPESA_API_BASE}/payments/${encodeURIComponent(orderReference)}`,
       {
         method: "GET",
@@ -443,6 +508,7 @@ function toPaymentRecord(value: unknown): ClickPesaPaymentRecord {
     collectedAmount: Number.isFinite(amount) ? amount : null,
     message: str(r.message),
     updatedAt: str(r.updatedAt),
+    payerPhone: str(r.paymentPhoneNumber),
   };
 }
 
@@ -508,7 +574,7 @@ export async function getAccountBalance(): Promise<BalanceOutcome> {
 
   let response: Response;
   try {
-    response = await fetch(`${CLICKPESA_API_BASE}/account/balance`, {
+    response = await counted(`${CLICKPESA_API_BASE}/account/balance`, {
       method: "GET",
       headers: { Authorization: `Bearer ${auth.token}` },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),
@@ -542,7 +608,7 @@ export async function previewMobilePayout(input: PayoutRequest): Promise<PayoutP
 
   let response: Response;
   try {
-    response = await fetch(`${CLICKPESA_API_BASE}/payouts/preview-mobile-money-payout`, {
+    response = await counted(`${CLICKPESA_API_BASE}/payouts/preview-mobile-money-payout`, {
       method: "POST",
       headers: { Authorization: `Bearer ${auth.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(payoutBody(input)),
@@ -618,7 +684,7 @@ export async function createMobilePayout(input: PayoutRequest): Promise<CreatePa
 
   let response: Response;
   try {
-    response = await fetch(`${CLICKPESA_API_BASE}/payouts/create-mobile-money-payout`, {
+    response = await counted(`${CLICKPESA_API_BASE}/payouts/create-mobile-money-payout`, {
       method: "POST",
       headers: { Authorization: `Bearer ${auth.token}`, "Content-Type": "application/json" },
       body: JSON.stringify(payoutBody(input)),
@@ -654,7 +720,7 @@ export async function queryPayoutStatus(orderReference: string): Promise<PayoutS
 
   let response: Response;
   try {
-    response = await fetch(`${CLICKPESA_API_BASE}/payouts/${encodeURIComponent(orderReference)}`, {
+    response = await counted(`${CLICKPESA_API_BASE}/payouts/${encodeURIComponent(orderReference)}`, {
       method: "GET",
       headers: { Authorization: `Bearer ${auth.token}` },
       signal: AbortSignal.timeout(STATUS_TIMEOUT_MS),

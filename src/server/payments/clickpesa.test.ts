@@ -10,6 +10,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   checkChecksum,
+  checkGateway,
+  clickPesaCallCount,
   createChecksum,
   createMobilePayout,
   generateCheckoutLink,
@@ -385,7 +387,7 @@ describe("queryPaymentStatus", () => {
       "fetch",
       vi.fn().mockResolvedValueOnce(tokenResponse).mockResolvedValueOnce(
         respond(200, [
-          { status: "success", paymentReference: "CP1", collectedAmount: "5574", orderReference: "ORADODN6CD" },
+          { status: "success", paymentReference: "CP1", collectedAmount: "5574", orderReference: "ORADODN6CD", paymentPhoneNumber: "255754123456" },
           { status: "FAILED" },
         ]),
       ),
@@ -395,8 +397,9 @@ describe("queryPaymentStatus", () => {
       ok: true,
       found: true,
       records: [
-        { status: "SUCCESS", paymentReference: "CP1", orderReference: "ORADODN6CD", collectedAmount: 5574, message: null, updatedAt: null },
-        { status: "FAILED", paymentReference: null, orderReference: null, collectedAmount: null, message: null, updatedAt: null },
+        // `payerPhone` is the wallet that paid: where an automatic refund is sent.
+        { status: "SUCCESS", paymentReference: "CP1", orderReference: "ORADODN6CD", collectedAmount: 5574, message: null, updatedAt: null, payerPhone: "255754123456" },
+        { status: "FAILED", paymentReference: null, orderReference: null, collectedAmount: null, message: null, updatedAt: null, payerPhone: null },
       ],
     });
   });
@@ -527,5 +530,78 @@ describe("payouts", () => {
       stub(json({ message: "No balance account is linked to this merchant yet." }, 404));
       await expect(getAccountBalance()).resolves.toEqual({ ok: false, reason: "no-account" });
     });
+  });
+});
+
+describe("checkGateway", () => {
+  const tokenOk = { ok: true, status: 200, json: async () => ({ success: true, token: "Bearer eyJtest" }), text: async () => "" };
+  const tokenRefused = { ok: false, status: 404, json: async () => ({}), text: async () => "" };
+
+  it("says ClickPesa is up when a new token is issued, and that it really asked", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(tokenOk);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(checkGateway()).resolves.toEqual({ ok: true, asked: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("reports what ClickPesa said when the token is refused -- the failure of 8 Oct 2026", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(tokenRefused));
+
+    await expect(checkGateway()).resolves.toEqual({ ok: false, detail: "ClickPesa generate-token failed: HTTP 404" });
+  });
+
+  it("never throws when the network itself fails", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("getaddrinfo ENOTFOUND api.clickpesa.com")));
+
+    await expect(checkGateway()).resolves.toEqual({ ok: false, detail: "getaddrinfo ENOTFOUND api.clickpesa.com" });
+  });
+
+  it("does not trust a token it already holds: a plain check always asks again", async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(tokenOk).mockResolvedValueOnce(tokenRefused);
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect((await checkGateway()).ok).toBe(true);
+    // ClickPesa has since stopped issuing tokens. A cached one must not hide that.
+    expect((await checkGateway()).ok).toBe(false);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("with reuseToken, spends no request when a token is already in hand, and says it did not ask", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(tokenOk);
+    vi.stubGlobal("fetch", fetchMock);
+    await checkGateway();
+
+    await expect(checkGateway({ reuseToken: true })).resolves.toEqual({ ok: true, asked: false });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("with reuseToken and no token in hand, asks", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(tokenOk);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(checkGateway({ reuseToken: true })).resolves.toEqual({ ok: true, asked: true });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("clickPesaCallCount", () => {
+  it("counts every request, the token request included, and a failed one too", async () => {
+    const tokenOk = { ok: true, status: 200, json: async () => ({ success: true, token: "Bearer eyJtest" }), text: async () => "" };
+    const notFound = { ok: false, status: 404, json: async () => ({}), text: async () => "" };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(tokenOk).mockResolvedValueOnce(notFound).mockResolvedValueOnce(notFound));
+    const before = clickPesaCallCount();
+
+    await queryPaymentStatus("ORADODN6CD");
+    expect(clickPesaCallCount() - before).toBe(2);
+
+    // The token is cached now: the next lookup is one request, not two.
+    await queryPayoutStatus("PABC");
+    expect(clickPesaCallCount() - before).toBe(3);
+  });
+
+  it("counts nothing when nothing is asked", () => {
+    const before = clickPesaCallCount();
+    expect(clickPesaCallCount()).toBe(before);
   });
 });

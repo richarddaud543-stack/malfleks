@@ -379,6 +379,9 @@ model Order {
   /// The code the customer gives at the door. See `DeliveryCode`.
   deliveryCode DeliveryCode?
 
+  /// Refunds MalFleks sent (or tried to send) itself. See `RefundSend`.
+  refundSends RefundSend[]
+
   // What an admin or branch view would query by: orders waiting on a
   // decision, a branch's own orders, newest first.
   @@index([status])
@@ -518,6 +521,15 @@ model OrderPayment {
   // payment's own status -- that stays pending | captured | failed.
   lastCheckedAt  DateTime?
   providerStatus String?
+
+  // The wallet the money actually came from, as ClickPesa reported it
+  // (`paymentPhoneNumber`), in payout format: twelve digits starting 255.
+  // Recorded at capture so that an automatic refund goes back to the wallet
+  // that paid, never to a number somebody typed into a form. Null on every
+  // payment captured before 10 Oct 2026 and whenever ClickPesa did not say;
+  // `refund-send.ts` then asks ClickPesa, and leaves the refund for a person
+  // if it still cannot tell.
+  payerPhone String?
 
   ledgerEntries LedgerEntry[]
 
@@ -1183,4 +1195,149 @@ model AgentHelpRequest {
 
   @@unique([agentKey, topic])
   @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// The rulebook (10 Oct 2026)
+//
+// The owner's ask: "a robust system that involves conditions and execution if
+// conditions are met or unmet ... to make it work when I am not around." The
+// rules themselves are code (`src/server/rules/`), for the reason the agents'
+// roster is: a rule that cancels an order or sends money is something to
+// review in a pull request, not to edit in a table. What is stored here is
+// what happens while the rules run.
+// ---------------------------------------------------------------------------
+
+// One pass of the rulebook. A row is written for every pass, including one
+// in which no rule had anything to do and one in which a rule threw -- the
+// same contract as `AgentRun`: a gap in this table must always mean "the
+// clock did not tick", never "nothing was wrong". It is also the heartbeat
+// the daily job reads to notice that the outside timer has stopped.
+//
+// `results` keeps only the rules that did, refused or failed at something;
+// a rule with nothing to do is the common case and is not worth a line 96
+// times a day. Quiet passes older than two weeks are pruned by the engine.
+model RuleRun {
+  id String @id @default(cuid())
+
+  /// timer (the outside 15-minute clock) | daily (Vercel's own cron) | manual
+  trigger String
+
+  startedAt  DateTime
+  finishedAt DateTime
+
+  /// ClickPesa calls this pass made, counted against the day's allowance.
+  apiCalls Int @default(0)
+  /// How many rules did something.
+  acted    Int @default(0)
+  /// How many rules threw.
+  errors   Int @default(0)
+
+  /// One sentence a person can read on a phone.
+  summary String
+
+  /// `[{ key, outcome, summary, count, details? }]`
+  results Json
+
+  @@index([startedAt])
+}
+
+// "This rule has already acted on this thing." The primary key is the whole
+// point: a rule claims its subject with an insert before it acts, and a second
+// pass, an overlapping pass or a retry is refused by the database rather than
+// by a read that is already stale. The same discipline as
+// `Order.branchRemindedAt`, made general so each new once-only rule does not
+// need a column of its own.
+model RuleMark {
+  ruleKey   String
+  subjectId String
+
+  createdAt DateTime @default(now())
+
+  @@id([ruleKey, subjectId])
+}
+
+// Something the owner has to know or decide: the rulebook stopped itself,
+// ClickPesa is refusing the site, a paid order has gone three days without
+// being delivered.
+//
+// `openKey` is `key` while the alert is open and null once it is resolved, and
+// it is unique -- so one condition raises one alert however many passes see
+// it, and can raise a new one after the owner has dealt with the last.
+//
+// `handling` is the owner saying "leave this one to me": the alert stays
+// visible and every rule that would otherwise act on the same thing (cancel
+// the order, hide the shop) stands down.
+model OwnerAlert {
+  id String @id @default(cuid())
+
+  /// What it is about, e.g. `gateway-down` or `undelivered:<orderId>`.
+  key     String
+  openKey String? @unique
+
+  /// urgent (email and text) | routine (email)
+  urgency String
+  /// open | handling | resolved
+  status  String @default("open")
+
+  subject String
+  body    String
+  /// Where in the console to go and deal with it.
+  href    String?
+  /// Whatever the rule needs to undo or follow up on what it did.
+  data    Json?
+
+  createdAt DateTime  @default(now())
+  /// Set when the message was accepted by the provider. Null means it was not
+  /// sent, and the next pass tries again.
+  emailedAt DateTime?
+  textedAt  DateTime?
+
+  resolvedAt DateTime?
+  /// An admin uid, or `system:rules` when the condition cleared by itself.
+  resolvedBy String?
+
+  @@index([status, createdAt])
+  @@index([key, createdAt])
+}
+
+// One refund MalFleks sent, or tried to send, to a customer itself.
+//
+// Built on the same single rule as `PayoutBatch`'s automatic sending: mobile
+// money cannot be pulled back, so the failure that must never happen is
+// sending the same refund twice. `sendRef` is written before the request
+// leaves; a row in `sending` is never sent again by code; and `openOrderId`
+// (the order id while the refund is pending or sending, null afterwards) is
+// unique, so one order cannot have two refunds in flight however many passes
+// overlap.
+//
+// The ledger's `refund` entry is written only when ClickPesa says the money
+// arrived, in the same transaction that marks this row `sent`.
+model RefundSend {
+  id String @id @default(cuid())
+
+  orderId     String
+  order       Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  openOrderId String? @unique
+
+  amountTZS Int
+  /// The wallet it was sent to, in payout format. Null if none could be found.
+  phone     String?
+  /// Why this refund needs no decision: shop-declined | deadline | paid-after-cancel
+  reason    String
+
+  /// pending | sending | sent | failed | returned
+  status String @default("pending")
+
+  sendRef     String? @unique
+  providerRef String?
+  feeTZS      Int?
+
+  createdAt     DateTime  @default(now())
+  sendStartedAt DateTime?
+  finishedAt    DateTime?
+  failureNote   String?
+
+  @@index([orderId])
+  @@index([status])
 }

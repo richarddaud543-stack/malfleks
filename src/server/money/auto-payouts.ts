@@ -111,17 +111,50 @@ export interface AutoPayoutStatus extends AutoPayoutConfig {
 }
 
 /** Midnight at the start of today in East Africa Time (UTC+3, no daylight saving). */
-function eatDayStart(now: Date): Date {
+export function eatDayStart(now: Date): Date {
   const eat = new Date(now.getTime() + 3 * 3_600_000);
   return new Date(Date.UTC(eat.getUTCFullYear(), eat.getUTCMonth(), eat.getUTCDate()) - 3 * 3_600_000);
 }
 
-async function sentTodayTZS(now: Date): Promise<number> {
-  const sum = await getPrisma().payoutBatch.aggregate({
-    where: { sendRef: { not: null }, sendStartedAt: { gte: eatDayStart(now) }, status: { in: ["sending", "paid"] } },
-    _sum: { totalTZS: true },
-  });
-  return sum._sum.totalTZS ?? 0;
+/**
+ * Everything MalFleks has sent out by itself today: payouts to partners and
+ * refunds to customers (`refund-send.ts`). One total, because the daily
+ * ceiling is a limit on money leaving without a person looking, and it does
+ * not matter to that limit who the money went to.
+ */
+export async function sentTodayTZS(now: Date): Promise<number> {
+  const since = eatDayStart(now);
+  const db = getPrisma();
+  const [payouts, refunds] = await Promise.all([
+    db.payoutBatch.aggregate({
+      where: { sendRef: { not: null }, sendStartedAt: { gte: since }, status: { in: ["sending", "paid"] } },
+      _sum: { totalTZS: true },
+    }),
+    db.refundSend.aggregate({
+      where: { sendStartedAt: { gte: since }, status: { in: ["sending", "sent"] } },
+      _sum: { amountTZS: true },
+    }),
+  ]);
+  return (payouts._sum.totalTZS ?? 0) + (refunds._sum.amountTZS ?? 0);
+}
+
+/** ClickPesa accepts one payout request per merchant every 60 seconds; a little over, for the clocks. */
+export const SEND_SPACING_MS = 70_000;
+
+/**
+ * Whether MalFleks asked ClickPesa to send money so recently that another
+ * request now would be refused for pace alone. A refund and a partner payout
+ * share the one-a-minute allowance, and a payout refused for pace would be
+ * marked failed and wait a day for no reason.
+ */
+export async function sentJustNow(now: Date): Promise<boolean> {
+  const since = new Date(now.getTime() - SEND_SPACING_MS);
+  const db = getPrisma();
+  const [payout, refund] = await Promise.all([
+    db.payoutBatch.findFirst({ where: { sendStartedAt: { gte: since } }, select: { id: true } }),
+    db.refundSend.findFirst({ where: { sendStartedAt: { gte: since } }, select: { id: true } }),
+  ]);
+  return Boolean(payout || refund);
 }
 
 export async function autoPayoutStatus(now: Date = new Date(), env: Env = process.env): Promise<AutoPayoutStatus> {
@@ -301,13 +334,15 @@ async function tellPeople(batchId: string, outcome: SettleOutcome): Promise<void
  * Never throws -- every failure is logged and reported in the result, because
  * this runs after a customer's delivery was confirmed and must not undo it.
  */
-export async function runAutoPayouts(now: Date = new Date(), env: Env = process.env): Promise<AutoPayoutRun> {
+export async function runAutoPayouts(now: Date = new Date(), env: Env = process.env, options: { settleInFlight?: boolean } = {}): Promise<AutoPayoutRun> {
   const run: AutoPayoutRun = { settled: [], leftForAdmin: [] };
   try {
     const config = autoPayoutConfig(env);
     // In-flight payouts are settled even when sending is off or paused: the
     // money already left, and the books should say what happened to it.
-    run.settled = await settleSendingPayouts();
+    // (`settleInFlight: false` is the rulebook, which has just done exactly
+    // that in a step of its own and has no ClickPesa calls to spend twice.)
+    if (options.settleInFlight !== false) run.settled = await settleSendingPayouts();
 
     if (!config.armed) return { ...run, skipped: "off" };
     if (await autoPayoutsPaused()) return { ...run, skipped: "paused" };
@@ -336,8 +371,11 @@ export async function runAutoPayouts(now: Date = new Date(), env: Env = process.
       }
     }
     if (!chosen) return run;
+    // Something was sent in the last minute (a refund, or another run's
+    // payout). The next run sends this one.
+    if (await sentJustNow(now)) return run;
 
-    run.sent = await sendOne(chosen);
+    run.sent = await sendOne(chosen, now);
     return run;
   } catch (error) {
     await logServerError("auto-payout-run", error);
@@ -345,7 +383,7 @@ export async function runAutoPayouts(now: Date = new Date(), env: Env = process.
   }
 }
 
-async function sendOne(payee: PayeeOwed): Promise<NonNullable<AutoPayoutRun["sent"]>> {
+async function sendOne(payee: PayeeOwed, now: Date): Promise<NonNullable<AutoPayoutRun["sent"]>> {
   const db = getPrisma();
   const phoneNumber = payee.payoutPhone!;
 
@@ -376,7 +414,8 @@ async function sendOne(payee: PayeeOwed): Promise<NonNullable<AutoPayoutRun["sen
   //    the reference is on record before the request leaves.
   const claimed = await db.payoutBatch.updateMany({
     where: { id: batchId, status: "pending", sendRef: null },
-    data: { status: "sending", sendRef, sendStartedAt: new Date(), feeTZS: Math.round(preview.feeTZS) },
+    // The run's own clock: the daily ceiling and the one-a-minute pace are both measured against it.
+    data: { status: "sending", sendRef, sendStartedAt: now, feeTZS: Math.round(preview.feeTZS) },
   });
   if (claimed.count !== 1) return { ...base, result: "refused", detail: "someone else acted on this payout first" };
 

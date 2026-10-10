@@ -97,6 +97,7 @@ export async function POST(request: Request): Promise<Response> {
         paymentReference:
           typeof data.paymentReference === "string" ? data.paymentReference : null,
         collectedAmount: Number(data.collectedAmount),
+        payerPhone: typeof data.paymentPhoneNumber === "string" ? data.paymentPhoneNumber : null,
         source: "webhook",
       });
     } else if (event === "PAYMENT FAILED") {
@@ -111,14 +112,21 @@ export async function POST(request: Request): Promise<Response> {
       const fromEvent = event === "PAYOUT REFUNDED" ? "REFUNDED" : event === "PAYOUT REVERSED" ? "REVERSED" : null;
       const status = (typeof data.status === "string" && data.status.trim() ? data.status.trim().toUpperCase() : null) ?? fromEvent ?? "UNKNOWN";
       const fee = Number(data.fee);
-      const { settlePayoutFromProvider } = await import("@/server/money/auto-payouts");
-      const { outcome, batchId } = await settlePayoutFromProvider(orderReference, {
+      const record = {
         status: fromEvent ?? status,
         id: typeof data.id === "string" && data.id ? data.id : null,
         orderReference,
         feeTZS: Number.isFinite(fee) ? fee : null,
-      });
-      if (batchId && outcome === "paid") {
+      };
+      const { settlePayoutFromProvider } = await import("@/server/money/auto-payouts");
+      const { outcome, batchId } = await settlePayoutFromProvider(orderReference, record);
+      if (outcome === "not-ours") {
+        // Not a partner payout. A refund MalFleks sent a customer is also a
+        // ClickPesa payout (see src/server/money/refund-send.ts) and is
+        // reported here the same way; a reference that is neither is ignored.
+        const { applyRefundAnswer } = await import("@/server/money/refund-send");
+        await applyRefundAnswer(orderReference, record);
+      } else if (batchId && outcome === "paid") {
         const { notifyPayoutSent } = await import("@/server/notify/events");
         await notifyPayoutSent(batchId);
       } else if (batchId && outcome === "returned") {

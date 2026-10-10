@@ -1,3 +1,4 @@
+import { RULES_ACTOR } from "@/server/orders/status";
 import { PAYMENT_ACTOR } from "@/server/payments/settle";
 import type { Prisma } from "@prisma/client";
 
@@ -199,7 +200,7 @@ export type TimelineItem =
        * partner's kind, anything else that is set is an admin. Null for an
        * event with no actor at all.
        */
-      by: "branch" | "courier" | "admin" | "payment" | null;
+      by: "branch" | "courier" | "admin" | "payment" | "rules" | null;
       note: string | null;
     }
   | { at: Date; type: "payment-link"; amountTZS: number }
@@ -253,8 +254,18 @@ export async function getOrderDetail(id: string) {
       : [],
   ]);
   const partnerKindByUid = new Map(partnerActors.map((a) => [a.uid, a.partner.kind]));
-  const actorRole = (uid: string | null): "branch" | "courier" | "admin" | "payment" | null =>
-    !uid ? null : uid === PAYMENT_ACTOR ? "payment" : !partnerKindByUid.has(uid) ? "admin" : partnerKindByUid.get(uid) === "courier" ? "courier" : "branch";
+  const actorRole = (uid: string | null): "branch" | "courier" | "admin" | "payment" | "rules" | null =>
+    !uid
+      ? null
+      : uid === PAYMENT_ACTOR
+        ? "payment"
+        : uid === RULES_ACTOR
+          ? "rules"
+          : !partnerKindByUid.has(uid)
+            ? "admin"
+            : partnerKindByUid.get(uid) === "courier"
+              ? "courier"
+              : "branch";
 
   const sum = (kind: string) => order.ledgerEntries.filter((e) => e.kind === kind).reduce((s, e) => s + e.amountTZS, 0);
   const money: OrderMoney = {

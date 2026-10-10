@@ -1,5 +1,6 @@
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
+import { toPayoutPhone } from "@/server/money/payout-rules";
 import { accruePayouts } from "@/server/money/payouts";
 import { notifyPartnersOfPayment } from "@/server/notify/events";
 import { ensureDeliveryCode } from "@/server/orders/delivery-code";
@@ -43,6 +44,12 @@ export interface CaptureInput {
   /** ClickPesa's own reference for the collection. Falls back to `providerRef`. */
   paymentReference: string | null;
   collectedAmount: number;
+  /**
+   * The wallet the money came from, as ClickPesa reported it. Kept on the
+   * payment so an automatic refund can go back to the wallet that paid.
+   * Anything that is not recognisably a Tanzanian mobile number is dropped.
+   */
+  payerPhone?: string | null;
   /** Which road recorded it -- written into the ledger note, so the audit trail says. */
   source: "webhook" | "reconcile";
 }
@@ -94,7 +101,7 @@ export async function capturePayment(input: CaptureInput): Promise<CaptureOutcom
     // `providerRef` to ClickPesa's own reference here does not affect it.
     const { count } = await tx.orderPayment.updateMany({
       where: { id: payment.id, status: { in: ["pending", "failed"] } },
-      data: { status: "captured", capturedAt: new Date(), providerRef: paymentReference },
+      data: { status: "captured", capturedAt: new Date(), providerRef: paymentReference, payerPhone: toPayoutPhone(input.payerPhone) },
     });
     // Lost the race to the other road, or a concurrent delivery. No-op.
     if (count === 0) return "already-captured" as const;

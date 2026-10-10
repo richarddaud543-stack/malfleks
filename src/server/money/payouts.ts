@@ -546,11 +546,21 @@ export async function recordRefund(
   });
 }
 
-/** Collected for this order, less what has already been refunded or split out. */
+/**
+ * Collected for this order, less what has already been refunded or split out,
+ * less a refund MalFleks is sending by itself right now.
+ *
+ * That last part matters: an automatic refund (`refund-send.ts`) writes its
+ * ledger entry only when ClickPesa confirms the money arrived. Between the
+ * request and the answer the ledger still shows the money as held, and without
+ * this an admin could record a second refund of the same shillings by hand.
+ */
 export async function refundableFor(db: Db, orderId: string): Promise<number> {
+  // One after the other: `db` is often a transaction, which has one connection.
   const groups = await db.ledgerEntry.groupBy({ by: ["kind"], where: { orderId }, _sum: { amountTZS: true } });
+  const onItsWay = await db.refundSend.aggregate({ where: { orderId, status: { in: ["pending", "sending"] } }, _sum: { amountTZS: true } });
   const sum = (k: string) => groups.find((g) => g.kind === k)?._sum.amountTZS ?? 0;
-  return sum("collected") - sum("refund") - SPLIT_KINDS.reduce((s, k) => s + sum(k), 0);
+  return sum("collected") - sum("refund") - SPLIT_KINDS.reduce((s, k) => s + sum(k), 0) - (onItsWay._sum.amountTZS ?? 0);
 }
 
 // ---------------------------------------------------------------------------

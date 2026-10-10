@@ -505,6 +505,8 @@ const PARTNER_STATUS_WORDS: Record<"branch" | "courier", Record<string, string>>
 function statusWords(item: Extract<TimelineItem, { type: "status" }>): string {
   // Paying is what confirms an order now; nobody pressed anything.
   if (item.by === "payment" && item.to === "confirmed") return "Confirmed automatically when the customer paid";
+  // The rulebook (src/server/rules/) acted: nobody at MalFleks pressed anything.
+  if (item.by === "rules" && item.to === "cancelled") return "Cancelled automatically by MalFleks's rules";
   const byPartner = item.by === "branch" || item.by === "courier" ? PARTNER_STATUS_WORDS[item.by][item.to] : undefined;
   return byPartner ?? STATUS_WORDS[item.to] ?? `Moved to ${item.to}`;
 }

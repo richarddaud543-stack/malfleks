@@ -84,6 +84,7 @@ export async function reconcilePayment(paymentId: string): Promise<ReconcileResu
     providerRef: payment.providerRef,
     paymentReference: decision.paymentReference,
     collectedAmount: decision.collectedAmount,
+    payerPhone: decision.payerPhone ?? null,
     source: "reconcile",
   });
 

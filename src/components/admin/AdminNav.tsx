@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { signOut } from "@/app/actions/auth";
 import type { NavCounts } from "@/server/admin/dashboard";
 
-type IconName = "overview" | "orders" | "applications" | "submissions" | "money" | "payouts" | "partners" | "catalogue" | "city";
+type IconName = "overview" | "orders" | "applications" | "submissions" | "money" | "payouts" | "partners" | "catalogue" | "city" | "rules";
 
 // Grouped the way the work flows: orders and money first, then the people
 // MalFleks works with, then what they sell.
@@ -20,6 +20,8 @@ const ITEMS: { href: string; label: string; icon: IconName; count?: keyof NavCou
   { href: "/admin/catalogue", label: "Catalogue", icon: "catalogue" },
   { href: "/admin/submissions", label: "Submissions", icon: "submissions", count: "submissions" },
   { href: "/admin/city", label: "The city", icon: "city", count: "city" },
+  // What the site does by itself, and what it could not settle without the owner.
+  { href: "/admin/rules", label: "Rules", icon: "rules", count: "rules" },
 ];
 
 const ICON_PATHS: Record<IconName, string> = {
@@ -32,6 +34,7 @@ const ICON_PATHS: Record<IconName, string> = {
   partners: "M7 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zM13.5 9a2 2 0 1 0 0-4M2.5 16c0-2.5 2-4 4.5-4s4.5 1.5 4.5 4M13 12c2.3 0 4.5 1.3 4.5 4",
   catalogue: "M3 4h6v6H3zM11 4h6v6h-6zM3 12h6v5H3zM11 12h6v5h-6z",
   city: "M3 17V8l4-3 4 3v9M11 17V11l3-2 3 2v6M2 17h16M5 11h1M5 14h1M14 13h1",
+  rules: "M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM10 6v4l2.5 2.5",
 };
 
 function Icon({ name }: { name: IconName }) {

@@ -21,6 +21,8 @@ export type SettlementDecision =
       paymentReference: string | null;
       collectedAmount: number;
       providerStatus: string;
+      /** The wallet that paid, when ClickPesa said. Absent, never guessed. */
+      payerPhone?: string;
     }
   | { action: "wait"; providerStatus: string };
 
@@ -66,6 +68,7 @@ export function decideSettlement(records: ClickPesaPaymentRecord[]): SettlementD
       paymentReference: best.paymentReference,
       collectedAmount: best.collectedAmount,
       providerStatus: best.status,
+      ...(best.payerPhone ? { payerPhone: best.payerPhone } : {}),
     };
   }
 

@@ -867,7 +867,27 @@ export function refundDueAdminMessage(input: {
   productName: string;
   reason: string | null;
   adminUrl: string;
+  /**
+   * MalFleks will send this refund itself (`src/server/money/refund-send.ts`).
+   * The email then says so, and says NOT to send it by hand: an owner who
+   * refunds from the ClickPesa dashboard while the site is doing the same
+   * thing refunds the customer twice.
+   */
+  automatic?: boolean;
 }): { subject: string; body: string } {
+  if (input.automatic) {
+    return {
+      subject: `MalFleks: ${input.reference} was cancelled — the refund is automatic`,
+      body: [
+        `Order ${input.reference} (${input.productName}) was cancelled after the customer had paid.`,
+        ...(input.reason ? [`Reason given: ${input.reason}`] : []),
+        "",
+        "MalFleks is sending the refund itself, to the mobile money number that paid.",
+        "Do NOT send it from ClickPesa as well. You will be told if it does not arrive.",
+        `${input.adminUrl}/admin/rules`,
+      ].join("\n"),
+    };
+  }
   return {
     subject: `MalFleks: refund due on ${input.reference}`,
     body: [

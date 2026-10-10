@@ -3,6 +3,7 @@ import { runAgent } from "@/agents/runtime";
 import { runAutoPayouts } from "@/server/money/auto-payouts";
 import { runStuckOrderSafetyNet } from "@/server/orders/stuck";
 import { reconcileDue } from "@/server/payments/reconcile";
+import { runRulebook } from "@/server/rules/engine";
 
 export const dynamic = "force-dynamic";
 
@@ -64,6 +65,16 @@ export const maxDuration = 60;
  * credentials are set, and whether or not the payment check succeeded), it
  * cancels nothing, and it cannot fail this route: a payment check that worked
  * still answers 200 if the digest did not send.
+ *
+ * ## The fifth job: the rulebook, and the watch on its clock
+ *
+ * The rulebook (`src/server/rules/`) is meant to run every fifteen minutes,
+ * called by an outside timer at `/api/rules/run`. This daily run does two
+ * things for it. It runs one pass itself, so that with the timer broken -- or
+ * never set up -- every rule still runs once a day, late but not lost. And
+ * because it is started by a *different* clock (Vercel's), it is the only
+ * place that can notice the timer has stopped: the `clock-watch` rule does
+ * its checking on this trigger and tells the owner. Never throws.
  */
 export async function GET(request: Request): Promise<Response> {
   const secret = process.env.CRON_SECRET?.trim();
@@ -98,6 +109,9 @@ export async function GET(request: Request): Promise<Response> {
   // recorded `error` the city page shows.
   const watch = await runAgent("watchman", "schedule");
 
+  // Last, so the rules see what the payment check above just recorded.
+  const rules = await runRulebook("daily");
+
   if (reconcileFailed) {
     return Response.json({ ok: false, stuckOrders: stuck.digest, branchReminders: stuck.branchReminders, watchman: watch.ok ? watch.run.outcome : "unknown-agent" }, { status: 500 });
   }
@@ -110,6 +124,7 @@ export async function GET(request: Request): Promise<Response> {
     branchReminders: stuck.branchReminders,
     payouts: payouts ? { skipped: payouts.skipped ?? null, settled: payouts.settled.length, sent: payouts.sent?.result ?? null, leftForAdmin: payouts.leftForAdmin.length } : null,
     watchman: watch.ok ? { outcome: watch.run.outcome, summary: watch.run.summary } : { outcome: "unknown-agent" },
+    rules: { ok: rules.ok, skipped: rules.skipped ?? null, acted: rules.acted, errors: rules.errors, summary: rules.summary },
     ...(ready ? {} : { skipped: "ClickPesa credentials not set on this deployment" }),
   });
 }

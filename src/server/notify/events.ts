@@ -397,7 +397,11 @@ export function notifyOrderCancelled(orderId: string): Promise<void> {
     // Since a branch can decline a paid order itself, nobody at MalFleks
     // necessarily saw it happen -- so the inbox is told, every time.
     if (order.payments.length > 0) {
-      const notice = refundDueAdminMessage({ reference: order.reference, productName: order.productName, reason: order.decisionNote, adminUrl: resolveAdminUrl() });
+      // Imported here, not at the top: refund-send.ts reaches back into this
+      // module to tell the customer when the refund has gone.
+      const { refundWillBeAutomatic } = await import("@/server/money/refund-send");
+      const automatic = await refundWillBeAutomatic(orderId);
+      const notice = refundDueAdminMessage({ reference: order.reference, productName: order.productName, reason: order.decisionNote, adminUrl: resolveAdminUrl(), automatic });
       await logIfUndelivered("notify-order-cancelled", `MalFleks that ${order.reference} needs a refund`, await sendNotification(notice.subject, notice.body));
     }
   });
