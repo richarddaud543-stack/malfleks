@@ -15,6 +15,7 @@ import { Badge, Card, Empty, Notice, PageHeader, plural, Section, Tile, Tiles } 
 import { formatTZS, formatWhen } from "@/lib/charts";
 import { readRulesPage, type RuleRow, type RulesPage } from "@/server/admin/rules";
 import { requireAdmin } from "@/server/auth/dal";
+import { logServerError } from "@/server/error-log";
 
 export const metadata: Metadata = {
   title: "Rules",
@@ -161,7 +162,25 @@ function AlertCard({ alert, now }: { alert: RulesPage["alerts"][number]; now: Da
 
 export default async function AdminRulesPage() {
   await requireAdmin("/admin/rules");
-  const page = await readRulesPage();
+
+  // The page is only a view. If it cannot be read (the database is briefly
+  // unreachable), say so plainly rather than show a bare error screen -- and
+  // say the one thing the owner needs to know: the rules do not depend on it.
+  let page: RulesPage;
+  try {
+    page = await readRulesPage();
+  } catch (error) {
+    await logServerError("admin-rules-page", error);
+    return (
+      <div className="mx-auto max-w-6xl">
+        <PageHeader title="Rules" description="What MalFleks does by itself while you are away." />
+        <Notice tone="danger">
+          <strong>This page could not be loaded just now.</strong> It has been logged. The rules themselves do not depend on this page and carry on running; try
+          again in a minute.
+        </Notice>
+      </div>
+    );
+  }
   const { clock, gateway, money, now } = page;
   const urgent = page.alerts.filter((a) => a.urgency === "urgent" && a.status === "open").length;
 
