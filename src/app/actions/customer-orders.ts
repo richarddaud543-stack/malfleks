@@ -32,7 +32,14 @@ export type ReturnOwnOrderResult =
 export async function returnOwnOrderAction(reference: string): Promise<ReturnOwnOrderResult> {
   if (!isAuthConfigured()) return { ok: false, reason: "unavailable" };
 
-  const session = await verifySession();
+  // See `reportListing`: the cookie read inside `verifySession` sits before its own guard.
+  let session: Awaited<ReturnType<typeof verifySession>>;
+  try {
+    session = await verifySession();
+  } catch (error) {
+    await logServerError("return-own-order", error);
+    return { ok: false, reason: "unavailable" };
+  }
   if (!session) return { ok: false, reason: "signed-out" };
 
   try {

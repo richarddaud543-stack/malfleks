@@ -36,7 +36,15 @@ export type ReportListingResult = { ok: true } | { ok: false; reason: ReportFail
 export async function reportListing(input: ListingReportInput): Promise<ReportListingResult> {
   if (!isAuthConfigured()) return { ok: false, reason: "unavailable" };
 
-  const session = await verifySession();
+  // `verifySession` turns an unreachable auth server into "signed out", but
+  // reading the cookies happens before its own guard: held here too.
+  let session: Awaited<ReturnType<typeof verifySession>>;
+  try {
+    session = await verifySession();
+  } catch (error) {
+    await logServerError("report-listing", error);
+    return { ok: false, reason: "unavailable" };
+  }
   if (!session) return { ok: false, reason: "signed-out" };
 
   const validated = validateListingReport({
