@@ -54,13 +54,19 @@ export default function ReturnOrderButton({ reference, until }: { reference: str
   function go() {
     setError(null);
     startTransition(async () => {
-      const result = await returnOwnOrderAction(reference);
-      if (result.ok) {
-        setAsked(true);
-        return;
+      try {
+        const result = await returnOwnOrderAction(reference);
+        if (result.ok) {
+          setAsked(true);
+          return;
+        }
+        setArmed(false);
+        setError(errorMessage(result.reason, copy));
+      } catch {
+        // The request itself failed (offline, a deploy mid-flight): nothing was asked.
+        setArmed(false);
+        setError(copy.failed);
       }
-      setArmed(false);
-      setError(errorMessage(result.reason, copy));
     });
   }
 

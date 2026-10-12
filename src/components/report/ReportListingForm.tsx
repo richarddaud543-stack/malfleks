@@ -64,9 +64,14 @@ export default function ReportListingForm({ productId, productPath }: { productI
     }
     if (!check.ok) return;
     startTransition(async () => {
-      const result = await reportListing({ productId, reason, details });
-      if (result.ok) setSent(true);
-      else setFailure(copy.failed[result.reason]);
+      try {
+        const result = await reportListing({ productId, reason, details });
+        if (result.ok) setSent(true);
+        else setFailure(copy.failed[result.reason]);
+      } catch {
+        // The request itself failed (offline, a deploy mid-flight): nothing was sent.
+        setFailure(copy.failed.unavailable);
+      }
     });
   }
 
