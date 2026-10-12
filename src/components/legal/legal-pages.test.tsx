@@ -33,9 +33,9 @@ describe.each([
 
   it("was last updated on the same day in both", async () => {
     const en = await draw(Page, "en");
-    expect(en.textContent).toMatch(/Last updated 5 October 2026/);
+    expect(en.textContent).toMatch(/Last updated 12 October 2026/);
     const sw = await draw(Page, "sw");
-    expect(sw.textContent).toMatch(/tarehe 5 Oktoba 2026/);
+    expect(sw.textContent).toMatch(/tarehe 12 Oktoba 2026/);
   });
 
   it("says in Swahili that the English version decides, and links to it", async () => {

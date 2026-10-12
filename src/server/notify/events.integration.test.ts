@@ -93,6 +93,8 @@ const ORDER_INPUT = {
   // `toyota-dar`'s own city: the action refuses a request that does not say
   // where it is going, and `createOrder` holds the answer to the branch's city.
   deliveryCity: "Dar es Salaam",
+  // The form's "I am 18 or older and I accept the terms" tick; the action refuses an order without it.
+  adultConfirmed: true,
   reference: "",
 };
 
@@ -243,6 +245,21 @@ describe("who may place an order, and where it may go", () => {
 
     await expect(submitOrder({ ...withoutCity, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
     await expect(submitOrder({ ...ORDER_INPUT, deliveryCity: "  ", requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    expect(await count()).toBe(before);
+  });
+
+  it("refuses an order whose customer did not confirm they are 18 or older", async () => {
+    session.mockResolvedValue(CUSTOMER);
+    const before = await count();
+    const { adultConfirmed: _omitted, ...unconfirmed } = ORDER_INPUT;
+    void _omitted;
+
+    await expect(submitOrder({ ...unconfirmed, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    await expect(submitOrder({ ...ORDER_INPUT, adultConfirmed: false, requestedAt: new Date().toISOString() })).resolves.toEqual({ ok: false, reason: "invalid" });
+    // A hand-made request that sends something truthy has still not ticked the box.
+    await expect(
+      submitOrder({ ...ORDER_INPUT, adultConfirmed: "yes" as unknown as boolean, requestedAt: new Date().toISOString() }),
+    ).resolves.toEqual({ ok: false, reason: "invalid" });
     expect(await count()).toBe(before);
   });
 

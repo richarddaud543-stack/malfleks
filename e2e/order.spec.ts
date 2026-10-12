@@ -13,6 +13,7 @@ async function fillDetails(page: Page, quantity = "1", city?: string) {
   await page.getByLabel("Phone number").fill("0754 123 456");
   if (city) await page.getByLabel("Delivery city").selectOption(city);
   await page.getByLabel("Delivery address").fill("12 Sokoine Road, Arusha");
+  await page.getByLabel(/I am 18 or older/).check();
 }
 
 // These run signed out, which is all CI can be. Since 4 Oct 2026 a signed-out

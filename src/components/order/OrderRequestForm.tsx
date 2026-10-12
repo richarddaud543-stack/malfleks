@@ -40,6 +40,7 @@ const FIELD_ORDER: OrderField[] = [
   "phone",
   "deliveryCity",
   "address",
+  "adultConfirmed",
 ];
 
 /**
@@ -70,6 +71,7 @@ function readDraft(productId: string): OrderRequestInput | null {
       address: text(draft.address, ""),
       agentId: typeof draft.agentId === "string" ? draft.agentId : null,
       deliveryCity: text(draft.deliveryCity, ""),
+      adultConfirmed: draft.adultConfirmed === true,
     };
   } catch {
     return null;
@@ -200,6 +202,7 @@ export default function OrderRequestForm({
         address: result.value.address,
         agentId: result.value.agent?.id ?? null,
         deliveryCity: input.deliveryCity,
+        adultConfirmed: input.adultConfirmed === true,
         reference: request.reference,
         requestedAt: request.requestedAt,
       });
@@ -223,6 +226,7 @@ export default function OrderRequestForm({
         address: result.value.address,
         agentId: result.value.agent?.id ?? null,
         deliveryCity: input.deliveryCity,
+        adultConfirmed: input.adultConfirmed === true,
         reference: request.reference,
         requestedAt: request.requestedAt,
       });
@@ -441,6 +445,37 @@ export default function OrderRequestForm({
             </Field>
           </div>
         </fieldset>
+
+        {/* Ordering is for adults who accept the terms (see the Terms, "Your
+            account" and "Returning goods"). The server refuses an order without
+            this tick too -- `hasAdultConfirmation`. */}
+        <div>
+          <div className="flex items-start gap-3">
+            <input
+              id={`${fieldId}-adultConfirmed`}
+              name="adultConfirmed"
+              data-field="adultConfirmed"
+              type="checkbox"
+              checked={input.adultConfirmed === true}
+              onChange={(e) => update({ adultConfirmed: e.target.checked })}
+              aria-invalid={Boolean(errors.adultConfirmed) || undefined}
+              aria-describedby={describe("adultConfirmed", false)}
+              className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--accent)]"
+            />
+            <label htmlFor={`${fieldId}-adultConfirmed`} className="text-sm">
+              {copy.adult.before}
+              <Link href="/terms" target="_blank" className="text-accent underline underline-offset-4">
+                {copy.adult.link}
+              </Link>
+              {copy.adult.after}
+            </label>
+          </div>
+          {errors.adultConfirmed && (
+            <p id={`${fieldId}-adultConfirmed-error`} className="mt-2 text-sm text-red-600">
+              {errors.adultConfirmed}
+            </p>
+          )}
+        </div>
 
         {/* One announcement per failed submit; the per-field messages are
             reached through aria-describedby as focus moves between them. */}

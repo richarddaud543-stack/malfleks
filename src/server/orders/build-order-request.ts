@@ -58,6 +58,12 @@ export interface SaveOrderRequestInput {
    * refuse a request that leaves it out -- see `hasDeliveryCity`.
    */
   deliveryCity?: string;
+  /**
+   * The customer's "I am 18 or older and accept the terms" tick. Optional in
+   * the type for the reason `deliveryCity` is; the public endpoints refuse a
+   * request without it -- see `hasAdultConfirmation`.
+   */
+  adultConfirmed?: boolean;
   /** The reference the customer already has on screen, so both copies match. */
   reference: string;
   requestedAt: string;
@@ -87,6 +93,15 @@ export type SaveOrderRequestFailure =
  */
 export function hasDeliveryCity(input: { deliveryCity?: unknown }): boolean {
   return typeof input.deliveryCity === "string" && input.deliveryCity.trim() !== "";
+}
+
+/**
+ * Whether the customer confirmed they are an adult and accept the terms.
+ * `=== true`, not truthiness: a hand-made request sending `"yes"` or `1` has
+ * not ticked the box the form shows.
+ */
+export function hasAdultConfirmation(input: { adultConfirmed?: unknown }): boolean {
+  return input.adultConfirmed === true;
 }
 
 export type BuildResult =
@@ -197,6 +212,7 @@ export function buildOrderRequest(
       address: input.address,
       agentId: input.agentId,
       deliveryCity: input.deliveryCity,
+      adultConfirmed: input.adultConfirmed,
     },
     route,
     product.priceTZS,

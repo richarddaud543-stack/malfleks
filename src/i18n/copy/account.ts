@@ -79,6 +79,25 @@ export const ACCOUNT = {
       askLabel: (reference: string) => `Ask to cancel order ${reference}`,
       cancelLabel: (reference: string) => `Cancel order ${reference}`,
     },
+    // Electronic Transactions Act s.30: 7 days after delivery to change one's mind.
+    returns: {
+      ask: "Return this order",
+      askLabel: (reference: string) => `Return order ${reference}`,
+      confirm: "Return it? You have 7 days from delivery, it must be unused, and you pay only the cost of sending it back.",
+      keep: "Keep it",
+      yes: "Yes, return it",
+      yesLabel: (reference: string) => `Yes, return order ${reference}`,
+      working: "Working…",
+      passedOn:
+        "We have your request. A person at MalFleks will contact you about taking it back to the shop, and your refund follows within 30 days. We have emailed you the details.",
+      signedOut: "Your session has expired. Sign in again to return this order.",
+      notFound: "We couldn't find this order on your account.",
+      notDelivered: "This order has not been recorded as delivered, so there is nothing to return yet.",
+      tooLate: "The 7 days to return this order have passed. If it arrived damaged or not as described, write to us.",
+      alreadyAsked: "You have already asked to return this order. We will reply by email.",
+      failed: "We couldn't do that just now. Nothing was changed — try again in a moment.",
+      until: (date: string) => `You can return it until ${date}.`,
+    },
     remove: {
       blockedUnpaid:
         "This order is confirmed and waiting for your payment, so it stays here until it is paid and delivered, or cancelled.",
@@ -210,6 +229,24 @@ export const ACCOUNT = {
       cancel: "Ghairi oda hii",
       askLabel: (reference: string) => `Omba kughairi oda ${reference}`,
       cancelLabel: (reference: string) => `Ghairi oda ${reference}`,
+    },
+    returns: {
+      ask: "Rudisha oda hii",
+      askLabel: (reference: string) => `Rudisha oda ${reference}`,
+      confirm: "Uirudishe? Una siku 7 tangu ilipofika, lazima iwe haijatumika, na unalipa gharama ya kuirudisha tu.",
+      keep: "Iache",
+      yes: "Ndiyo, irudishe",
+      yesLabel: (reference: string) => `Ndiyo, rudisha oda ${reference}`,
+      working: "Inashughulikiwa…",
+      passedOn:
+        "Tumepokea ombi lako. Mtu wa MalFleks atawasiliana nawe kuhusu kuirudisha dukani, na pesa yako itarudishwa ndani ya siku 30. Tumekutumia maelezo kwa barua pepe.",
+      signedOut: "Kipindi chako kimeisha. Ingia tena ili urudishe oda hii.",
+      notFound: "Hatukuipata oda hii kwenye akaunti yako.",
+      notDelivered: "Oda hii haijawekwa kuwa imefika, kwa hiyo bado hakuna cha kurudisha.",
+      tooLate: "Siku 7 za kurudisha oda hii zimepita. Kama ilifika ikiwa imeharibika au tofauti na ilivyoelezwa, tuandikie.",
+      alreadyAsked: "Umeshaomba kurudisha oda hii. Tutakujibu kwa barua pepe.",
+      failed: "Hatukuweza kufanya hivyo sasa hivi. Hakuna kilichobadilishwa — jaribu tena baada ya muda mfupi.",
+      until: (date: string) => `Unaweza kuirudisha mpaka ${date}.`,
     },
     remove: {
       blockedUnpaid:

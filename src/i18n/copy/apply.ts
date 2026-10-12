@@ -294,13 +294,14 @@ export const CONTACT = {
     },
     wrongHeading: "About a listing that is wrong",
     wrongBody:
-      "An address that does not exist, a price that is out of date, a brand or logo used where it should not be — send the link and what is wrong with it. We would rather take a listing down and put it back than leave a customer travelling to the wrong place.",
+      "An address that does not exist, a price that is out of date, a brand or logo used where it should not be — press \"Report this listing\" on its page, or send the link and what is wrong with it. We would rather take a listing down and put it back than leave a customer travelling to the wrong place.",
     dataHeading: "About your data",
     data: {
       before: "What we hold and how to have it deleted is set out in the ",
       link: "privacy notice",
       after: ". Write from the address you signed in with and we will act on it.",
     },
+    whoHeading: "Who we are",
   },
   sw: {
     title: "Wasiliana nasi",
@@ -320,12 +321,13 @@ export const CONTACT = {
     },
     wrongHeading: "Kuhusu tangazo lenye makosa",
     wrongBody:
-      "Anwani isiyokuwepo, bei iliyopitwa na wakati, chapa au nembo iliyotumika pasipostahili — tuma kiungo na ueleze kosa lake. Ni afadhali tuliondoe tangazo na kulirudisha kuliko kumwacha mteja asafiri kwenda mahali pasipo sahihi.",
+      "Anwani isiyokuwepo, bei iliyopitwa na wakati, chapa au nembo iliyotumika pasipostahili — bonyeza \"Ripoti tangazo hili\" kwenye ukurasa wake, au tuma kiungo na ueleze kosa lake. Ni afadhali tuliondoe tangazo na kulirudisha kuliko kumwacha mteja asafiri kwenda mahali pasipo sahihi.",
     dataHeading: "Kuhusu taarifa zako",
     data: {
       before: "Tunachohifadhi na jinsi ya kuomba kifutwe vimeelezwa kwenye ",
       link: "taarifa ya faragha",
       after: ". Andika ukitumia anwani uliyoingia nayo nasi tutalishughulikia.",
     },
+    whoHeading: "Sisi ni nani",
   },
 };

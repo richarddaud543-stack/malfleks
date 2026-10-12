@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import ScrollReveal from "@/components/motion/ScrollReveal";
+import BusinessDetails from "@/components/legal/BusinessDetails";
 import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 type Props = { params: Promise<{ lang: string }> };
@@ -51,7 +52,7 @@ export default async function TermsPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 5 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 12 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -77,6 +78,19 @@ export default async function TermsPage({ params }: Props) {
             An order is placed with the branch once you have paid for it on
             MalFleks. Until then nothing is reserved and nothing is owed.
           </p>
+        </section>
+
+        {/* Electronic Transactions Act 2015, s.28(1)(a)-(b). */}
+        <section id="who-we-are" className="scroll-mt-28">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Who we are
+          </h2>
+          <p className="mt-2">
+            These are MalFleks&apos;s own details, as the Electronic Transactions
+            Act, 2015 asks an online business to publish them. Each branch&apos;s
+            name and location are on its page and on your order.
+          </p>
+          <BusinessDetails locale="en" className="mt-4" />
         </section>
 
         {/* `id` so the footer's "Paying, delivery and refunds" link lands here. */}
@@ -116,7 +130,10 @@ export default async function TermsPage({ params }: Props) {
           <p className="mt-2">
             If the branch or MalFleks cancels an order you have paid for — for
             example because the branch turns out not to have the item — you are
-            refunded the full amount.
+            refunded the full amount. If an order you paid for has not been
+            delivered within 30 days of your payment, you may cancel it and you
+            are refunded in full, whatever the reason; a late order is usually
+            cancelled and refunded long before that.
           </p>
           <p className="mt-2">
             You can cancel an order you have not paid for yourself, on{" "}
@@ -138,6 +155,38 @@ export default async function TermsPage({ params }: Props) {
           </p>
         </section>
 
+        {/* Electronic Transactions Act 2015, s.30. */}
+        <section id="returns" className="scroll-mt-28">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Returning goods after delivery
+          </h2>
+          <p className="mt-2">
+            You may change your mind. Within 7 days after you receive an order,
+            you may cancel it, as long as you have not used what you bought.
+            Press &ldquo;Return this order&rdquo; on{" "}
+            <Link
+              href="/account"
+              className="text-accent underline underline-offset-4"
+            >
+              Your orders
+            </Link>
+            , or email us with the order reference.
+          </p>
+          <p className="mt-2">
+            Return the goods to the branch in the condition you received them.
+            You pay only the direct cost of sending them back. Once the branch
+            has them, MalFleks refunds the full amount you paid, no later than
+            30 days after you cancelled.
+          </p>
+          <p className="mt-2">
+            This right does not cover food, drinks and other goods meant for
+            everyday use. Goods that arrive damaged, wrong or not as described
+            are a different matter: tell us within 7 days and we will put it
+            right with the branch — a replacement, or a full refund that
+            includes the cost of sending them back.
+          </p>
+        </section>
+
         <section>
           <h2 className="font-display text-lg font-medium text-foreground">
             Your account
@@ -151,6 +200,11 @@ export default async function TermsPage({ params }: Props) {
             Use a phone number and address you can actually be reached at. A
             request with details that go nowhere wastes a real person&apos;s
             morning.
+          </p>
+          <p className="mt-2">
+            <strong>You must be 18 or older to order.</strong> When you place an
+            order you confirm that you are. If we learn that an order was placed
+            by someone younger, we cancel it and refund what was paid.
           </p>
         </section>
 
@@ -170,6 +224,11 @@ export default async function TermsPage({ params }: Props) {
             for honouring the price they published. We remove listings, and
             partners, that are not.
           </p>
+          <p className="mt-2">
+            Partners take back goods a customer returns under the 7-day rule
+            above and give back what they were paid for them. MalFleks may hold
+            that amount from the partner&apos;s next payout.
+          </p>
         </section>
 
         <section>
@@ -181,6 +240,24 @@ export default async function TermsPage({ params }: Props) {
             owners and are used to identify the shops that sell those products.
             Their appearance here is not a claim of endorsement or partnership
             beyond what a listing says.
+          </p>
+        </section>
+
+        <section id="report" className="scroll-mt-28">
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Reporting a listing
+          </h2>
+          <p className="mt-2">
+            If a listing uses your photo, your brand or your work without your
+            permission, offers something fake or unsafe, or is simply wrong,
+            press &ldquo;Report this listing&rdquo; on its page, or email us.
+            Say which listing, what is wrong and, for your own work, that it is
+            yours.
+          </p>
+          <p className="mt-2">
+            A person at MalFleks reads every report. While we check, we may
+            hide the listing. We take down what breaks someone else&apos;s
+            rights, tell the partner why, and remove partners who do it again.
           </p>
         </section>
 

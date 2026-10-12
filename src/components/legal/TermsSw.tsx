@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import BusinessDetails from "@/components/legal/BusinessDetails";
 import EnglishDecides from "@/components/legal/EnglishDecides";
 import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
@@ -21,7 +22,7 @@ export default function TermsSw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Masharti ya matumizi</h1>
-      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 5 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 12 Oktoba 2026.</p>
       <EnglishDecides path="/terms" />
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -42,6 +43,15 @@ export default function TermsSw() {
             Oda huwekwa kwa tawi ukishailipia kwenye MalFleks. Kabla ya hapo hakuna kinachotengwa na hakuna
             unachodaiwa.
           </p>
+        </section>
+
+        <section id="who-we-are" className="scroll-mt-28">
+          <h2 className={H}>Sisi ni nani</h2>
+          <p className="mt-2">
+            Hizi ni taarifa za MalFleks yenyewe, kama Sheria ya Miamala ya Kielektroniki ya 2015 inavyoitaka biashara
+            ya mtandaoni kuzichapisha. Jina na mahali pa kila tawi viko kwenye ukurasa wake na kwenye oda yako.
+          </p>
+          <BusinessDetails locale="sw" className="mt-4" />
         </section>
 
         <section id="paying" className="scroll-mt-28">
@@ -69,7 +79,9 @@ export default function TermsSw() {
           </p>
           <p className="mt-2">
             Tawi au MalFleks ikighairi oda uliyoilipia — kwa mfano kwa sababu tawi limebainika kutokuwa na bidhaa hiyo
-            — unarudishiwa kiasi chote.
+            — unarudishiwa kiasi chote. Oda uliyoilipia isipofika ndani ya siku 30 tangu ulipolipa, unaweza
+            kuighairi na kurudishiwa kiasi chote, sababu yoyote ile; kwa kawaida oda iliyochelewa hughairiwa na pesa
+            kurudishwa muda mrefu kabla ya hapo.
           </p>
           <p className="mt-2">
             Oda ambayo hujailipia unaweza kuighairi mwenyewe, kwenye{" "}
@@ -86,6 +98,28 @@ export default function TermsSw() {
           </p>
         </section>
 
+        <section id="returns" className="scroll-mt-28">
+          <h2 className={H}>Kurudisha bidhaa baada ya kuzipokea</h2>
+          <p className="mt-2">
+            Unaweza kubadili nia. Ndani ya siku 7 baada ya kupokea oda, unaweza kuighairi, ilimradi hujatumia
+            ulichonunua. Bonyeza “Rudisha oda hii” kwenye{" "}
+            <Link href="/account" className="text-accent underline underline-offset-4">
+              Oda zako
+            </Link>
+            , au tutumie barua pepe yenye namba ya kumbukumbu ya oda.
+          </p>
+          <p className="mt-2">
+            Rudisha bidhaa kwa tawi zikiwa katika hali ulivyozipokea. Unalipa gharama ya moja kwa moja ya kuzirudisha
+            tu. Tawi likishazipokea, MalFleks inakurudishia kiasi chote ulicholipa, si zaidi ya siku 30 baada ya
+            kughairi.
+          </p>
+          <p className="mt-2">
+            Haki hii haihusu vyakula, vinywaji na bidhaa nyingine za matumizi ya kila siku. Bidhaa zinazofika zikiwa
+            zimeharibika, si zenyewe au tofauti na zilivyoelezwa ni jambo jingine: tuambie ndani ya siku 7 na
+            tutalirekebisha na tawi — kwa kubadilishiwa, au kwa kurudishiwa kiasi chote pamoja na gharama ya kuzirudisha.
+          </p>
+        </section>
+
         <section>
           <h2 className={H}>Akaunti yako</h2>
           <p className="mt-2">
@@ -95,6 +129,10 @@ export default function TermsSw() {
           <p className="mt-2">
             Tumia namba ya simu na anwani unayoweza kupatikana kweli. Ombi lenye taarifa zisizofika popote hupoteza
             muda wa mtu halisi.
+          </p>
+          <p className="mt-2">
+            <strong>Lazima uwe na umri wa miaka 18 au zaidi ili kuagiza.</strong> Unapoweka oda unathibitisha kuwa
+            ndivyo. Tukibaini kuwa oda iliwekwa na mtu mwenye umri mdogo zaidi, tunaighairi na kurudisha kilicholipwa.
           </p>
         </section>
 
@@ -109,6 +147,10 @@ export default function TermsSw() {
             Bidhaa anazotuma mshirika hukaguliwa kabla hazijaonekana. Washirika wanawajibika kuhakikisha matangazo yao
             ni sahihi, na kuheshimu bei waliyoweka. Tunaondoa matangazo, na washirika, wasiofanya hivyo.
           </p>
+          <p className="mt-2">
+            Washirika hupokea tena bidhaa ambazo mteja anazirudisha chini ya kanuni ya siku 7 hapo juu na kurudisha
+            walicholipwa kwa ajili yake. MalFleks inaweza kukata kiasi hicho kwenye malipo yanayofuata ya mshirika.
+          </p>
         </section>
 
         <section>
@@ -117,6 +159,19 @@ export default function TermsSw() {
             Majina na nembo za chapa zinazoonyeshwa kwenye MalFleks ni alama za biashara za wamiliki wake na hutumika
             kutambulisha maduka yanayouza bidhaa hizo. Kuonekana kwake hapa si dai la kuidhinishwa wala ushirikiano
             zaidi ya kile tangazo linachosema.
+          </p>
+        </section>
+
+        <section id="report" className="scroll-mt-28">
+          <h2 className={H}>Kuripoti tangazo</h2>
+          <p className="mt-2">
+            Tangazo likitumia picha yako, chapa yako au kazi yako bila ruhusa yako, likitoa kitu feki au hatari, au
+            likiwa si sahihi tu, bonyeza “Ripoti tangazo hili” kwenye ukurasa wake, au tutumie barua pepe. Taja tangazo
+            lipi, kosa ni nini na, kwa kazi yako mwenyewe, kwamba ni yako.
+          </p>
+          <p className="mt-2">
+            Mtu wa MalFleks husoma kila ripoti. Tunapochunguza, tunaweza kulificha tangazo. Tunaondoa kinachovunja haki
+            za mtu mwingine, tunamweleza mshirika sababu, na tunawaondoa washirika wanaorudia.
           </p>
         </section>
 

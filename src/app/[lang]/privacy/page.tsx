@@ -60,7 +60,7 @@ export default async function PrivacyPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 5 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 12 October 2026.</p>
       </ScrollReveal>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -103,6 +103,12 @@ export default async function PrivacyPage({ params }: Props) {
             succeeded, how much it was, when, its own reference for it, and the
             mobile money number it came from. We store the amount, the time and
             the reference against your order.
+          </p>
+          <p className="mt-3">
+            If you report a listing, or ask to return an order, we keep what you
+            wrote, which listing or order it was about, when, and the email
+            address of the account you were signed in with, so a person at
+            MalFleks can follow it up and reply to you.
           </p>
         </section>
 
@@ -148,7 +154,10 @@ export default async function PrivacyPage({ params }: Props) {
             time, the country and city, and the browser and device type. It sets
             no cookies, does not record your name or email address, and does not
             follow you to other websites. Order references are removed from the
-            page addresses before they are counted.
+            page addresses before they are counted. Nothing on MalFleks records
+            your screen, your clicks or what you type, and the site&apos;s fonts
+            are served by MalFleks itself, so opening a page does not send your
+            address to Google or any other font service.
           </p>
           <p className="mt-2">
             We do not sell your details, and we do not pass them to advertisers.
@@ -202,6 +211,23 @@ export default async function PrivacyPage({ params }: Props) {
             One limit worth being straight about: a branch that has already
             received your request has your phone number in their own records,
             and we cannot delete that for you. We can tell you who it went to.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="font-display text-lg font-medium text-foreground">
+            Messages we send
+          </h2>
+          <p className="mt-2">
+            We email or text you only about something you started: your order,
+            its payment and delivery, your account, or your application to be a
+            partner. Those messages are not advertising, and each one says who
+            it is from and how to reach us.
+          </p>
+          <p className="mt-2">
+            MalFleks does not send offers or newsletters. If it ever does, it
+            will ask you first, and every such message will carry a way to stop
+            them in one step.
           </p>
         </section>
 

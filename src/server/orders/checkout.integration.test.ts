@@ -243,6 +243,7 @@ describe("checkoutForCustomer", () => {
       cancelReason: "Out of stock",
       refundDue: false,
       keepSavedCopy: false,
+      deliveredAt: null,
     });
   });
 });

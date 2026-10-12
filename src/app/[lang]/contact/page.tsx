@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import ScrollReveal from "@/components/motion/ScrollReveal";
+import BusinessDetails from "@/components/legal/BusinessDetails";
 import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 type Props = { params: Promise<{ lang: string }> };
@@ -28,7 +29,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
  * broken the first time someone travels.
  */
 export default async function ContactPage({ params }: Props) {
-  const copy = CONTACT[await pageLocale(params)];
+  const locale = await pageLocale(params);
+  const copy = CONTACT[locale];
   return (
     <div className="mx-auto max-w-2xl px-5 py-16">
       <ScrollReveal>
@@ -103,6 +105,14 @@ export default async function ContactPage({ params }: Props) {
             </Link>
             {copy.data.after}
           </p>
+        </section>
+
+        {/* Electronic Transactions Act 2015, s.28: who is behind the site. */}
+        <section>
+          <h2 className="font-display text-lg font-medium text-foreground">
+            {copy.whoHeading}
+          </h2>
+          <BusinessDetails locale={locale} className="mt-3" />
         </section>
       </div>
     </div>

@@ -295,6 +295,25 @@ describe("customer emails", () => {
     await expect(sendCustomerEmail("asha@example.test", "s", "b", {})).resolves.toEqual({ sent: false, reason: "not-configured" });
   });
 
+  it("ends every customer and partner email by saying who sent it and that it is not advertising", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{}", { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const env = { RESEND_API_KEY: "re_test" };
+
+    await sendCustomerEmail("asha@example.test", "s", "Body here", env);
+    await sendPartnerEmail("shop@example.test", "s", "Body here", env);
+
+    for (const [, init] of fetchMock.mock.calls) {
+      const text: string = JSON.parse(String(init.body)).text;
+      expect(text.startsWith("Body here\n\n——")).toBe(true);
+      expect(text).toMatch(/it is not advertising/);
+      expect(text).toMatch(/si tangazo/);
+      expect(text).toContain("MalFleks");
+      expect(text).toContain(MALFLEKS_CONTACT_EMAIL);
+    }
+    vi.unstubAllGlobals();
+  });
+
   it("the checkout email links to the MalFleks pay page and states the total", () => {
     const { subject, body } = paymentReadyMessage({
       firstName: "Asha",

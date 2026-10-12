@@ -25,6 +25,7 @@ export const ORDER = {
       phoneInvalid: "Enter a Tanzanian mobile number, e.g. 0754 123 456.",
       address: "Enter a street and area so the driver can find you.",
       agent: "Select an agent to carry this order.",
+      adult: "Confirm that you are 18 or older to order.",
     },
     page: {
       title: "Delivery",
@@ -60,6 +61,12 @@ export const ORDER = {
       opening: "Opening payment…",
       toPayment: "Continue to payment",
       signIn: "Sign in to order",
+      // Electronic Transactions Act s.30 and the Age of Majority Act: see the Terms.
+      adult: {
+        before: "I am 18 or older and I accept the ",
+        link: "terms of use",
+        after: ", including the 7-day right to return goods.",
+      },
       noteSignedIn:
         "Next you pay by mobile money. MalFleks holds your payment until the order is delivered; if the branch can't supply it, you are refunded in full.",
       noteSignedOut:
@@ -216,6 +223,7 @@ export const ORDER = {
       phoneInvalid: "Andika namba ya simu ya Tanzania, mfano 0754 123 456.",
       address: "Andika mtaa na eneo ili dereva akupate.",
       agent: "Chagua msafirishaji wa kubeba oda hii.",
+      adult: "Thibitisha kuwa una umri wa miaka 18 au zaidi ili uagize.",
     },
     page: {
       title: "Usafirishaji",
@@ -252,6 +260,11 @@ export const ORDER = {
       opening: "Malipo yanafunguliwa…",
       toPayment: "Endelea kwenye malipo",
       signIn: "Ingia ili uagize",
+      adult: {
+        before: "Nina umri wa miaka 18 au zaidi na ninakubali ",
+        link: "masharti ya matumizi",
+        after: ", ikiwemo haki ya siku 7 ya kurudisha bidhaa.",
+      },
       noteSignedIn:
         "Hatua inayofuata ni kulipa kwa pesa ya simu. MalFleks inashikilia malipo yako mpaka mzigo ufike; tawi likishindwa kukupatia, unarudishiwa pesa yote.",
       noteSignedOut:

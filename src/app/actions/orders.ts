@@ -7,7 +7,7 @@ import { createOrder, type CreateOrderFailure } from "@/server/orders/create-ord
 import { checkRateLimit, clientIp } from "@/server/rate-limit";
 import { logServerError } from "@/server/error-log";
 import type { TransitionBlocker } from "@/server/orders/status";
-import { hasDeliveryCity, type SaveOrderRequestInput } from "@/server/orders/build-order-request";
+import { hasAdultConfirmation, hasDeliveryCity, type SaveOrderRequestInput } from "@/server/orders/build-order-request";
 import {
   requestPaymentForOrder,
   type RequestPaymentFailure,
@@ -71,6 +71,8 @@ export async function submitOrder(
     // Where it is going has to be said; `createOrder` then holds the answer
     // to the branch's own city.
     if (!hasDeliveryCity(input)) return { ok: false, reason: "invalid" };
+    // Ordering is for adults who accept the terms; the form asks, this holds it.
+    if (!hasAdultConfirmation(input)) return { ok: false, reason: "invalid" };
 
     const identity = session?.uid ? `uid:${session.uid}` : `ip:${await clientIp()}`;
     const limit = await checkRateLimit(identity, ORDER_RATE_LIMIT);

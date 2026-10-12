@@ -22,7 +22,7 @@ export default function PrivacySw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Faragha</h1>
-      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 5 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 12 Oktoba 2026.</p>
       <EnglishDecides path="/privacy" />
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -56,6 +56,10 @@ export default function PrivacySw() {
             wa malipo. ClickPesa hutuambia kuwa malipo yamefanikiwa, yalikuwa kiasi gani, lini, namba yake ya
             kumbukumbu ya malipo hayo, na namba ya pesa ya simu yalikotoka. Tunahifadhi kiasi, muda na namba ya
             kumbukumbu kwenye oda yako.
+          </p>
+          <p className="mt-3">
+            Ukiripoti tangazo, au ukiomba kurudisha oda, tunahifadhi ulichoandika, tangazo au oda husika, muda, na
+            anwani ya barua pepe ya akaunti uliyoingia nayo, ili mtu wa MalFleks aweze kulifuatilia na kukujibu.
           </p>
         </section>
 
@@ -91,7 +95,9 @@ export default function PrivacySw() {
             Tunahesabu matembezi kwa Vercel Web Analytics, ili tuone kurasa zipi zinatumika na kwa aina gani ya kifaa.
             Hurekodi ukurasa, muda, nchi na mji, na aina ya kivinjari na kifaa. Haiweki vidakuzi (cookies), hairekodi
             jina lako wala anwani yako ya barua pepe, na haikufuati kwenye tovuti nyingine. Namba za kumbukumbu za oda
-            huondolewa kwenye anwani za kurasa kabla hazijahesabiwa.
+            huondolewa kwenye anwani za kurasa kabla hazijahesabiwa. Hakuna kitu kwenye MalFleks kinachorekodi skrini
+            yako, unachobonyeza wala unachoandika, na herufi (fonts) za tovuti hutolewa na MalFleks yenyewe, kwa hiyo
+            kufungua ukurasa hakupeleki anwani yako kwa Google wala huduma nyingine ya herufi.
           </p>
           <p className="mt-2">
             Hatuuzi taarifa zako, na hatuzipeleki kwa watangazaji. Hakuna matangazo ya biashara kwenye MalFleks.
@@ -131,6 +137,19 @@ export default function PrivacySw() {
           <p className="mt-2">
             Kuna kikomo kimoja tunachopaswa kukisema wazi: tawi ambalo tayari limepokea ombi lako lina namba yako ya
             simu kwenye kumbukumbu zake lenyewe, na hatuwezi kukufutia hiyo. Tunaweza kukuambia lilikwenda kwa nani.
+          </p>
+        </section>
+
+        <section>
+          <h2 className={H}>Ujumbe tunaotuma</h2>
+          <p className="mt-2">
+            Tunakutumia barua pepe au ujumbe mfupi kuhusu kitu ulichoanzisha tu: oda yako, malipo na usafirishaji wake,
+            akaunti yako, au ombi lako la kuwa mshirika. Ujumbe huo si matangazo, na kila mmoja unasema umetoka kwa nani
+            na jinsi ya kuwasiliana nasi.
+          </p>
+          <p className="mt-2">
+            MalFleks haitumi ofa wala majarida. Ikiwahi kufanya hivyo, itakuomba kwanza, na kila ujumbe wa aina hiyo
+            utakuwa na njia ya kuusimamisha kwa hatua moja.
           </p>
         </section>
 

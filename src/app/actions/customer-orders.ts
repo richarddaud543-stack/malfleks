@@ -20,6 +20,32 @@ export type CancelOwnOrderResult =
   | { ok: true; kind: "cancelled" | "requested" }
   | { ok: false; reason: "signed-out" | "unavailable" | "not-found" | "too-late" | "already-asked" };
 
+export type ReturnOwnOrderResult =
+  | { ok: true }
+  | { ok: false; reason: "signed-out" | "unavailable" | "not-found" | "not-delivered" | "too-late" | "already-asked" };
+
+/**
+ * "Return this order": the customer's 7-day right after delivery (Electronic
+ * Transactions Act s.30). Passed to MalFleks as an owner alert; nothing on the
+ * order changes here. See `requestReturnAsCustomer`.
+ */
+export async function returnOwnOrderAction(reference: string): Promise<ReturnOwnOrderResult> {
+  if (!isAuthConfigured()) return { ok: false, reason: "unavailable" };
+
+  const session = await verifySession();
+  if (!session) return { ok: false, reason: "signed-out" };
+
+  try {
+    const { requestReturnAsCustomer } = await import("@/server/orders/customer-return");
+    const outcome = await requestReturnAsCustomer(session.uid, String(reference));
+    if (outcome.ok) revalidatePath("/admin/rules");
+    return outcome;
+  } catch (error) {
+    await logServerError("return-own-order", error, session.uid);
+    return { ok: false, reason: "unavailable" };
+  }
+}
+
 export async function cancelOwnOrderAction(reference: string): Promise<CancelOwnOrderResult> {
   if (!isAuthConfigured()) return { ok: false, reason: "unavailable" };
 

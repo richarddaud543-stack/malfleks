@@ -1,3 +1,4 @@
+import { businessSignature } from "@/lib/business";
 import { MALFLEKS_CONTACT_EMAIL } from "@/lib/contact";
 
 /**
@@ -144,6 +145,32 @@ export async function sendNotification(
   return sendEmail(notifyAddress(env), subject, body, env);
 }
 
+/**
+ * The last lines of every email to a customer or a partner: who sent it, how
+ * to reach them, and that it is a service message rather than advertising.
+ *
+ * Tanzania's Electronic Transactions Act s.28 asks an online business to make
+ * its name and contact details available; an email that arrives from a bare
+ * Gmail sender with no name behind it is how a customer stops trusting it is
+ * really MalFleks. MalFleks sends no marketing (the Privacy notice says so), so
+ * there is nothing here to unsubscribe from -- if that ever changes, those
+ * messages need a one-step way to stop them, and this footer is not it.
+ *
+ * Not added to `sendNotification`: that one goes to MalFleks's own inbox.
+ */
+export function serviceFooter(): string {
+  return [
+    "——",
+    "Ujumbe huu unahusu oda, akaunti au ombi lako kwenye MalFleks; si tangazo.",
+    "This message is about your order, account or application on MalFleks; it is not advertising.",
+    businessSignature(),
+  ].join("\n");
+}
+
+function withFooter(body: string): string {
+  return `${body}\n\n${serviceFooter()}`;
+}
+
 /** Loose on purpose: this only keeps obvious junk out of a provider call, it does not validate an address. */
 const EMAIL_SHAPE = /^[^\s@<>,;]+@[^\s@<>,;]+\.[^\s@<>,;]+$/;
 
@@ -165,7 +192,7 @@ export async function sendCustomerEmail(
 ): Promise<NotifyResult | { sent: false; reason: "no-address" }> {
   const address = to?.trim();
   if (!address || !EMAIL_SHAPE.test(address)) return { sent: false, reason: "no-address" };
-  return sendEmail(address, subject, body, env);
+  return sendEmail(address, subject, withFooter(body), env);
 }
 
 /**
@@ -187,7 +214,7 @@ export async function sendPartnerEmail(
 ): Promise<NotifyResult | { sent: false; reason: "no-address" }> {
   const address = to?.trim();
   if (!address || !EMAIL_SHAPE.test(address)) return { sent: false, reason: "no-address" };
-  return sendEmail(address, subject, body, env);
+  return sendEmail(address, subject, withFooter(body), env);
 }
 
 async function sendEmail(
@@ -779,10 +806,69 @@ function orderDeliveredMessageEn(input: {
       "If it has not reached you, or something is wrong with it, tell us:",
       `${input.siteUrl}/contact`,
       "",
+      "Changed your mind? You may return it within 7 days, unused: press",
+      `"Return this order" on ${input.siteUrl}/account`,
+      "",
       "The delivery record stays here:",
       `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
     ].join("\n"),
   };
+}
+
+/**
+ * To the customer: their request to return a delivered order has reached
+ * MalFleks. Says what to do with the goods and what happens to the money --
+ * no more than the Terms promise (Electronic Transactions Act s.30).
+ */
+function returnRequestedMessageEn(input: {
+  firstName: string | null;
+  reference: string;
+  productName: string;
+  branchName: string;
+  contactEmail: string;
+}): { subject: string; body: string } {
+  return {
+    subject: `We have your request to return MalFleks order ${input.reference}`,
+    body: [
+      input.firstName ? `Hello ${input.firstName},` : "Hello,",
+      "",
+      `You asked to return ${input.productName} (reference ${input.reference}).`,
+      "A person at MalFleks will contact you about taking it back to",
+      `${input.branchName}. Keep it as you received it until then.`,
+      "",
+      "You pay only the direct cost of sending it back. Once the branch has",
+      "it, MalFleks refunds the full amount you paid, no later than 30 days",
+      "after today.",
+      "",
+      "Food, drinks and other everyday goods cannot be returned this way; if",
+      "that is what you ordered, we will tell you. If it arrived damaged or",
+      "not as described, reply and say so.",
+      "",
+      `Questions: ${input.contactEmail}`,
+    ].join("\n"),
+  };
+}
+
+/** To the owner, as the body of the return-request alert. */
+export function returnRequestAdminBody(input: {
+  reference: string;
+  productName: string;
+  quantity: number;
+  branchName: string;
+  customerName: string;
+  customerPhone: string;
+  deliveredAt: Date;
+}): string {
+  return [
+    `The customer wants to return order ${input.reference}: ${input.quantity} × ${input.productName}, from ${input.branchName}.`,
+    `Delivered ${input.deliveredAt.toISOString().slice(0, 10)}; they asked within the 7 days the law allows (Electronic Transactions Act s.30).`,
+    "",
+    `Customer: ${input.customerName}, ${input.customerPhone}. They have been emailed that someone will contact them.`,
+    "",
+    "What to do: check it is not food or an everyday consumable (those are excluded) and that it is unused,",
+    "arrange the return with the branch (the customer pays only the cost of sending it back),",
+    "then refund the full amount within 30 days of today and record it on the order.",
+  ].join("\n");
 }
 
 /** To the customer: money has gone back to them. */
@@ -1248,8 +1334,34 @@ function orderDeliveredMessageSw(input: Parameters<typeof orderDeliveredMessageE
       "Kama haijakufikia, au ina tatizo, tuambie:",
       `${input.siteUrl}/contact`,
       "",
+      "Umebadili nia? Unaweza kuirudisha ndani ya siku 7 bila kuitumia: bonyeza",
+      `"Rudisha oda hii" kwenye ${input.siteUrl}/account`,
+      "",
       "Kumbukumbu ya usafirishaji inabaki hapa:",
       `${input.siteUrl}/track/${encodeURIComponent(input.reference)}`,
+    ].join("\n"),
+  };
+}
+
+function returnRequestedMessageSw(input: Parameters<typeof returnRequestedMessageEn>[0]): Message {
+  return {
+    subject: `Tumepokea ombi lako la kurudisha oda ya MalFleks ${input.reference}`,
+    body: [
+      salamu(input.firstName),
+      "",
+      `Umeomba kurudisha ${input.productName} (kumbukumbu ${input.reference}).`,
+      "Mtu wa MalFleks atawasiliana nawe kuhusu kuirudisha kwa",
+      `${input.branchName}. Iweke kama ulivyoipokea mpaka hapo.`,
+      "",
+      "Unalipa gharama ya moja kwa moja ya kuirudisha tu. Tawi likishaipokea,",
+      "MalFleks inakurudishia kiasi chote ulicholipa, si zaidi ya siku 30",
+      "kuanzia leo.",
+      "",
+      "Vyakula, vinywaji na bidhaa nyingine za kila siku haviwezi kurudishwa",
+      "kwa njia hii; kama ndivyo ulivyoagiza, tutakuambia. Kama ilifika",
+      "ikiwa imeharibika au tofauti na ilivyoelezwa, jibu na useme hivyo.",
+      "",
+      `Maswali: ${input.contactEmail}`,
     ].join("\n"),
   };
 }
@@ -1324,6 +1436,10 @@ export function orderCancelledMessage(input: Parameters<typeof orderCancelledMes
 
 export function orderDeliveredMessage(input: Parameters<typeof orderDeliveredMessageEn>[0]): Message {
   return both(orderDeliveredMessageSw(input), orderDeliveredMessageEn(input));
+}
+
+export function returnRequestedMessage(input: Parameters<typeof returnRequestedMessageEn>[0]): Message {
+  return both(returnRequestedMessageSw(input), returnRequestedMessageEn(input));
 }
 
 export function refundRecordedMessage(input: Parameters<typeof refundRecordedMessageEn>[0]): Message {

@@ -64,6 +64,7 @@ function input(patch: Partial<OrderRequestInput> = {}): OrderRequestInput {
     fullName: "Neema Mushi",
     phone: "0754 123 456",
     address: "12 Sokoine Road, Arusha",
+    adultConfirmed: true,
     ...patch,
   };
 }
@@ -720,5 +721,29 @@ describe("order storage round trip", () => {
 
     const badRoute = { ...request, route: { kind: "pigeon", carrier: "Ndege" } };
     expect(parseOrderRequest(JSON.stringify(badRoute))).toBeNull();
+  });
+});
+
+describe("validateOrderRequest — the 18+ confirmation", () => {
+  it("refuses a form whose box is not ticked, and says why", () => {
+    const result = validateOrderRequest(input({ adultConfirmed: false }), brandRoute, 50_000);
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.errors.adultConfirmed).toBe("Confirm that you are 18 or older to order.");
+  });
+
+  it("says it in Swahili on the Swahili form", () => {
+    const result = validateOrderRequest(input({ adultConfirmed: false }), brandRoute, 50_000, undefined, "sw");
+    if (!result.ok) expect(result.errors.adultConfirmed).toMatch(/miaka 18/);
+    else throw new Error("expected a refusal");
+  });
+
+  it("starts unticked: a fresh form cannot be sent without the customer ticking it", () => {
+    expect(emptyOrderInput.adultConfirmed).toBe(false);
+  });
+
+  it("is not asked by a caller that has no customer to ask", () => {
+    const { adultConfirmed: _omitted, ...rest } = input();
+    void _omitted;
+    expect(validateOrderRequest(rest, brandRoute, 50_000).ok).toBe(true);
   });
 });

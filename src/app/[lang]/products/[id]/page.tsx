@@ -25,6 +25,7 @@ import { productPhotoList } from "@/lib/product-photo";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import { sharePreview } from "@/lib/share-metadata";
 import { CHROME } from "@/i18n/copy/chrome";
+import { REPORT } from "@/i18n/copy/report";
 import { categoryLabel, SHOP } from "@/i18n/copy/shop";
 import { localeAlternates, localePath, OG_LOCALE } from "@/i18n/locale";
 import { pageLocale } from "@/i18n/server";
@@ -287,6 +288,18 @@ export default async function ProductPage({
               <SafePay className="mt-6" locale={locale} />
             </div>
           )}
+
+          {/* For a rights holder whose photo or brand is used here, or anyone
+              who spots a fake or a wrong price -- see `reportListing`. Quiet
+              on purpose: it must be findable, not compete with "Order". */}
+          <p className="mt-8 text-xs text-muted">
+            <Link
+              href={`/report/${product.id}`}
+              className="underline decoration-border underline-offset-4 hover:text-foreground"
+            >
+              {REPORT[locale].link}
+            </Link>
+          </p>
         </ScrollReveal>
       </div>
     </div>

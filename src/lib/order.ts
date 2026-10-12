@@ -290,6 +290,15 @@ export interface OrderRequestInput {
    * treated as "not answered" wherever the branch's city is known.
    */
   deliveryCity?: string;
+  /**
+   * The customer ticked "I am 18 or older and I accept the terms". Ordering is
+   * for adults (Age of Majority Act: 18), and the box is how a customer says
+   * so. Optional for the same reason as `deliveryCity`: server code and pure
+   * tests that have no customer to ask leave it out, and a missing value is
+   * not checked here. The two public endpoints refuse an order without it --
+   * see `hasAdultConfirmation` in `build-order-request.ts`.
+   */
+  adultConfirmed?: boolean;
 }
 
 /** What the form sends when the customer says they are somewhere else. */
@@ -302,6 +311,7 @@ export const emptyOrderInput: OrderRequestInput = {
   address: "",
   agentId: null,
   deliveryCity: "",
+  adultConfirmed: false,
 };
 
 export type OrderField = keyof OrderRequestInput;
@@ -396,6 +406,12 @@ export function validateOrderRequest(
   const address = input.address.trim();
   if (address.length < MIN_ADDRESS_LENGTH) {
     errors.address = words.address;
+  }
+
+  // Answered only by the form (and the server, which passes the customer's
+  // answer through): a caller that never asked has nothing to check.
+  if (input.adultConfirmed !== undefined && input.adultConfirmed !== true) {
+    errors.adultConfirmed = words.adult;
   }
 
   // A brand route has nothing to pick, so a stray agentId is simply dropped

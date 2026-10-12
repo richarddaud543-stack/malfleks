@@ -283,11 +283,17 @@ export interface AccountOrderStatus {
    * delivered.
    */
   keepSavedCopy: boolean;
+  /**
+   * When it was recorded as delivered (ISO), for the 7-day "Return this order"
+   * window. Null unless delivered.
+   */
+  deliveredAt: string | null;
 }
 
 function accountStatus(order: {
   status: string;
   decisionNote: string | null;
+  decidedAt?: Date | null;
   quoteOrderTotalTZS?: number | null;
   payments: { status: string; checkoutLink: string | null }[];
 }): AccountOrderStatus {
@@ -316,6 +322,7 @@ function accountStatus(order: {
     cancelReason: state === "cancelled" ? order.decisionNote : null,
     refundDue: state === "cancelled" && paid,
     keepSavedCopy: order.status === "confirmed",
+    deliveredAt: state === "delivered" && order.decidedAt ? order.decidedAt.toISOString() : null,
   };
 }
 
@@ -331,7 +338,7 @@ function accountStatus(order: {
 export async function checkoutStatesForCustomer(customerId: string): Promise<Map<string, AccountOrderStatus>> {
   const orders = await getPrisma().order.findMany({
     where: { customerId },
-    select: { reference: true, status: true, decisionNote: true, quoteOrderTotalTZS: true, payments: { select: { status: true, checkoutLink: true } } },
+    select: { reference: true, status: true, decisionNote: true, decidedAt: true, quoteOrderTotalTZS: true, payments: { select: { status: true, checkoutLink: true } } },
   });
   return new Map(orders.map((o) => [o.reference, accountStatus(o)]));
 }

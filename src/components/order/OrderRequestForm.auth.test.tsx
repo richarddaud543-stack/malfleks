@@ -88,7 +88,7 @@ function fill() {
   });
   fireEvent.change(screen.getByLabelText(/Delivery address/), {
     target: { value: "12 Sokoine Road, Arusha" },
-  });
+  });  fireEvent.click(screen.getByLabelText(/I am 18 or older/));
 }
 
 const SIGN_IN_FIRST = "/sign-in?next=%2Fdelivery%2Ftoyota-corolla";
@@ -148,7 +148,7 @@ describe("OrderRequestForm and the customer's session", () => {
   it("puts back what was typed when the customer returns from signing in, and clears it once ordered", async () => {
     sessionStorage.setItem(
       orderDraftKey("toyota-corolla"),
-      JSON.stringify({ quantity: "3", fullName: "Neema Mushi", phone: "0754123456", address: "12 Sokoine Road", agentId: null, deliveryCity: "Dar es Salaam" }),
+      JSON.stringify({ quantity: "3", fullName: "Neema Mushi", phone: "0754123456", address: "12 Sokoine Road", agentId: null, deliveryCity: "Dar es Salaam", adultConfirmed: true }),
     );
     mockSession(true);
     submitOrder.mockResolvedValue({ ok: true, reference: "TOY-DAR-PAY1", payNow: true });
@@ -191,6 +191,22 @@ describe("OrderRequestForm and the customer's session", () => {
     expect(saveOrderRequest).not.toHaveBeenCalled();
   });
 
+  it("sends nothing until the customer confirms they are 18 or older", async () => {
+    mockSession(true);
+    render(<OrderRequestForm {...brandDelivered} />);
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+
+    fill();
+    // Untick the box `fill()` ticked: the one thing missing is the confirmation.
+    fireEvent.click(screen.getByLabelText(/I am 18 or older/));
+    fireEvent.click(screen.getByRole("button", { name: "Continue to payment" }));
+
+    expect(await screen.findByText("Confirm that you are 18 or older to order.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/I am 18 or older/)).toHaveFocus();
+    expect(submitOrder).not.toHaveBeenCalled();
+    expect(saveOrderRequest).not.toHaveBeenCalled();
+  });
+
   it("sends the order, without prices, once the customer is signed in", async () => {
     mockSession(true);
     saveOrderRequest.mockResolvedValue({ saved: true, reference: "TOY-DAR-K7M4" });
@@ -208,6 +224,8 @@ describe("OrderRequestForm and the customer's session", () => {
     // Where it is going, as the customer picked it: the server refuses a
     // request without it and holds it to the branch's own city.
     expect(payload.deliveryCity).toBe("Dar es Salaam");
+    // The customer's own "18 or older, I accept the terms" tick; the server refuses an order without it.
+    expect(payload.adultConfirmed).toBe(true);
     // Nothing with a price on it: the server re-derives all of that, so a
     // hand-crafted payload cannot misstate what was ordered.
     expect(payload).not.toHaveProperty("lineTotalTZS");

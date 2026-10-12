@@ -57,6 +57,7 @@ function fillDetails(phone = "0754123456", city?: string) {
   type(/Phone number/, phone);
   if (city) type("Delivery city", city);
   type(/Delivery address/, "12 Sokoine Road, Arusha");
+  fireEvent.click(screen.getByLabelText(/I am 18 or older/));
 }
 
 const SUBMIT = "Continue to payment";

@@ -9,6 +9,8 @@ import type { SavedOrderRequest } from "@/server/orders/saved-requests";
 import CancelOrderButton from "./CancelOrderButton";
 import DeliveryCodePanel from "./DeliveryCodePanel";
 import DeleteSavedRequest from "./DeleteSavedRequest";
+import ReturnOrderButton from "./ReturnOrderButton";
+import { returnWindowClosesAt, returnWindowOpen } from "@/lib/returns";
 
 /**
  * One saved order request.
@@ -54,6 +56,18 @@ export default function SavedRequestCard({
   const branchHref = `/brands/${request.brand.slug ?? request.brand.id}/branches/${request.branch.id}`;
   const requestedAt = new Date(request.requestedAt);
   const dateIsUsable = !Number.isNaN(requestedAt.getTime());
+  // The 7-day right to return after delivery (Electronic Transactions Act
+  // s.30). Decided here at render time for showing the button; the server
+  // decides again when it is pressed.
+  const canReturn = state === "delivered" && returnWindowOpen(status?.deliveredAt);
+  const returnUntil =
+    canReturn && status?.deliveredAt
+      ? returnWindowClosesAt(status.deliveredAt).toLocaleDateString(ACCOUNT[locale].dateLocale, {
+          day: "numeric",
+          month: "long",
+          timeZone: "Africa/Dar_es_Salaam",
+        })
+      : undefined;
 
   return (
     <li className="glass-card rounded-2xl p-6">
@@ -191,6 +205,7 @@ export default function SavedRequestCard({
         {(state === "ready" || state === "waiting" || state === "paid") && (
           <CancelOrderButton reference={request.reference} paid={state === "paid"} />
         )}
+        {canReturn && <ReturnOrderButton reference={request.reference} until={returnUntil} />}
         {/* The only other interactive part of an otherwise static card, so it
             is the only other part that is a client component. While the order
             is confirmed -- unpaid, or paid and on its way -- this card is the

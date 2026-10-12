@@ -106,6 +106,7 @@ test.describe("signed out", () => {
     await page.getByLabel(/Phone number/).fill(PHONE);
     await page.getByLabel("Delivery city").selectOption("Dar es Salaam");
     await page.getByLabel(/Delivery address/).fill(ADDRESS);
+    await page.getByLabel(/I am 18 or older/).check();
 
     // The form says so before the button is pressed, rather than only being true.
     await expect(page.getByText(/Nothing is sent or charged yet/)).toBeVisible();
