@@ -19,6 +19,8 @@ import { displayPhone } from "@/lib/order";
 import { resolveSiteUrl } from "@/lib/site-url";
 import ProductGrid from "@/components/product/ProductGrid";
 import ScrollReveal from "@/components/motion/ScrollReveal";
+import VerifiedShop from "@/components/trust/VerifiedShop";
+import { isVerifiedShop } from "@/server/partners/verification";
 
 export async function generateStaticParams() {
   // Brands are fetched once and indexed rather than queried per branch, which
@@ -82,7 +84,7 @@ export default async function BranchPage({
     notFound();
   }
 
-  const branchProducts = await getProductsByBranchId(branch.id);
+  const [branchProducts, verifiedShop] = await Promise.all([getProductsByBranchId(branch.id), isVerifiedShop(branch.id)]);
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-16">
@@ -130,6 +132,7 @@ export default async function BranchPage({
           by knowing a developer called it a prototype — they need to know the
           location has not been confirmed, and what to do instead.
         */}
+        {verifiedShop && <VerifiedShop locale={locale} className="mt-4" />}
         {!branch.verified && (
           <p className="mt-3 max-w-prose text-xs text-muted">
             {copy.unverified(brand.name)}

@@ -36,6 +36,16 @@ export const UNDELIVERED = {
   minHoursAfterFinalWarning: 24,
 } as const;
 
+/**
+ * A shop that has not had its documents (licence, TIN, shop front) checked.
+ * The advert and the Terms say every shop on MalFleks is verified; this is the
+ * time a shop is given, after it is first told, to send them before its
+ * products come off the shop. Switch the rule off on the Rules page to stop it.
+ */
+export const SHOP_VERIFICATION = {
+  graceDays: 14,
+} as const;
+
 export const SHOP_RELIABILITY = {
   /** Paid orders a shop failed (declined after payment, or missed the deadline)... */
   failures: 3,

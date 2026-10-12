@@ -15,6 +15,22 @@ export const PARTNER = {
     dateLocale: "en-GB",
     home: {
       title: "Your MalFleks listings",
+      documents: {
+        heading: "Your shop's documents",
+        verified: (date: string) => `Checked by MalFleks on ${date}. Customers see your shop as verified.`,
+        waiting:
+          "Thank you — all three have arrived. A person at MalFleks will read them; until then your shop does not show as verified.",
+        needed:
+          "MalFleks tells customers every shop here has been checked, because they pay before they receive anything. Please upload these three. They are never shown to customers.",
+        deadline: (date: string) => `Please send them by ${date}. After that your products are hidden until they are checked. Nothing is deleted.`,
+        hidden: "Your products are hidden until your documents are checked. Upload the missing ones below.",
+        have: "Received",
+        send: "Send documents",
+        sending: "Sending\u2026",
+        sent: "Sent. MalFleks will read them and let you know.",
+        failed: "That didn't go through. Your files are still chosen — try again.",
+        ownerOnly: "Only the account owner can upload the shop's documents.",
+      },
       yourBranch: "Your branch",
       yourCourier: "Your courier account",
       customerOrders: "Customer orders",
@@ -352,6 +368,22 @@ export const PARTNER = {
     dateLocale: "sw-TZ",
     home: {
       title: "Bidhaa zako kwenye MalFleks",
+      documents: {
+        heading: "Nyaraka za duka lako",
+        verified: (date: string) => `Zimekaguliwa na MalFleks tarehe ${date}. Wateja wanaona duka lako limethibitishwa.`,
+        waiting:
+          "Asante — nyaraka zote tatu zimefika. Mtu wa MalFleks atazisoma; mpaka hapo duka lako halionyeshwi kama limethibitishwa.",
+        needed:
+          "MalFleks inawaambia wateja kwamba kila duka hapa limekaguliwa, kwa sababu wanalipa kabla ya kupokea. Tafadhali pakia nyaraka hizi tatu. Hazionyeshwi kwa wateja kamwe.",
+        deadline: (date: string) => `Tafadhali zitume kabla ya ${date}. Baada ya hapo bidhaa zako zitafichwa mpaka zikaguliwe. Hakuna kitakachofutwa.`,
+        hidden: "Bidhaa zako zimefichwa mpaka nyaraka zako zikaguliwe. Pakia zinazokosekana hapa chini.",
+        have: "Zimepokelewa",
+        send: "Tuma nyaraka",
+        sending: "Inatuma\u2026",
+        sent: "Zimetumwa. MalFleks itazisoma na kukujulisha.",
+        failed: "Haikufanikiwa. Faili zako bado zimechaguliwa — jaribu tena.",
+        ownerOnly: "Mmiliki wa akaunti pekee ndiye anaweza kupakia nyaraka za duka.",
+      },
       yourBranch: "Tawi lako",
       yourCourier: "Akaunti yako ya usafirishaji",
       customerOrders: "Oda za wateja",

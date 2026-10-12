@@ -287,6 +287,82 @@ export function listingsHiddenMessage(input: { failures: number; windowDays: num
   );
 }
 
+/**
+ * To a shop: MalFleks needs its three documents. Sent once, when the
+ * verification rule first finds the shop unverified. Says why (customers pay
+ * before they receive anything, and MalFleks tells them every shop is
+ * checked), what to send, where, and the date after which its products come
+ * off the shop.
+ */
+export function verificationNeededMessage(input: { shopName: string; deadline: string; siteUrl: string }): Message {
+  return both(
+    {
+      subject: `MalFleks: tafadhali tuma nyaraka za ${input.shopName}`,
+      body: [
+        "MalFleks inawaambia wateja kwamba kila duka hapa limekaguliwa: wateja hulipa kabla",
+        "ya kupokea mzigo, na wanahitaji kujua wanalipa biashara halisi.",
+        "",
+        "Tafadhali pakia nyaraka hizi tatu kwenye ukurasa wako wa mshirika:",
+        "  1. Leseni ya biashara",
+        "  2. Cheti cha TIN",
+        "  3. Picha ya mbele ya duka lako",
+        `${input.siteUrl}/partner`,
+        "",
+        "Hazionyeshwi kwa wateja wala kwa mtu yeyote nje ya MalFleks.",
+        "",
+        `Zisipofika na kukaguliwa kufikia ${input.deadline}, bidhaa zako zitafichwa dukani`,
+        "mpaka zikaguliwe. Hakuna kitakachofutwa.",
+      ].join("\n"),
+    },
+    {
+      subject: `MalFleks: please send ${input.shopName}'s documents`,
+      body: [
+        "MalFleks tells customers that every shop here has been checked: they pay before",
+        "they receive anything, and they need to know they are paying a real business.",
+        "",
+        "Please upload these three documents on your partner page:",
+        "  1. Business licence",
+        "  2. TIN certificate",
+        "  3. A photo of your shop front",
+        `${input.siteUrl}/partner`,
+        "",
+        "They are never shown to customers or to anyone outside MalFleks.",
+        "",
+        `If they have not arrived and been checked by ${input.deadline}, your products will be`,
+        "hidden from the shop until they are. Nothing will be deleted.",
+      ].join("\n"),
+    },
+  );
+}
+
+/** To a shop: its grace period ran out and its products are hidden until its documents are checked. */
+export function verificationHiddenMessage(input: { shopName: string; hidden: number; siteUrl: string }): Message {
+  return both(
+    {
+      subject: "MalFleks: bidhaa zako zimefichwa mpaka nyaraka zikaguliwe",
+      body: [
+        `Nyaraka za ${input.shopName} bado hazijakaguliwa, kwa hiyo bidhaa zako ${input.hidden}`,
+        "zimefichwa dukani kwa sasa. Hakuna kilichofutwa.",
+        "",
+        "Pakia leseni ya biashara, cheti cha TIN na picha ya mbele ya duka hapa:",
+        `${input.siteUrl}/partner`,
+        "Zikishakaguliwa, bidhaa zako zinarudi dukani.",
+      ].join("\n"),
+    },
+    {
+      subject: "MalFleks: your products are hidden until your documents are checked",
+      body: [
+        `${input.shopName}'s documents have not been checked yet, so your ${input.hidden} product${input.hidden === 1 ? " is" : "s are"}`,
+        "hidden from the shop for now. Nothing has been deleted.",
+        "",
+        "Upload your business licence, TIN certificate and shop-front photo here:",
+        `${input.siteUrl}/partner`,
+        "Once they are checked, your products come back.",
+      ].join("\n"),
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // To the owner
 // ---------------------------------------------------------------------------

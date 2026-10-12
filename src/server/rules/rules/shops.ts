@@ -1,15 +1,17 @@
 import type { Prisma } from "@prisma/client";
 
 import { resolveSiteUrl } from "@/lib/site-url";
+import { missingDocumentKinds } from "@/lib/partner-document";
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { sendPartnerEmail } from "@/server/notify/email";
 import { partnerContact } from "@/server/notify/events";
-import { listingsHiddenMessage } from "@/server/notify/rule-messages";
+import { listingsHiddenMessage, verificationHiddenMessage, verificationNeededMessage } from "@/server/notify/rule-messages";
 import { RULES_ACTOR } from "@/server/orders/status";
+import { asVerificationHold, VERIFICATION_ALERT_KEY } from "@/server/partners/verification";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 import { raiseAlert } from "../alerts";
-import { HOUR_MS, SHOP_RELIABILITY } from "../thresholds";
+import { HOUR_MS, SHOP_RELIABILITY, SHOP_VERIFICATION } from "../thresholds";
 import type { Rule } from "../types";
 
 /**
@@ -172,3 +174,122 @@ export async function restoreHiddenListings(alertId: string): Promise<number> {
   if (count > 0) await notifyPublicSiteOfCatalogueChange();
   return count;
 }
+
+/** "14 October 2026", the way a deadline is written to a shop and the owner. */
+function deadlineWords(date: Date): string {
+  return date.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
+}
+
+/** The email on the application a partner was approved from, or null. */
+async function partnerEmail(applicationId: string): Promise<string | null> {
+  const application = await getPrisma().partnerApplication.findUnique({ where: { id: applicationId }, select: { email: true } });
+  return application?.email?.trim() || null;
+}
+
+async function tellShop(to: string | null, message: { subject: string; body: string }, shopName: string, env: Record<string, string | undefined>): Promise<void> {
+  if (!to) return;
+  const sent = await sendPartnerEmail(to, message.subject, message.body, env);
+  if (!sent.sent && sent.reason !== "no-address" && sent.reason !== "not-configured") {
+    await logServerError("rule-shop-verification", new Error(`Could not write to ${shopName} about its documents: ${sent.reason}`));
+  }
+}
+
+/**
+ * Every shop on MalFleks has had its documents checked -- what the advert,
+ * the Terms and the "Verified shop" mark promise customers.
+ *
+ * Two steps, a fortnight apart, so no shop is surprised:
+ *
+ * 1. **Ask.** An active shop whose documents have not been checked is written
+ *    to (Swahili and English) with what to send, where, and the date. The
+ *    owner gets one routine alert per shop, which stays open until the shop is
+ *    verified. The date is stored on that alert.
+ * 2. **Hide.** On that date, if the shop has still not sent all three, its
+ *    products come off the shop and it is told. A shop that *has* sent all
+ *    three is never hidden for the owner not having read them yet -- the
+ *    alert waits for him instead.
+ *
+ * Verifying the shop on its console page (`markShopVerified`) closes the alert
+ * and puts back exactly what this rule hid.
+ */
+export const shopVerification: Rule = {
+  key: "shop-verification",
+  group: "shops",
+  title: "Ask unverified shops for their documents",
+  when: "A shop on MalFleks has not had its business licence, TIN certificate and shop-front photo checked.",
+  then: `The shop is asked for them and given ${SHOP_VERIFICATION.graceDays} days, and you are told. If it has still not sent all three by then, its products are hidden (not deleted) until you mark its documents checked.`,
+  async run(ctx) {
+    const db = getPrisma();
+    const shops = await db.partner.findMany({
+      where: { kind: "brand", status: "active", documentsVerifiedAt: null },
+      select: { id: true, displayName: true, city: true, branchId: true, applicationId: true },
+      orderBy: { approvedAt: "asc" },
+      take: 200,
+    });
+    if (shops.length === 0) return { acted: 0, notes: [] };
+
+    const siteUrl = resolveSiteUrl(ctx.env);
+    const notes: string[] = [];
+    for (const shop of shops) {
+      const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${shop.id}` }, select: { id: true, data: true, body: true } });
+
+      // 1. Ask.
+      if (!open) {
+        const deadline = new Date(ctx.now.getTime() + SHOP_VERIFICATION.graceDays * 24 * HOUR_MS);
+        const data: Prisma.InputJsonValue = { partnerId: shop.id, branchId: shop.branchId, deadline: deadline.toISOString() };
+        const { raised } = await raiseAlert(
+          {
+            key: VERIFICATION_ALERT_KEY,
+            subjectId: shop.id,
+            urgency: "routine",
+            subject: `${shop.displayName}: documents not checked yet`,
+            body: [
+              `${shop.displayName} (${shop.city}) is on MalFleks, but its business licence, TIN certificate and shop-front photo have not been checked.`,
+              "The advert and the Terms tell customers every shop has been, so the shop has been asked to upload them from its partner page.",
+              "",
+              `If they have not all arrived by ${deadlineWords(deadline)}, its products will be hidden from the shop until you check them.`,
+              'When they arrive, open the shop\'s page in the console, read them, and press "Documents checked".',
+              "To give the shop more time, switch this rule off on the Rules page.",
+            ].join("\n"),
+            href: `/admin/partners/${shop.id}`,
+            data,
+          },
+          ctx.env,
+        );
+        if (!raised) continue;
+        await tellShop(await partnerEmail(shop.applicationId), verificationNeededMessage({ shopName: shop.displayName, deadline: deadlineWords(deadline), siteUrl }), shop.displayName, ctx.env);
+        notes.push(`Asked ${shop.displayName} for its documents, by ${deadlineWords(deadline)}.`);
+        continue;
+      }
+
+      // 2. Hide, once the date has passed -- and only once.
+      const hold = asVerificationHold(open.data);
+      if (!hold || hold.hiddenAt || ctx.now < new Date(hold.deadline)) continue;
+      const branchId = shop.branchId;
+      if (!branchId) continue;
+      const documents = await db.partnerDocument.findMany({ where: { applicationId: shop.applicationId }, select: { kind: true } });
+      // The shop did its part; the wait is MalFleks's, and the alert is waiting.
+      if (missingDocumentKinds(documents).length === 0) continue;
+
+      const live = await db.product.findMany({ where: { branchId, hiddenAt: null }, select: { id: true } });
+      const productIds = live.map((p) => p.id);
+      // The record first: what is hidden is put back from it, so it must exist
+      // before anything is hidden.
+      const recorded: Prisma.InputJsonValue = { ...hold, branchId, hiddenAt: ctx.now.toISOString(), productIds };
+      await db.ownerAlert.update({
+        where: { id: open.id },
+        data: {
+          data: recorded,
+          body: `${open.body}\n\n${deadlineWords(ctx.now)}: the documents had not all arrived, so its ${productIds.length} product${productIds.length === 1 ? " was" : "s were"} hidden. Pressing "Documents checked" puts them back.`.slice(0, 4000),
+        },
+      });
+      if (productIds.length > 0) {
+        await db.product.updateMany({ where: { id: { in: productIds }, hiddenAt: null }, data: { hiddenAt: ctx.now } });
+        await notifyPublicSiteOfCatalogueChange();
+      }
+      await tellShop(await partnerEmail(shop.applicationId), verificationHiddenMessage({ shopName: shop.displayName, hidden: productIds.length, siteUrl }), shop.displayName, ctx.env);
+      notes.push(`Hid ${productIds.length} product${productIds.length === 1 ? "" : "s"} of ${shop.displayName}: documents not sent in ${SHOP_VERIFICATION.graceDays} days.`);
+    }
+    return { acted: notes.length, notes };
+  },
+};

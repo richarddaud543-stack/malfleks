@@ -776,6 +776,14 @@ model Partner {
   /// orders were already priced.
   deliveryMode String @default("customer_pays")
 
+  /// When a person at MalFleks checked this shop's three documents (business
+  /// licence, TIN certificate, shop-front photo) and found them in order, and
+  /// who. Null until then -- including every shop approved before 12 Oct 2026,
+  /// when documents were not yet asked for. This is what "verified shop" means
+  /// on the site and in the advert; see `src/server/partners/verification.ts`.
+  documentsVerifiedAt DateTime?
+  documentsVerifiedBy String?
+
   /// The catalogue rows this partner maps to, once wired up. Null until then.
   branchId String?
   agentId  String?

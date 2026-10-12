@@ -89,6 +89,12 @@ export async function attachApplicationDocuments(
     // existed.
     const screened = await screenApplicationDocuments(applicationId, documents);
 
+    // A shop already on MalFleks sending documents from its partner page: the
+    // owner is told they are waiting to be read. Does nothing for an
+    // application still being reviewed -- the review queue shows those.
+    const { tellOwnerDocumentsArrived } = await import("@/server/partners/verification");
+    await tellOwnerDocumentsArrived(applicationId);
+
     return {
       attached: true,
       recorded: recorded.recorded,

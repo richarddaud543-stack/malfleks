@@ -2,7 +2,7 @@ import { checkoutOpen, gatewayWatch, paymentRecheck } from "./rules/gateway";
 import { booksCheck, moneyInFlight, payoutSend, refundSend } from "./rules/money";
 import { deliveryAlert, deliveryCancel, deliveryFinalWarning, deliveryReminder, unpaidCancel, unpaidReminder } from "./rules/orders";
 import { clockWatch, dailySummary } from "./rules/owner";
-import { shopReliability } from "./rules/shops";
+import { shopReliability, shopVerification } from "./rules/shops";
 import type { Rule, RuleGroup } from "./types";
 
 /**
@@ -58,6 +58,7 @@ export const RULEBOOK: readonly Rule[] = [
   payoutSend,
   // 5. Step back.
   shopReliability,
+  shopVerification,
   booksCheck,
   dailySummary,
 ];

@@ -72,7 +72,8 @@ import { paidOrder, PAYER, placedOrder, resetRulebookTables, SHOP, shopUser, unp
 import { RULEBOOK } from "./rulebook";
 import { restoreHiddenListings } from "./rules/shops";
 import { setRuleOff, setRulebookPaused } from "./settings";
-import { DEFAULT_API_DAILY_BUDGET, HOUR_MS, MAX_CALLS_PER_PASS, SHOP_RELIABILITY, UNDELIVERED, UNPAID } from "./thresholds";
+import { DEFAULT_API_DAILY_BUDGET, HOUR_MS, MAX_CALLS_PER_PASS, SHOP_RELIABILITY, SHOP_VERIFICATION, UNDELIVERED, UNPAID } from "./thresholds";
+import { markShopVerified } from "@/server/partners/verification";
 import type { Rule } from "./types";
 
 let db: TestDatabase;
@@ -847,6 +848,112 @@ describe("money", () => {
     await pass(NOW, SENDING);
 
     expect((await alerts()).filter((a) => a.key === "books-short")).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("a shop whose documents have not been checked", () => {
+  const DAY_MS = 24 * HOUR_MS;
+  const liveProducts = () => getPrisma().product.count({ where: { branchId: SHOP, hiddenAt: null } });
+  const verificationAlerts = async () => (await alerts()).filter((a) => a.key === "shop-verification");
+  async function upload(applicationId: string, uid: string, kinds: string[]) {
+    for (const kind of kinds) {
+      await getPrisma().partnerDocument.create({
+        data: { applicationId, uid, kind, storagePath: `${uid}/${applicationId}/${kind}-${Date.now()}-${Math.random()}.pdf`, mimeType: "application/pdf", byteSize: 1000 },
+      });
+    }
+  }
+
+  it("is asked once, in both languages, with a date; the owner is told; nothing is hidden yet", async () => {
+    const { email } = await shopUser(SHOP, { verified: false });
+    const before = await liveProducts();
+
+    const run = await pass();
+
+    expect(noteOf(run, "shop-verification")?.acted).toBe(1);
+    const [alert] = await verificationAlerts();
+    expect(alert).toMatchObject({ urgency: "routine", status: "open" });
+    expect(alert.body).toContain("19 September 2026");
+    const asked = sendPartnerEmail.mock.calls.filter((call) => call[0] === email);
+    expect(asked).toHaveLength(1);
+    expect(String(asked[0][2])).toMatch(/Leseni ya biashara/);
+    expect(String(asked[0][2])).toMatch(/Business licence/);
+    expect(String(asked[0][2])).toContain("19 September 2026");
+    expect(await liveProducts()).toBe(before);
+
+    // Later passes inside the fortnight do nothing more.
+    forgetMessages();
+    await pass(new Date(NOW.getTime() + (SHOP_VERIFICATION.graceDays - 1) * DAY_MS));
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+    expect(await verificationAlerts()).toHaveLength(1);
+    expect(await liveProducts()).toBe(before);
+  });
+
+  it("has its products hidden once the fortnight passes without them, and verifying puts back exactly those", async () => {
+    const { email, partnerId, applicationId, uid } = await shopUser(SHOP, { verified: false });
+    const before = await liveProducts();
+    expect(before).toBeGreaterThan(1);
+    const otherShops = await getPrisma().product.count({ where: { branchId: { not: SHOP }, hiddenAt: null } });
+    await pass();
+    forgetMessages();
+
+    const late = new Date(NOW.getTime() + SHOP_VERIFICATION.graceDays * DAY_MS + PASS_MS);
+    const run = await pass(late);
+
+    expect(noteOf(run, "shop-verification")?.acted).toBe(1);
+    expect(await liveProducts()).toBe(0);
+    expect(await getPrisma().product.count({ where: { branchId: { not: SHOP }, hiddenAt: null } })).toBe(otherShops);
+    expect(sendPartnerEmail.mock.calls.some((call) => call[0] === email && /hidden until your documents are checked/.test(String(call[1])))).toBe(true);
+    const [alert] = await verificationAlerts();
+    expect(alert.body).toMatch(/were hidden/);
+
+    // Hidden once, not every pass.
+    forgetMessages();
+    await pass(new Date(late.getTime() + PASS_MS));
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+
+    // An admin hides one product for another reason in the meantime.
+    const [other] = await getPrisma().product.findMany({ where: { branchId: SHOP }, take: 1 });
+    await getPrisma().product.update({ where: { id: other.id }, data: { hiddenAt: new Date(late.getTime() + 2 * PASS_MS) } });
+
+    // Not verifiable without all three.
+    await upload(applicationId, uid, ["licence", "tin"]);
+    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: false, reason: "documents-missing" });
+
+    await upload(applicationId, uid, ["shopfront"]);
+    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: true, restored: before - 1 });
+    expect(await liveProducts()).toBe(before - 1);
+    expect((await getPrisma().product.findUniqueOrThrow({ where: { id: other.id } })).hiddenAt).not.toBeNull();
+    expect((await verificationAlerts()).map((a) => a.status)).toEqual(["resolved"]);
+
+    // Verified: the rule leaves it alone from now on.
+    forgetMessages();
+    await pass(new Date(late.getTime() + 3 * PASS_MS));
+    expect(await verificationAlerts()).toHaveLength(1);
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+  });
+
+  it("is not hidden for MalFleks not having read documents it already sent", async () => {
+    const { applicationId, uid } = await shopUser(SHOP, { verified: false });
+    const before = await liveProducts();
+    await pass();
+    await upload(applicationId, uid, ["licence", "tin", "shopfront"]);
+
+    await pass(new Date(NOW.getTime() + (SHOP_VERIFICATION.graceDays + 3) * DAY_MS));
+
+    expect(await liveProducts()).toBe(before);
+    expect((await verificationAlerts()).map((a) => a.status)).toEqual(["open"]);
+  });
+
+  it("can be switched off, and leaves a verified shop alone", async () => {
+    await shopUser(SHOP);
+    await pass();
+    expect(await verificationAlerts()).toEqual([]);
+
+    await shopUser("toyota-arusha", { verified: false });
+    await setRuleOff("shop-verification", true, "admin-1");
+    await pass(new Date(NOW.getTime() + PASS_MS));
+    expect(await verificationAlerts()).toEqual([]);
   });
 });
 

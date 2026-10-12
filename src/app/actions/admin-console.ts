@@ -377,3 +377,44 @@ export async function setProductStockAction(_prev: ConsoleState, formData: FormD
     return FAILED;
   }
 }
+
+/**
+ * "Documents checked": a person has read this shop's licence, TIN certificate
+ * and shop-front photo and found them in order. The shop shows as verified to
+ * customers from now on, and anything the verification rule hid comes back.
+ */
+export async function markShopVerifiedAction(_prev: ConsoleState, formData: FormData): Promise<ConsoleState> {
+  const session = await adminSession();
+  if (!session) return FORBIDDEN;
+  const partnerId = field(formData, "partnerId");
+  try {
+    const { markShopVerified } = await import("@/server/partners/verification");
+    const outcome = await markShopVerified(partnerId, session.uid);
+    if (!outcome.ok) {
+      const messages: Record<typeof outcome.reason, string> = {
+        "not-found": "This partner no longer exists.",
+        "not-a-shop": "Only shops are verified this way. Couriers are approved, not verified.",
+        "documents-missing": "All three documents have to be here first: business licence, TIN certificate and shop-front photo.",
+        "already-verified": "Already marked as checked.",
+      };
+      return { status: "error", message: messages[outcome.reason] };
+    }
+    revalidatePath(`/admin/partners/${partnerId}`);
+    revalidatePath("/admin/partners");
+    revalidatePath("/admin/rules");
+    revalidatePath("/admin");
+    revalidateSitePath("/partner");
+    // The "Verified shop" mark is on public pages.
+    await notifyPublicSiteOfCatalogueChange();
+    return {
+      status: "ok",
+      message:
+        outcome.restored > 0
+          ? `Marked as checked. ${outcome.restored} hidden product${outcome.restored === 1 ? " is" : "s are"} back on the shop.`
+          : "Marked as checked. Customers now see this shop as verified.",
+    };
+  } catch (error) {
+    await logServerError("mark-shop-verified", error, session.uid);
+    return FAILED;
+  }
+}

@@ -16,6 +16,8 @@ import {
 } from "@/server/repositories";
 import ProductGallery from "@/components/product/ProductGallery";
 import SafePay from "@/components/trust/SafePay";
+import VerifiedShop from "@/components/trust/VerifiedShop";
+import { isVerifiedShop } from "@/server/partners/verification";
 import ProductShowcase from "@/components/product/ProductShowcase";
 import DeliveryRouteLine from "@/components/delivery/DeliveryRouteLine";
 import ScrollReveal from "@/components/motion/ScrollReveal";
@@ -107,7 +109,7 @@ export default async function ProductPage({
   // The couriers come from the database, not `src/data`. Without this the page
   // would rank and offer the seeded fixture couriers — and ignore every real
   // one a partner had been wired up as.
-  const agents = await getAgentsForCity(branch.city);
+  const [agents, verifiedShop] = await Promise.all([getAgentsForCity(branch.city), isVerifiedShop(branch.id)]);
   const outlook = previewDelivery({ product, brand, branch, agents, locale });
   const blockReason = orderBlockReason(
     product,
@@ -283,6 +285,7 @@ export default async function ProductPage({
                 {/* Most branch names already end in their city. */}
                 {branch.name.includes(branch.city) ? "" : `, ${branch.city}`}
               </p>
+              {verifiedShop && <VerifiedShop locale={locale} className="mt-3" />}
               {/* The reason to buy here rather than by sending money to a
                   seller's number — said before the customer commits. */}
               <SafePay className="mt-6" locale={locale} />

@@ -4,11 +4,13 @@ import { notFound } from "next/navigation";
 
 import { setPartnerStatusAction } from "@/app/actions/admin-console";
 import ActionForm from "@/components/admin/ActionForm";
+import ShopDocumentsCard from "@/components/admin/ShopDocumentsCard";
 import { Badge, Card, Empty, Facts, inputClass, labelClass, Notice, PageHeader, placeLabel, plural, Section, TableFrame, Th, Tile, Tiles } from "@/components/admin/ui";
 import { ageLabel, formatTZS, formatWhen } from "@/lib/charts";
 import { formatPhone } from "@/lib/order";
 import { getPartnerDetail } from "@/server/admin/partners";
 import { requireAdmin } from "@/server/auth/dal";
+import { shopDocumentsView, shopVerificationState } from "@/server/partners/verification";
 
 export const metadata: Metadata = {
   title: "Partner",
@@ -28,6 +30,11 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
   const now = new Date();
   const suspended = partner.status !== "active";
   const totalOrders = Object.values(statusCounts).reduce((s, n) => s + n, 0);
+  const isShop = partner.kind !== "courier";
+  const [verification, documentsView] = isShop
+    ? await Promise.all([shopVerificationState(partner.id), shopDocumentsView(partner.id)])
+    : [null, null];
+  const dateWords = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -173,6 +180,19 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="flex min-w-0 flex-col gap-4">
+          {verification && (
+            <ShopDocumentsCard
+              partnerId={partner.id}
+              displayName={partner.displayName}
+              verifiedAt={verification.verifiedAt?.toISOString() ?? null}
+              verifiedWhen={verification.verifiedAt ? formatWhen(verification.verifiedAt) : null}
+              missing={verification.missing}
+              documents={verification.documents.map((d) => ({ id: d.id, kind: d.kind, uploadedWhen: formatWhen(d.uploadedAt), aiVerdict: d.aiVerdict, aiNotes: d.aiNotes }))}
+              deadline={documentsView?.deadline ? dateWords(documentsView.deadline) : null}
+              hiddenByRule={documentsView?.hidden ?? false}
+            />
+          )}
+
           <Card className="p-4">
             <h2 className="text-sm font-semibold">Payouts</h2>
             {batches.length === 0 ? (

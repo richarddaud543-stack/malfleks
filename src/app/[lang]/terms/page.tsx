@@ -208,7 +208,7 @@ export default async function TermsPage({ params }: Props) {
           </p>
         </section>
 
-        <section>
+        <section id="partners" className="scroll-mt-28">
           <h2 className="font-display text-lg font-medium text-foreground">
             Partners
           </h2>
@@ -217,6 +217,15 @@ export default async function TermsPage({ params }: Props) {
             application by hand. Approval is not automatic and being approved
             does not put a branch on the map — that is a separate step, taken
             once we have confirmed the address with the business.
+          </p>
+          <p className="mt-2">
+            A shop marked &ldquo;Verified shop&rdquo; has sent MalFleks its
+            business licence, its TIN certificate and a photo of its shop
+            front, and a person at MalFleks has checked them. That confirms the
+            shop is a registered business; it is not a check of each product,
+            which is what the review of listings, the 7-day return and the
+            report button are for. A shop that does not send its documents
+            when asked has its products hidden until it does.
           </p>
           <p className="mt-2">
             Products a partner submits are reviewed before they appear.

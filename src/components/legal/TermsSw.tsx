@@ -136,12 +136,19 @@ export default function TermsSw() {
           </p>
         </section>
 
-        <section>
+        <section id="partners" className="scroll-mt-28">
           <h2 className={H}>Washirika</h2>
           <p className="mt-2">
             Biashara huomba kuorodheshwa na mtu wa MalFleks hukagua kila ombi kwa mkono. Kukubaliwa si kwa kiotomatiki,
             na kukubaliwa hakuliweki tawi kwenye ramani — hiyo ni hatua tofauti, inayochukuliwa tukishathibitisha
             anwani na biashara husika.
+          </p>
+          <p className="mt-2">
+            Duka lenye alama ya &ldquo;Duka lililothibitishwa&rdquo; limeitumia MalFleks leseni yake ya biashara, cheti
+            chake cha TIN na picha ya mbele ya duka, na mtu wa MalFleks amezikagua. Hilo linathibitisha kwamba duka ni
+            biashara iliyosajiliwa; si ukaguzi wa kila bidhaa, kazi ambayo inafanywa na ukaguzi wa matangazo, kanuni ya
+            kurudisha ndani ya siku 7 na kitufe cha kuripoti. Duka lisilotuma nyaraka zake likiombwa, bidhaa zake
+            hufichwa mpaka litakapozituma.
           </p>
           <p className="mt-2">
             Bidhaa anazotuma mshirika hukaguliwa kabla hazijaonekana. Washirika wanawajibika kuhakikisha matangazo yao

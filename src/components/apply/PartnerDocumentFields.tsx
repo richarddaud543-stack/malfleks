@@ -47,12 +47,15 @@ export default function PartnerDocumentFields({
   problems,
   onChange,
   disabled = false,
+  kinds = DOCUMENT_KINDS,
 }: {
   files: PickedFiles;
   /** Per-document message, already in the reader's language. */
   problems: Partial<Record<DocumentKind, string>>;
   onChange: (kind: DocumentKind, file: File | null) => void;
   disabled?: boolean;
+  /** Which documents to ask for. All three on the application; only the missing ones on the partner page. */
+  kinds?: readonly DocumentKind[];
 }) {
   const locale = useLocale();
   const copy = APPLY[locale].form;
@@ -67,7 +70,7 @@ export default function PartnerDocumentFields({
       </p>
 
       <ul className="mt-5 grid gap-4">
-        {DOCUMENT_KINDS.map((kind) => {
+        {DOCUMENT_KINDS.filter((kind) => kinds.includes(kind)).map((kind) => {
           const words = LABELS[kind];
           const inputId = `${groupId}-${kind}`;
           const hintId = `${inputId}-hint`;

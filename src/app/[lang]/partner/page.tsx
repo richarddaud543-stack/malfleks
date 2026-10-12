@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import LiveProducts from "@/components/partner/LiveProducts";
+import ShopDocumentsPanel from "@/components/partner/ShopDocumentsPanel";
 import SubmissionTable from "@/components/partner/SubmissionTable";
 import {
   countSubmissionsForPartner,
@@ -13,6 +14,7 @@ import {
   type PartnerSubmission,
 } from "@/server/partners/portal";
 import { listLiveProductsForBranch, type LiveProduct } from "@/server/partners/stock";
+import { shopDocumentsView, type ShopDocumentsView } from "@/server/partners/verification";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -77,6 +79,14 @@ export default async function PartnerPage({ params }: Props) {
     liveProducts = await listLiveProductsForBranch(partner.branchId).catch(() => null);
   }
 
+  // The shop's documents: what MalFleks has, what it still needs, and by when.
+  // Its own read and its own failure, like the live products below.
+  let documents: ShopDocumentsView | null = null;
+  if (isBrand) documents = await shopDocumentsView(partner.partnerId).catch(() => null);
+  const docCopy = copy.documents;
+  const dateWords = (date: Date) =>
+    date.toLocaleDateString(PARTNER[locale].dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">
@@ -134,6 +144,39 @@ export default async function PartnerPage({ params }: Props) {
             {copy.noBranch.after}
           </p>
         </div>
+      )}
+
+      {documents && !suspended && (
+        <section
+          aria-labelledby="documents-heading"
+          className={`glass-card mt-8 rounded-2xl px-6 py-5 ${!documents.verifiedAt && documents.hidden ? "border border-red-600/40" : ""}`}
+        >
+          <h2 id="documents-heading" className="font-display text-lg font-medium">
+            {docCopy.heading}
+          </h2>
+          {documents.verifiedAt ? (
+            <p className="mt-2 text-sm text-muted">{docCopy.verified(dateWords(documents.verifiedAt))}</p>
+          ) : documents.missing.length === 0 ? (
+            <p className="mt-2 max-w-prose text-sm text-muted">{docCopy.waiting}</p>
+          ) : (
+            <>
+              <p className="mt-2 max-w-prose text-sm text-muted">{documents.hidden ? docCopy.hidden : docCopy.needed}</p>
+              {documents.deadline && !documents.hidden && (
+                <p className="mt-2 max-w-prose text-sm font-medium">{docCopy.deadline(dateWords(documents.deadline))}</p>
+              )}
+              {documents.received.length > 0 && (
+                <p className="mt-2 text-sm text-muted">
+                  {docCopy.have}: {documents.received.length} / 3
+                </p>
+              )}
+              {partner.role === "owner" ? (
+                <ShopDocumentsPanel applicationId={partner.applicationId} missing={documents.missing} />
+              ) : (
+                <p className="mt-3 text-sm text-muted">{docCopy.ownerOnly}</p>
+              )}
+            </>
+          )}
+        </section>
       )}
 
       {!isBrand && !partner.agentId && (

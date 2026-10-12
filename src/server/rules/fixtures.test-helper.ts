@@ -86,7 +86,12 @@ export async function paidOrder(paidAt: Date, options: { totalTZS?: number; paye
 }
 
 /** The shop's own sign-in, with an address on file so it can be written to. */
-export async function shopUser(branchId: string = SHOP): Promise<{ uid: string; email: string }> {
+/**
+ * A shop and its owner's account. Verified by default: most rule tests are
+ * about orders and money, and an unverified shop would have the verification
+ * rule write to it in every pass. Pass `verified: false` to test that rule.
+ */
+export async function shopUser(branchId: string = SHOP, options: { verified?: boolean } = {}): Promise<{ uid: string; email: string; partnerId: string; applicationId: string }> {
   const n = next();
   const uid = `uid-shop-${n}-${Date.now()}`;
   const email = `shop${n}@example.com`;
@@ -95,7 +100,7 @@ export async function shopUser(branchId: string = SHOP): Promise<{ uid: string; 
     data: { kind: "brand", status: "approved", uid, email, businessName: "Toyota Dar", contactName: "Juma", phone: "+255754000111", city: "Dar es Salaam" },
     select: { id: true },
   });
-  await prisma.partner.create({
+  const partner = await prisma.partner.create({
     data: {
       kind: "brand",
       status: "active",
@@ -107,10 +112,12 @@ export async function shopUser(branchId: string = SHOP): Promise<{ uid: string; 
       branchId,
       applicationId: application.id,
       approvedBy: "admin-0",
+      ...(options.verified === false ? {} : { documentsVerifiedAt: new Date("2026-01-01T00:00:00Z"), documentsVerifiedBy: "admin-0" }),
       users: { create: { uid, role: "owner" } },
     },
+    select: { id: true },
   });
-  return { uid, email };
+  return { uid, email, partnerId: partner.id, applicationId: application.id };
 }
 
 /** Empty every table a rule reads or writes, so each test sees only what it made. */

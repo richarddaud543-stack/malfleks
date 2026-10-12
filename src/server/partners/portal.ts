@@ -43,6 +43,10 @@ export interface PartnerIdentity {
    */
   agentId: string | null;
   role: string;
+  /** The application this partner was approved from: its documents hang off it. */
+  applicationId: string;
+  /** When MalFleks checked the shop's documents. Null until then. See `verification.ts`. */
+  documentsVerifiedAt: Date | null;
 }
 
 /**
@@ -68,6 +72,8 @@ export async function partnerForUser(uid: string): Promise<PartnerIdentity | nul
           brandId: true,
           branchId: true,
           agentId: true,
+          applicationId: true,
+          documentsVerifiedAt: true,
         },
       },
     },
@@ -85,6 +91,8 @@ export async function partnerForUser(uid: string): Promise<PartnerIdentity | nul
     branchId: link.partner.branchId,
     agentId: link.partner.agentId,
     role: link.role,
+    applicationId: link.partner.applicationId,
+    documentsVerifiedAt: link.partner.documentsVerifiedAt,
   };
 }
 

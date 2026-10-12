@@ -1,4 +1,5 @@
 import { getPrisma } from "@/server/db/client";
+import { missingDocumentKinds } from "@/lib/partner-document";
 
 /**
  * Reviewing partner applications — the admin half of the pipeline.
@@ -197,8 +198,15 @@ export async function approveApplication(
   const check = canApprove(application, alreadyPartnered);
   if (!check.ok || !application) return check.ok ? { ok: true } : check;
 
+  // A shop that applied with all three documents was verified by the person
+  // approving it: approving is reading them. See `verification.ts`.
+  const verifiedNow =
+    application.kind === "brand" &&
+    missingDocumentKinds(await db.partnerDocument.findMany({ where: { applicationId: application.id }, select: { kind: true } })).length === 0;
+
   try {
     await db.$transaction(async (tx) => {
+      const now = new Date();
       const partner = await tx.partner.create({
         data: {
           kind: application.kind,
@@ -215,6 +223,7 @@ export async function approveApplication(
           ...(application.deliveryMode ? { deliveryMode: application.deliveryMode } : {}),
           applicationId: application.id,
           approvedBy: adminUid,
+          ...(verifiedNow ? { documentsVerifiedAt: now, documentsVerifiedBy: adminUid } : {}),
         },
         select: { id: true },
       });
@@ -236,7 +245,7 @@ export async function approveApplication(
         where: { id: application.id, status: "pending" },
         data: {
           status: "approved",
-          reviewedAt: new Date(),
+          reviewedAt: now,
           reviewedBy: adminUid,
         },
       });
