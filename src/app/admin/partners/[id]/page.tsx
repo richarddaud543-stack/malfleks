@@ -32,7 +32,8 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
   const totalOrders = Object.values(statusCounts).reduce((s, n) => s + n, 0);
   const isShop = partner.kind !== "courier";
   const [verification, documentsView] = isShop
-    ? await Promise.all([shopVerificationState(partner.id), shopDocumentsView(partner.id)])
+    ? // Its own failure: the rest of the page (orders, payouts, suspend) still loads without the documents card.
+      await Promise.all([shopVerificationState(partner.id), shopDocumentsView(partner.id)]).catch(() => [null, null] as const)
     : [null, null];
   const dateWords = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
 

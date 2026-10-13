@@ -239,10 +239,15 @@ export const shopVerification: Rule = {
     for (const alert of stillOpen) {
       const partnerId = asVerificationHold(alert.data)?.partnerId;
       if (!partnerId) continue;
-      const partner = await db.partner.findUnique({ where: { id: partnerId }, select: { displayName: true, documentsVerifiedAt: true, documentsVerifiedBy: true } });
-      if (!partner?.documentsVerifiedAt) continue;
-      const restored = await releaseVerificationHold(partnerId, partner.documentsVerifiedBy ?? RULES_ACTOR);
-      notes.push(`Finished verifying ${partner.displayName}: ${restored} hidden product${restored === 1 ? "" : "s"} put back.`);
+      // One shop's failure must not stop the others: logged, and tried again next pass.
+      try {
+        const partner = await db.partner.findUnique({ where: { id: partnerId }, select: { displayName: true, documentsVerifiedAt: true, documentsVerifiedBy: true } });
+        if (!partner?.documentsVerifiedAt) continue;
+        const restored = await releaseVerificationHold(partnerId, partner.documentsVerifiedBy ?? RULES_ACTOR);
+        notes.push(`Finished verifying ${partner.displayName}: ${restored} hidden product${restored === 1 ? "" : "s"} put back.`);
+      } catch (error) {
+        await logServerError("rule-shop-verification", error);
+      }
     }
 
     if (shops.length === 0) return { acted: notes.length, notes };
