@@ -1049,6 +1049,18 @@ describe("a delivery rider whose driving licence has not been checked", () => {
     expect((await keyed("shop-verification")).map((a) => a.status)).toEqual(["resolved"]);
   });
 
+  it("tries the urgent alert again next pass if it could not be stored", async () => {
+    await riderUser({ verified: false, agentId: ROUTED });
+    await pass();
+    const createMany = vi.spyOn(getPrisma().ownerAlert, "createMany").mockRejectedValueOnce(new Error("connection reset"));
+    await pass(late);
+    createMany.mockRestore();
+    expect(await keyed("rider-licence-overdue")).toEqual([]);
+
+    await pass(new Date(late.getTime() + PASS_MS));
+    expect(await keyed("rider-licence-overdue")).toHaveLength(1);
+  });
+
   it("sent it but you haven't read it yet: you are told it is waiting, and the rider is not nagged", async () => {
     const { email, applicationId, uid } = await riderUser({ verified: false, agentId: ROUTED });
     await pass();

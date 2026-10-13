@@ -398,9 +398,11 @@ async function askRider(rider: UnverifiedPartner, ctx: { now: Date; env: Record<
 
   const documents = await db.partnerDocument.findMany({ where: { applicationId: rider.applicationId }, select: { kind: true } });
   const sent = missingDocumentKinds(documents, "courier").length === 0;
-  // Recorded first, so a failure below does not send the same warning every pass.
-  await db.ownerAlert.update({ where: { id: open.id }, data: { data: { ...hold, escalatedAt: ctx.now.toISOString() } } });
-  await raiseAlert(
+  // The urgent alert first. `raiseAlert` never throws: "not raised" is either
+  // "already open" (a pass that raised it and then failed to record it) or a
+  // failure to store it. Only the first lets this go on; on the second nothing
+  // is recorded, so the next pass tries again.
+  const { raised } = await raiseAlert(
     {
       key: RIDER_OVERDUE_ALERT_KEY,
       subjectId: rider.id,
@@ -421,6 +423,13 @@ async function askRider(rider: UnverifiedPartner, ctx: { now: Date; env: Record<
     },
     ctx.env,
   );
+  if (!raised) {
+    const alreadyOpen = await db.ownerAlert.count({ where: { openKey: `${RIDER_OVERDUE_ALERT_KEY}:${rider.id}` } });
+    if (alreadyOpen === 0) return null;
+  }
+  // Then recorded, before the rider is written to: a failure after this point
+  // cannot send the reminder twice, and one before it is retried next pass.
+  await db.ownerAlert.update({ where: { id: open.id }, data: { data: { ...hold, escalatedAt: ctx.now.toISOString() } } });
   if (!sent) {
     await tellShop(await partnerEmail(rider.applicationId), riderLicenceReminderMessage({ riderName: rider.contactName || rider.displayName, siteUrl }), rider.displayName, ctx.env);
   }
