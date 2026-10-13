@@ -22,8 +22,8 @@ import { approveApplication } from "./review";
 import {
   DOCUMENTS_ARRIVED_ALERT_KEY,
   isVerifiedShop,
-  markShopVerified,
-  shopDocumentsView,
+  markDocumentsChecked,
+  partnerDocumentsView,
   tellOwnerDocumentsArrived,
 } from "./verification";
 
@@ -81,10 +81,15 @@ describe("approving a shop", () => {
     expect(partner.documentsVerifiedAt).toBeNull();
   });
 
-  it("never verifies a courier: couriers are approved, not verified", async () => {
+  it("verifies a rider who applied with their driving licence", async () => {
+    const { partner } = await approved("courier", ["driving"]);
+    expect(partner.documentsVerifiedAt).toBeInstanceOf(Date);
+  });
+
+  it("does not verify a rider without one -- a shop's papers are not a driving licence", async () => {
     const { partner } = await approved("courier", ["licence", "tin", "shopfront"]);
     expect(partner.documentsVerifiedAt).toBeNull();
-    expect(await markShopVerified(partner.id, "admin-1")).toEqual({ ok: false, reason: "not-a-shop" });
+    expect(await markDocumentsChecked(partner.id, "admin-1")).toEqual({ ok: false, reason: "documents-missing" });
   });
 });
 
@@ -116,7 +121,7 @@ describe("a shop sending its documents after approval", () => {
 describe("Documents checked", () => {
   it("needs all three, records who, closes the owner's alerts, and happens once", async () => {
     const { partner, applicationId, uid } = await approved("brand", ["licence"]);
-    expect(await markShopVerified(partner.id, "admin-2")).toEqual({ ok: false, reason: "documents-missing" });
+    expect(await markDocumentsChecked(partner.id, "admin-2")).toEqual({ ok: false, reason: "documents-missing" });
 
     for (const kind of ["tin", "shopfront"]) {
       await getPrisma().partnerDocument.create({
@@ -125,8 +130,8 @@ describe("Documents checked", () => {
     }
     await tellOwnerDocumentsArrived(applicationId);
 
-    expect(await markShopVerified(partner.id, "admin-2")).toEqual({ ok: true, restored: 0 });
-    expect(await markShopVerified(partner.id, "admin-2")).toEqual({ ok: false, reason: "already-verified" });
+    expect(await markDocumentsChecked(partner.id, "admin-2")).toEqual({ ok: true, restored: 0 });
+    expect(await markDocumentsChecked(partner.id, "admin-2")).toEqual({ ok: false, reason: "already-verified" });
 
     const after = await getPrisma().partner.findUniqueOrThrow({ where: { id: partner.id } });
     expect(after.documentsVerifiedBy).toBe("admin-2");
@@ -134,7 +139,7 @@ describe("Documents checked", () => {
   });
 
   it("refuses a partner that does not exist", async () => {
-    expect(await markShopVerified("no-such-partner", "admin-1")).toEqual({ ok: false, reason: "not-found" });
+    expect(await markDocumentsChecked("no-such-partner", "admin-1")).toEqual({ ok: false, reason: "not-found" });
   });
 });
 
@@ -155,10 +160,24 @@ describe("what customers and the shop are shown", () => {
 
   it("tells the shop what it has sent and what it still owes", async () => {
     const { partner } = await approved("brand", ["tin"]);
-    const view = await shopDocumentsView(partner.id);
+    const view = await partnerDocumentsView(partner.id);
     expect(view).toMatchObject({ verifiedAt: null, received: ["tin"], missing: ["licence", "shopfront"], deadline: null, hidden: false });
 
-    const courier = await approved("courier", []);
-    expect(await shopDocumentsView(courier.partner.id)).toBeNull();
+    const rider = await approved("courier", []);
+    expect(await partnerDocumentsView(rider.partner.id)).toMatchObject({ kind: "courier", verifiedAt: null, received: [], missing: ["driving"] });
+  });
+
+  it("lets a rider send their licence later, tells the owner, and can then be checked", async () => {
+    const { partner, applicationId, uid } = await approved("courier", []);
+    await getPrisma().partnerDocument.create({
+      data: { applicationId, uid, kind: "driving", storagePath: `${uid}/${applicationId}/driving-late.jpg`, mimeType: "image/jpeg", byteSize: 1000 },
+    });
+    expect(await tellOwnerDocumentsArrived(applicationId)).toBe(true);
+    const [alert] = await getPrisma().ownerAlert.findMany({ where: { key: DOCUMENTS_ARRIVED_ALERT_KEY } });
+    expect(alert.body).toMatch(/driving licence is there/);
+    expect(alert.body).toMatch(/delivery routing/);
+
+    expect(await markDocumentsChecked(partner.id, "admin-1")).toEqual({ ok: true, restored: 0 });
+    expect((await getPrisma().ownerAlert.findUniqueOrThrow({ where: { id: alert.id } })).status).toBe("resolved");
   });
 });

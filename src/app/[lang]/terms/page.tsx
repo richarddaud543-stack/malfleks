@@ -52,7 +52,7 @@ export default async function TermsPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Terms of use
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 12 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 13 October 2026.</p>
       </ScrollReveal>
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -226,6 +226,11 @@ export default async function TermsPage({ params }: Props) {
             which is what the review of listings, the 7-day return and the
             report button are for. A shop that does not send its documents
             when asked has its products hidden until it does.
+          </p>
+          <p className="mt-2">
+            Delivery riders send MalFleks their driving licence, and a person
+            at MalFleks checks it before they are given any delivery. A rider
+            who does not send it when asked may be stopped from delivering.
           </p>
           <p className="mt-2">
             Products a partner submits are reviewed before they appear.

@@ -35,6 +35,8 @@ const FAILURE: Record<string, string> = {
   "invalid-eta": "Delivery days must be whole numbers, smallest first.",
   "name-taken":
     "That name is already taken in the catalogue. Give it a distinct one.",
+  "licence-not-checked":
+    "Their driving licence hasn't been checked yet. Open the rider's page, read it, and press \"Documents checked\" first.",
   unavailable: "We couldn't reach the database. Nothing was changed.",
 };
 
@@ -77,34 +79,40 @@ export default function PartnerActivationCard({
     setBusy(true);
     setFailure(null);
 
-    let result: ActivationResult;
-    if (isBrand) {
-      result = await activateBrand(partner.partnerId, {
-        brandId: brandId || null,
-        brandName,
-        category,
-        branchName,
-        city,
-        addressLine: addressLine.trim() || null,
-        phone: phone.trim() || null,
-        hours: hours.trim() || null,
-        deliveryOffered,
-        verified,
-      });
-    } else {
-      result = await activateCourier(partner.partnerId, {
-        name: agentName,
-        city,
-        regionsServed: regions,
-        etaMinDays: Number(etaMin),
-        etaMaxDays: Number(etaMax),
-        phone: phone.trim() || null,
-        verified,
-      });
-    }
+    try {
+      let result: ActivationResult;
+      if (isBrand) {
+        result = await activateBrand(partner.partnerId, {
+          brandId: brandId || null,
+          brandName,
+          category,
+          branchName,
+          city,
+          addressLine: addressLine.trim() || null,
+          phone: phone.trim() || null,
+          hours: hours.trim() || null,
+          deliveryOffered,
+          verified,
+        });
+      } else {
+        result = await activateCourier(partner.partnerId, {
+          name: agentName,
+          city,
+          regionsServed: regions,
+          etaMinDays: Number(etaMin),
+          etaMaxDays: Number(etaMax),
+          phone: phone.trim() || null,
+          verified,
+        });
+      }
 
-    setBusy(false);
-    if (!result.ok) setFailure(FAILURE[result.reason] ?? FAILURE.unavailable);
+      if (!result.ok) setFailure(FAILURE[result.reason] ?? FAILURE.unavailable);
+    } catch {
+      // The request itself failed (offline, a deploy mid-flight): nothing was changed.
+      setFailure(FAILURE.unavailable);
+    } finally {
+      setBusy(false);
+    }
     // On success the server revalidates and this card disappears from the list.
   }
 
@@ -128,14 +136,21 @@ export default function PartnerActivationCard({
             </p>
           )}
         </div>
-        {!open && (
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="btn-pill btn-lime px-5 py-2 text-sm"
-          >
-            {isBrand ? "Put on the map" : "Add to delivery"}
-          </button>
+        {!open && !isBrand && !partner.documentsChecked ? (
+          // A rider is not sent to anyone's door before their licence is read.
+          <a href={`/admin/partners/${partner.partnerId}`} className="text-sm font-medium text-accent hover:underline">
+            Check their driving licence first →
+          </a>
+        ) : (
+          !open && (
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="btn-pill btn-lime px-5 py-2 text-sm"
+            >
+              {isBrand ? "Put on the map" : "Add to delivery"}
+            </button>
+          )
         )}
       </div>
 

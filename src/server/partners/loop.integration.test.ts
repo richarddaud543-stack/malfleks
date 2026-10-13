@@ -242,6 +242,18 @@ describe("the whole loop, from an empty catalogue to an order in a branch's hand
       where: { uid: courierUid },
       select: { id: true },
     });
+    // The rider's driving licence, uploaded with the application: approving
+    // with it attached is what lets them into the routing.
+    await db.partnerDocument.create({
+      data: {
+        applicationId: courierPending!.id,
+        uid: courierUid,
+        kind: "driving",
+        storagePath: `${courierUid}/${courierPending!.id}/driving-1.jpg`,
+        mimeType: "image/jpeg",
+        byteSize: 1000,
+      },
+    });
     expect(await approveApplication(courierPending!.id, ADMIN)).toEqual({
       ok: true,
     });

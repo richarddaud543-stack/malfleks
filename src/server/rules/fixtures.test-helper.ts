@@ -121,6 +121,38 @@ export async function shopUser(branchId: string = SHOP, options: { verified?: bo
 }
 
 /** Empty every table a rule reads or writes, so each test sees only what it made. */
+/**
+ * A delivery rider and their account. Verified by default, like `shopUser`.
+ * `agentId` puts them in the delivery routing (a seeded `DeliveryAgent`).
+ */
+export async function riderUser(options: { verified?: boolean; agentId?: string | null } = {}): Promise<{ uid: string; email: string; partnerId: string; applicationId: string }> {
+  const n = next();
+  const uid = `uid-rider-${n}-${Date.now()}`;
+  const email = `rider${n}@example.com`;
+  const prisma = getPrisma();
+  const application = await prisma.partnerApplication.create({
+    data: { kind: "courier", status: "approved", uid, email, businessName: "Swift Riders", contactName: "Baraka", phone: "+255754000222", city: "Arusha" },
+    select: { id: true },
+  });
+  const partner = await prisma.partner.create({
+    data: {
+      kind: "courier",
+      status: "active",
+      displayName: "Swift Riders",
+      contactName: "Baraka",
+      phone: "+255754000222",
+      city: "Arusha",
+      agentId: options.agentId ?? null,
+      applicationId: application.id,
+      approvedBy: "admin-0",
+      ...(options.verified === false ? {} : { documentsVerifiedAt: new Date("2026-01-01T00:00:00Z"), documentsVerifiedBy: "admin-0" }),
+      users: { create: { uid, role: "owner" } },
+    },
+    select: { id: true },
+  });
+  return { uid, email, partnerId: partner.id, applicationId: application.id };
+}
+
 export async function resetRulebookTables(): Promise<void> {
   const prisma = getPrisma();
   await prisma.refundSend.deleteMany({});

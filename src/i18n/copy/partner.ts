@@ -30,6 +30,15 @@ export const PARTNER = {
         sent: "Sent. MalFleks will read them and let you know.",
         failed: "That didn't go through. Your files are still chosen — try again.",
         ownerOnly: "Only the account owner can upload the shop's documents.",
+        rider: {
+          heading: "Your driving licence",
+          verified: (date: string) => `Checked by MalFleks on ${date}. You can be given deliveries.`,
+          waiting: "Thank you — your licence has arrived. A person at MalFleks will check it before you are given deliveries.",
+          needed:
+            "Before MalFleks sends a rider to a customer's door, a person here checks their driving licence. Please upload a clear photo of yours. It is never shown to customers.",
+          deadline: (date: string) => `Please send it by ${date}.`,
+          ownerOnly: "Only the account owner can upload the driving licence.",
+        },
       },
       yourBranch: "Your branch",
       yourCourier: "Your courier account",
@@ -383,6 +392,15 @@ export const PARTNER = {
         sent: "Zimetumwa. MalFleks itazisoma na kukujulisha.",
         failed: "Haikufanikiwa. Faili zako bado zimechaguliwa — jaribu tena.",
         ownerOnly: "Mmiliki wa akaunti pekee ndiye anaweza kupakia nyaraka za duka.",
+        rider: {
+          heading: "Leseni yako ya udereva",
+          verified: (date: string) => `Imekaguliwa na MalFleks tarehe ${date}. Unaweza kupewa mizigo ya kupeleka.`,
+          waiting: "Asante — leseni yako imefika. Mtu wa MalFleks ataikagua kabla hujapewa mizigo ya kupeleka.",
+          needed:
+            "Kabla MalFleks haijamtuma msafirishaji mlangoni kwa mteja, mtu hapa hukagua leseni yake ya udereva. Tafadhali pakia picha safi ya leseni yako. Haionyeshwi kwa wateja kamwe.",
+          deadline: (date: string) => `Tafadhali itume kabla ya ${date}.`,
+          ownerOnly: "Mmiliki wa akaunti pekee ndiye anaweza kupakia leseni ya udereva.",
+        },
       },
       yourBranch: "Tawi lako",
       yourCourier: "Akaunti yako ya usafirishaji",

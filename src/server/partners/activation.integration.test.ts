@@ -42,7 +42,7 @@ let seq = 0;
 
 async function approvedPartner(
   kind: "brand" | "courier",
-  overrides: { status?: string; city?: string } = {},
+  overrides: { status?: string; city?: string; licenceChecked?: boolean } = {},
 ) {
   seq += 1;
   const partner = await getPrisma().partner.create({
@@ -55,6 +55,9 @@ async function approvedPartner(
       city: overrides.city ?? "Dar es Salaam",
       applicationId: `act-app-${seq}-${Date.now()}`,
       approvedBy: "admin-0",
+      // A rider's licence is checked unless a test says otherwise: these are
+      // about the routing form, and an unchecked rider is refused first.
+      ...(kind === "courier" && overrides.licenceChecked !== false ? { documentsVerifiedAt: new Date(), documentsVerifiedBy: "admin-0" } : {}),
     },
     select: { id: true },
   });
@@ -266,6 +269,12 @@ describe("activateBrandPartner", () => {
 });
 
 describe("activateCourierPartner", () => {
+  it("refuses a rider whose driving licence nobody has checked", async () => {
+    const partnerId = await approvedPartner("courier", { licenceChecked: false });
+    expect(await activateCourierPartner(partnerId, courierInput())).toEqual({ ok: false, reason: "licence-not-checked" });
+    expect((await getPrisma().partner.findUniqueOrThrow({ where: { id: partnerId } })).agentId).toBeNull();
+  });
+
   it("creates the agent, its regions, and links the partner", async () => {
     const partnerId = await approvedPartner("courier");
 

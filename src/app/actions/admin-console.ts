@@ -379,28 +379,29 @@ export async function setProductStockAction(_prev: ConsoleState, formData: FormD
 }
 
 /**
- * "Documents checked": a person has read this shop's licence, TIN certificate
- * and shop-front photo and found them in order. The shop shows as verified to
- * customers from now on, and anything the verification rule hid comes back.
+ * "Documents checked": a person has read this partner's documents -- a shop's
+ * licence, TIN certificate and shop-front photo, or a rider's driving licence
+ * -- and found them in order. A shop shows as verified to customers from now
+ * on, and anything the verification rule hid comes back. A rider can now be
+ * put into the delivery routing.
  */
-export async function markShopVerifiedAction(_prev: ConsoleState, formData: FormData): Promise<ConsoleState> {
+export async function markDocumentsCheckedAction(_prev: ConsoleState, formData: FormData): Promise<ConsoleState> {
   const session = await adminSession();
   if (!session) return FORBIDDEN;
   const partnerId = field(formData, "partnerId");
   try {
-    const { markShopVerified } = await import("@/server/partners/verification");
-    const outcome = await markShopVerified(partnerId, session.uid);
+    const { markDocumentsChecked } = await import("@/server/partners/verification");
+    const outcome = await markDocumentsChecked(partnerId, session.uid);
     if (!outcome.ok) {
       const messages: Record<typeof outcome.reason, string> = {
         "not-found": "This partner no longer exists.",
-        "not-a-shop": "Only shops are verified this way. Couriers are approved, not verified.",
-        "documents-missing": "All three documents have to be here first: business licence, TIN certificate and shop-front photo.",
+        "documents-missing": "Every document has to be here first: a shop's business licence, TIN certificate and shop-front photo, or a rider's driving licence.",
         "already-verified": "Already marked as checked.",
       };
       return { status: "error", message: messages[outcome.reason] };
     }
     revalidatePath(`/admin/partners/${partnerId}`);
-    revalidatePath("/admin/partners");
+    revalidatePath("/admin/partners", "layout");
     revalidatePath("/admin/rules");
     revalidatePath("/admin");
     revalidateSitePath("/partner");
@@ -412,10 +413,10 @@ export async function markShopVerifiedAction(_prev: ConsoleState, formData: Form
         ? "Marked as checked. Its hidden products couldn't be put back just now — the rulebook will finish that on its next run, within 15 minutes."
         : outcome.restored > 0
           ? `Marked as checked. ${outcome.restored} hidden product${outcome.restored === 1 ? " is" : "s are"} back on the shop.`
-          : "Marked as checked. Customers now see this shop as verified.",
+          : "Marked as checked.",
     };
   } catch (error) {
-    await logServerError("mark-shop-verified", error, session.uid);
+    await logServerError("mark-documents-checked", error, session.uid);
     return FAILED;
   }
 }

@@ -8,6 +8,7 @@ import {
   DOCUMENT_INPUT_ACCEPT,
   DOCUMENT_KINDS,
   MAX_DOCUMENT_BYTES,
+  REQUIRED_DOCUMENT_KINDS,
   type DocumentKind,
 } from "@/lib/partner-document";
 
@@ -31,10 +32,17 @@ import {
 
 export type PickedFiles = Partial<Record<DocumentKind, File>>;
 
-const LABELS: Record<DocumentKind, { label: "documentLicence" | "documentTin" | "documentShopfront"; hint: "documentLicenceHint" | "documentTinHint" | "documentShopfrontHint" }> = {
+const LABELS: Record<
+  DocumentKind,
+  {
+    label: "documentLicence" | "documentTin" | "documentShopfront" | "documentDriving";
+    hint: "documentLicenceHint" | "documentTinHint" | "documentShopfrontHint" | "documentDrivingHint";
+  }
+> = {
   licence: { label: "documentLicence", hint: "documentLicenceHint" },
   tin: { label: "documentTin", hint: "documentTinHint" },
   shopfront: { label: "documentShopfront", hint: "documentShopfrontHint" },
+  driving: { label: "documentDriving", hint: "documentDrivingHint" },
 };
 
 function sizeLabel(bytes: number): string {
@@ -47,15 +55,18 @@ export default function PartnerDocumentFields({
   problems,
   onChange,
   disabled = false,
-  kinds = DOCUMENT_KINDS,
+  kinds = REQUIRED_DOCUMENT_KINDS,
+  forCourier = false,
 }: {
   files: PickedFiles;
   /** Per-document message, already in the reader's language. */
   problems: Partial<Record<DocumentKind, string>>;
   onChange: (kind: DocumentKind, file: File | null) => void;
   disabled?: boolean;
-  /** Which documents to ask for. All three on the application; only the missing ones on the partner page. */
+  /** Which documents to ask for: a shop's three, a rider's licence, or only the missing ones on the partner page. */
   kinds?: readonly DocumentKind[];
+  /** A delivery rider rather than a shop: says why a rider is asked. */
+  forCourier?: boolean;
 }) {
   const locale = useLocale();
   const copy = APPLY[locale].form;
@@ -64,7 +75,7 @@ export default function PartnerDocumentFields({
   return (
     <section className="rounded-2xl border border-border bg-surface-2 p-5">
       <h2 className="font-display text-base font-medium">{copy.documentsHeading}</h2>
-      <p className="mt-2 text-sm text-muted">{copy.documentsIntro}</p>
+      <p className="mt-2 text-sm text-muted">{forCourier ? copy.documentsIntroCourier : copy.documentsIntro}</p>
       <p className="mt-2 text-sm text-muted">
         <strong className="font-medium">{copy.documentsPrivate}</strong>
       </p>

@@ -12,9 +12,10 @@ import { checkDocumentFile, DOCUMENT_KINDS, type DocumentKind } from "@/lib/part
 import { uploadPartnerDocuments } from "@/lib/partner-document-upload";
 
 /**
- * A shop already on MalFleks sending its business licence, TIN certificate and
- * shop-front photo -- the ones every shop approved before 12 Oct 2026 was
- * never asked for, and the ones a shop that applied without them still owes.
+ * A partner already on MalFleks sending its documents: a shop's business
+ * licence, TIN certificate and shop-front photo -- the ones every shop approved
+ * before 12 Oct 2026 was never asked for -- or a rider's driving licence, asked
+ * of every rider from 13 Oct 2026.
  *
  * The same picker and the same upload path as the application form
  * (`PartnerDocumentFields`, `uploadPartnerDocuments`,
@@ -25,7 +26,16 @@ import { uploadPartnerDocuments } from "@/lib/partner-document-upload";
  * Only the kinds still missing are offered: a shop that sent two of three is
  * asked for the third, not all three again.
  */
-export default function ShopDocumentsPanel({ applicationId, missing }: { applicationId: string; missing: DocumentKind[] }) {
+export default function PartnerDocumentsPanel({
+  applicationId,
+  missing,
+  forCourier = false,
+}: {
+  applicationId: string;
+  missing: DocumentKind[];
+  /** A rider sending a driving licence, rather than a shop. */
+  forCourier?: boolean;
+}) {
   const locale = useLocale();
   const copy = PARTNER[locale].home.documents;
   const formCopy = APPLY[locale].form;
@@ -105,7 +115,7 @@ export default function ShopDocumentsPanel({ applicationId, missing }: { applica
 
   return (
     <div className="mt-5">
-      <PartnerDocumentFields files={files} problems={problems} onChange={pick} disabled={sending} kinds={missing} />
+      <PartnerDocumentFields files={files} problems={problems} onChange={pick} disabled={sending} kinds={missing} forCourier={forCourier} />
       <div className="mt-5 flex flex-wrap items-center gap-4">
         <button type="button" onClick={send} disabled={blocked || sending} className="btn-pill btn-lime px-5 py-2 text-sm disabled:opacity-50">
           {sending ? copy.sending : copy.send}

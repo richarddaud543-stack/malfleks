@@ -60,7 +60,7 @@ export default async function PrivacyPage({ params }: Props) {
         <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">
           Privacy
         </h1>
-        <p className="mt-3 text-sm text-muted">Last updated 12 October 2026.</p>
+        <p className="mt-3 text-sm text-muted">Last updated 13 October 2026.</p>
       </ScrollReveal>
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -88,6 +88,15 @@ export default async function PrivacyPage({ params }: Props) {
               your business name, contact name, phone number, city and address
             </li>
             <li>anything you write in the notes field</li>
+            <li>
+              the documents you upload — a shop&apos;s business licence, TIN
+              certificate and shop-front photo, or a delivery rider&apos;s
+              driving licence. They are kept in private storage that only
+              MalFleks&apos;s administrators can open, and are never shown to
+              customers. When our document checker is switched on, they are
+              also read by Google&apos;s Gemini service, which points out
+              problems for the person reviewing them and decides nothing.
+            </li>
           </ul>
           <p className="mt-3">
             When you place an order while signed in, we also keep the email

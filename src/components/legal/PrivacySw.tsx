@@ -22,7 +22,7 @@ export default function PrivacySw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Faragha</h1>
-      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 12 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Ilisasishwa mara ya mwisho tarehe 13 Oktoba 2026.</p>
       <EnglishDecides path="/privacy" />
 
       <div className="mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -43,6 +43,12 @@ export default function PrivacySw() {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>jina la biashara yako, jina la mtu wa kuwasiliana naye, namba ya simu, mji na anwani</li>
             <li>chochote unachoandika kwenye sehemu ya maelezo</li>
+            <li>
+              nyaraka unazopakia — leseni ya biashara, cheti cha TIN na picha ya mbele ya duka kwa duka, au leseni ya
+              udereva kwa msafirishaji. Zinatunzwa mahali pa siri ambapo wasimamizi wa MalFleks pekee wanaweza kuzifungua,
+              na hazionyeshwi kwa wateja kamwe. Kikaguzi chetu cha nyaraka kikiwa kimewashwa, husomwa pia na huduma ya
+              Gemini ya Google, ambayo huonyesha matatizo kwa mtu anayezikagua na haiamui chochote.
+            </li>
           </ul>
           <p className="mt-3">
             Unapoweka oda ukiwa umeingia, tunahifadhi pia anwani ya barua pepe ya akaunti ya Google uliyotumia, ili

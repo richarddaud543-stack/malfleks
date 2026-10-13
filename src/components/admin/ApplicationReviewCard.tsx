@@ -6,7 +6,7 @@ import {
   rejectPartnerApplication,
 } from "@/app/actions/partner-review";
 import { viewApplicationDocument } from "@/app/actions/partner-review";
-import { REQUIRED_DOCUMENT_KINDS } from "@/lib/partner-document";
+import { requiredDocumentKinds } from "@/lib/partner-document";
 import type { ReviewableApplication } from "@/server/partners/review";
 
 /**
@@ -40,6 +40,7 @@ const DOCUMENT_LABELS: Record<string, string> = {
   licence: "Business licence",
   tin: "TIN certificate",
   shopfront: "Shop front",
+  driving: "Driving licence",
 };
 
 /**
@@ -62,7 +63,7 @@ function PaperworkPanel({ application }: { application: ReviewableApplication })
   const [linkError, setLinkError] = useState<string | null>(null);
 
   const verdict = application.aiVerdict ? VERDICT_STYLE[application.aiVerdict] : null;
-  const missing = REQUIRED_DOCUMENT_KINDS.filter(
+  const missing = requiredDocumentKinds(application.kind).filter(
     (kind) => !application.documents.some((document) => document.kind === kind),
   );
 
@@ -82,7 +83,6 @@ function PaperworkPanel({ application }: { application: ReviewableApplication })
     window.open(outcome.url, "_blank", "noopener,noreferrer");
   }
 
-  if (application.kind !== "brand") return null;
 
   return (
     <section className="mt-4 rounded-xl border border-border p-4">

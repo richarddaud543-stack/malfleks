@@ -363,6 +363,65 @@ export function verificationHiddenMessage(input: { shopName: string; hidden: num
   );
 }
 
+/**
+ * To a delivery rider: MalFleks needs their driving licence. Sent once, when
+ * the verification rule first finds the rider unverified.
+ */
+export function riderLicenceNeededMessage(input: { riderName: string; deadline: string; siteUrl: string }): Message {
+  return both(
+    {
+      subject: "MalFleks: tafadhali tuma leseni yako ya udereva",
+      body: [
+        habari(input.riderName),
+        "",
+        "Kabla MalFleks haijamtuma msafirishaji mlangoni kwa mteja, mtu wa MalFleks hukagua leseni yake ya udereva.",
+        "Tafadhali pakia picha safi ya leseni yako (upande wenye picha na jina lako) kwenye ukurasa wako wa mshirika:",
+        `${input.siteUrl}/partner`,
+        "",
+        `Tafadhali itume kabla ya ${input.deadline}. Haionyeshwi kwa wateja wala kwa mtu yeyote nje ya MalFleks.`,
+      ].join("\n"),
+    },
+    {
+      subject: "MalFleks: please send your driving licence",
+      body: [
+        hello(input.riderName),
+        "",
+        "Before MalFleks sends a rider to a customer's door, a person at MalFleks checks their driving licence.",
+        "Please upload a clear photo of yours (the side with your photo and name) on your partner page:",
+        `${input.siteUrl}/partner`,
+        "",
+        `Please send it by ${input.deadline}. It is never shown to customers or to anyone outside MalFleks.`,
+      ].join("\n"),
+    },
+  );
+}
+
+/** To a delivery rider: the date passed and MalFleks still does not have their licence. Sent once. */
+export function riderLicenceReminderMessage(input: { riderName: string; siteUrl: string }): Message {
+  return both(
+    {
+      subject: "MalFleks: bado tunahitaji leseni yako ya udereva",
+      body: [
+        habari(input.riderName),
+        "",
+        "Bado hatujapokea leseni yako ya udereva. Bila hiyo, MalFleks inaweza kuacha kukupa mizigo ya kupeleka.",
+        "Tafadhali ipakie leo hapa:",
+        `${input.siteUrl}/partner`,
+      ].join("\n"),
+    },
+    {
+      subject: "MalFleks: we still need your driving licence",
+      body: [
+        hello(input.riderName),
+        "",
+        "We still haven't received your driving licence. Without it, MalFleks may stop giving you deliveries.",
+        "Please upload it today here:",
+        `${input.siteUrl}/partner`,
+      ].join("\n"),
+    },
+  );
+}
+
 // ---------------------------------------------------------------------------
 // To the owner
 // ---------------------------------------------------------------------------

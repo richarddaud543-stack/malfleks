@@ -115,6 +115,11 @@ export const APPLY = {
       documentTinHint: "Your TRA taxpayer certificate. We check the name and TIN match your licence.",
       documentShopfront: "Photo of your shop front",
       documentShopfrontHint: "A picture of the outside of your shop, with the signage if you have it.",
+      documentsIntroCourier:
+        "Riders carry customers' goods to their door. So before anyone is given a delivery, a person at MalFleks checks their driving licence. One file.",
+      documentDriving: "Driving licence (leseni ya udereva)",
+      documentDrivingHint:
+        "A clear photo of your driving licence card, the side with your photo and name. It must cover the vehicle you deliver with and still be in date.",
       documentAdd: "Choose file",
       documentReplace: "Replace",
       documentRemove: "Remove",
@@ -246,6 +251,11 @@ export const APPLY = {
       documentTinHint: "Cheti chako cha TRA. Tunakagua jina na namba ya TIN zinalingana na leseni.",
       documentShopfront: "Picha ya mbele ya duka lako",
       documentShopfrontHint: "Picha ya nje ya duka lako, na bango kama unalo.",
+      documentsIntroCourier:
+        "Wasafirishaji hubeba mizigo ya wateja hadi mlangoni. Kwa hiyo kabla mtu hajapewa mzigo wa kupeleka, mtu wa MalFleks hukagua leseni yake ya udereva. Faili moja.",
+      documentDriving: "Leseni ya udereva",
+      documentDrivingHint:
+        "Picha safi ya kadi ya leseni yako ya udereva, upande wenye picha na jina lako. Iruhusu chombo unachotumia kupeleka mizigo na iwe bado hai.",
       documentAdd: "Chagua faili",
       documentReplace: "Badilisha",
       documentRemove: "Ondoa",

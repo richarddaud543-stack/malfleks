@@ -198,11 +198,14 @@ export async function approveApplication(
   const check = canApprove(application, alreadyPartnered);
   if (!check.ok || !application) return check.ok ? { ok: true } : check;
 
-  // A shop that applied with all three documents was verified by the person
-  // approving it: approving is reading them. See `verification.ts`.
+  // A shop that applied with all three documents, or a rider with their
+  // driving licence, was verified by the person approving it: approving is
+  // reading them. See `verification.ts`.
   const verifiedNow =
-    application.kind === "brand" &&
-    missingDocumentKinds(await db.partnerDocument.findMany({ where: { applicationId: application.id }, select: { kind: true } })).length === 0;
+    missingDocumentKinds(
+      await db.partnerDocument.findMany({ where: { applicationId: application.id }, select: { kind: true } }),
+      application.kind,
+    ).length === 0;
 
   try {
     await db.$transaction(async (tx) => {

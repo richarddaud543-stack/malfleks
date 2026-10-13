@@ -9,6 +9,8 @@ import {
   MAX_DOCUMENT_BYTES,
   missingDocumentKinds,
   ownsDocumentPath,
+  REQUIRED_DOCUMENT_KINDS,
+  requiredDocumentKinds,
   PARTNER_DOCUMENT_BUCKET,
   partnerDocumentPath,
 } from "./partner-document";
@@ -161,11 +163,11 @@ describe("ownsDocumentPath — the lock that matters", () => {
 
 describe("missingDocumentKinds", () => {
   it("names all three when nothing has been uploaded", () => {
-    expect(missingDocumentKinds([])).toEqual([...DOCUMENT_KINDS]);
+    expect(missingDocumentKinds([])).toEqual([...REQUIRED_DOCUMENT_KINDS]);
   });
 
   it("names none when all three are in", () => {
-    expect(missingDocumentKinds(DOCUMENT_KINDS.map((kind) => ({ kind })))).toEqual([]);
+    expect(missingDocumentKinds(REQUIRED_DOCUMENT_KINDS.map((kind) => ({ kind })))).toEqual([]);
   });
 
   it("names only what is actually absent", () => {
@@ -173,6 +175,19 @@ describe("missingDocumentKinds", () => {
   });
 
   it("ignores a kind we never asked for", () => {
-    expect(missingDocumentKinds([{ kind: "nida" }])).toEqual([...DOCUMENT_KINDS]);
+    expect(missingDocumentKinds([{ kind: "nida" }])).toEqual([...REQUIRED_DOCUMENT_KINDS]);
+  });
+
+  it("asks a delivery rider for their driving licence, and only that", () => {
+    expect(requiredDocumentKinds("courier")).toEqual(["driving"]);
+    expect(missingDocumentKinds([], "courier")).toEqual(["driving"]);
+    expect(missingDocumentKinds([{ kind: "driving" }], "courier")).toEqual([]);
+    // A shop's paperwork is not a rider's licence.
+    expect(missingDocumentKinds(REQUIRED_DOCUMENT_KINDS.map((kind) => ({ kind })), "courier")).toEqual(["driving"]);
+  });
+
+  it("does not let a driving licence stand in for a shop's documents", () => {
+    expect(requiredDocumentKinds("brand")).toEqual(["licence", "tin", "shopfront"]);
+    expect(missingDocumentKinds([{ kind: "driving" }], "brand")).toEqual(["licence", "tin", "shopfront"]);
   });
 });

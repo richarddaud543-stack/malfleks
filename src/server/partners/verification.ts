@@ -1,13 +1,13 @@
 import type { Prisma } from "@prisma/client";
 
-import { missingDocumentKinds, REQUIRED_DOCUMENT_KINDS, type DocumentKind } from "@/lib/partner-document";
+import { missingDocumentKinds, requiredDocumentKinds, type DocumentKind } from "@/lib/partner-document";
 import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 import { raiseAlert, resolveAlertFor } from "@/server/rules/alerts";
 
 /**
- * What "verified shop" means on MalFleks, in one place.
+ * What "verified" means on MalFleks, for shops and delivery riders, in one place.
  *
  * The advert, the Terms and the product pages say every shop on MalFleks has
  * been checked: a business licence, a TIN certificate and a photo of the shop
@@ -23,19 +23,27 @@ import { raiseAlert, resolveAlertFor } from "@/server/rules/alerts";
  * - **"Documents checked"** on the shop's console page, after a shop that was
  *   approved without them uploads them from its partner page.
  *
- * Couriers are not shops and are not covered: the Terms say riders are
- * "approved by MalFleks", which approval already is.
+ * Delivery riders (`kind: "courier"`) are verified the same way, on one
+ * document: their driving licence (added 13 Oct 2026). A rider is verified at
+ * approval when the application carried it, or with "Documents checked" once
+ * they upload it from their partner page -- and is not put into the delivery
+ * routing until then (`activateCourierPartner`).
  *
  * An unverified shop is given `SHOP_VERIFICATION.graceDays` after it is first
  * told, then its products come off the shop until it is verified -- the
  * `shop-verification` rule. Verifying puts back exactly what that rule hid.
+ * An unverified rider already in the routing is not taken out automatically:
+ * it may be the only rider a city has, and removing it would leave every shop
+ * there unorderable. The owner is told instead, urgently, and decides.
  */
 
 export const VERIFICATION_ALERT_KEY = "shop-verification";
-/** "A shop sent its documents and they are waiting for you." One open at a time per shop. */
+/** "A partner sent its documents and they are waiting for you." One open at a time per partner. */
 export const DOCUMENTS_ARRIVED_ALERT_KEY = "shop-documents";
+/** "A rider's licence is past its deadline and the rider is still delivering." Urgent; one per rider. */
+export const RIDER_OVERDUE_ALERT_KEY = "rider-licence-overdue";
 
-export interface ShopDocumentRow {
+export interface PartnerDocumentRow {
   id: string;
   kind: string;
   uploadedAt: Date;
@@ -43,17 +51,17 @@ export interface ShopDocumentRow {
   aiNotes: string | null;
 }
 
-export interface ShopVerificationState {
+export interface PartnerVerificationState {
   partnerId: string;
-  /** Only a "brand" partner is a shop. */
-  isShop: boolean;
+  /** "brand" (a shop) or "courier" (a delivery rider): decides which documents count. */
+  kind: string;
   verifiedAt: Date | null;
   verifiedBy: string | null;
   missing: DocumentKind[];
-  documents: ShopDocumentRow[];
+  documents: PartnerDocumentRow[];
 }
 
-export async function shopVerificationState(partnerId: string): Promise<ShopVerificationState | null> {
+export async function partnerVerificationState(partnerId: string): Promise<PartnerVerificationState | null> {
   const db = getPrisma();
   const partner = await db.partner.findUnique({
     where: { id: partnerId },
@@ -67,28 +75,29 @@ export async function shopVerificationState(partnerId: string): Promise<ShopVeri
   });
   return {
     partnerId: partner.id,
-    isShop: partner.kind === "brand",
+    kind: partner.kind,
     verifiedAt: partner.documentsVerifiedAt,
     verifiedBy: partner.documentsVerifiedBy,
-    missing: missingDocumentKinds(documents),
+    missing: missingDocumentKinds(documents, partner.kind),
     documents,
   };
 }
 
-/** What a shop sees about its own documents on its partner page. */
-export interface ShopDocumentsView {
+/** What a partner sees about its own documents on its partner page. */
+export interface PartnerDocumentsView {
+  kind: string;
   verifiedAt: Date | null;
   received: DocumentKind[];
   missing: DocumentKind[];
-  /** When its products come off the shop if still unverified, while the rule is waiting. */
+  /** The date the rule gave it, while the rule is waiting: a shop's products come off the shop after it. */
   deadline: Date | null;
-  /** True once the rule has hidden its products. */
+  /** True once the rule has hidden a shop's products. Never true for a rider. */
   hidden: boolean;
 }
 
-export async function shopDocumentsView(partnerId: string): Promise<ShopDocumentsView | null> {
-  const state = await shopVerificationState(partnerId);
-  if (!state || !state.isShop) return null;
+export async function partnerDocumentsView(partnerId: string): Promise<PartnerDocumentsView | null> {
+  const state = await partnerVerificationState(partnerId);
+  if (!state) return null;
   const open = await getPrisma().ownerAlert.findUnique({
     where: { openKey: `${VERIFICATION_ALERT_KEY}:${partnerId}` },
     select: { data: true },
@@ -96,8 +105,9 @@ export async function shopDocumentsView(partnerId: string): Promise<ShopDocument
   const hold = open ? asVerificationHold(open.data) : null;
   const kinds = new Set(state.documents.map((d) => d.kind));
   return {
+    kind: state.kind,
     verifiedAt: state.verifiedAt,
-    received: REQUIRED_DOCUMENT_KINDS.filter((kind) => kinds.has(kind)),
+    received: requiredDocumentKinds(state.kind).filter((kind) => kinds.has(kind)),
     missing: state.missing,
     deadline: hold ? new Date(hold.deadline) : null,
     hidden: Boolean(hold?.hiddenAt),
@@ -110,17 +120,17 @@ export type MarkVerifiedOutcome =
    * rule hid failed. The alert stays open, and the rule's next pass finishes it.
    */
   | { ok: true; restored: number; restoreFailed?: true }
-  | { ok: false; reason: "not-found" | "not-a-shop" | "documents-missing" | "already-verified" };
+  | { ok: false; reason: "not-found" | "documents-missing" | "already-verified" };
 
 /**
- * A person at MalFleks has read a shop's three documents and they are in
- * order. Refuses while any of the three is missing: "verified" with a document
- * missing is exactly the claim this exists to keep honest.
+ * A person at MalFleks has read a partner's documents -- a shop's three, or a
+ * rider's driving licence -- and they are in order. Refuses while any is
+ * missing: "verified" with a document missing is exactly the claim this exists
+ * to keep honest.
  */
-export async function markShopVerified(partnerId: string, adminUid: string, now: Date = new Date()): Promise<MarkVerifiedOutcome> {
-  const state = await shopVerificationState(partnerId);
+export async function markDocumentsChecked(partnerId: string, adminUid: string, now: Date = new Date()): Promise<MarkVerifiedOutcome> {
+  const state = await partnerVerificationState(partnerId);
   if (!state) return { ok: false, reason: "not-found" };
-  if (!state.isShop) return { ok: false, reason: "not-a-shop" };
   if (state.missing.length > 0) return { ok: false, reason: "documents-missing" };
 
   const db = getPrisma();
@@ -131,9 +141,9 @@ export async function markShopVerified(partnerId: string, adminUid: string, now:
   });
   if (count === 0) return { ok: false, reason: "already-verified" };
 
-  // The shop IS verified from here, whatever happens next. A failure putting
-  // its products back must not read as "not verified": it is reported apart,
-  // and the rule retries it (`shopVerification`, verified shops' open alerts).
+  // The partner IS verified from here, whatever happens next. A failure putting
+  // a shop's products back must not read as "not verified": it is reported
+  // apart, and the rule retries it (`shopVerification`, verified partners' open alerts).
   try {
     return { ok: true, restored: await releaseVerificationHold(partnerId, adminUid) };
   } catch (error) {
@@ -145,7 +155,8 @@ export async function markShopVerified(partnerId: string, adminUid: string, now:
 /**
  * Put back the products the rule hid -- only those, and only while they still
  * carry the moment the rule hid them, so a product an admin hid for another
- * reason since stays hidden -- then close the shop's alerts.
+ * reason since stays hidden -- then close the partner's alerts. A rider has
+ * nothing hidden; only its alerts are closed.
  *
  * Products first, alerts second: if putting the products back fails, the
  * verification alert is still open, and the rule's next pass sees a verified
@@ -175,13 +186,14 @@ export async function releaseVerificationHold(partnerId: string, by: string): Pr
   if (restored > 0) await notifyPublicSiteOfCatalogueChange();
   await resolveAlertFor(VERIFICATION_ALERT_KEY, partnerId, by);
   await resolveAlertFor(DOCUMENTS_ARRIVED_ALERT_KEY, partnerId, by);
+  await resolveAlertFor(RIDER_OVERDUE_ALERT_KEY, partnerId, by);
   return restored;
 }
 
 /**
  * Called after documents are attached to an application. When that
- * application already became a shop -- one approved before documents were
- * asked for, uploading them now from its partner page -- the owner is told
+ * application already became a partner -- a shop or rider approved before
+ * documents were asked for, uploading them now from its partner page -- the owner is told
  * they are waiting to be read. Nothing is verified by uploading: a person
  * reads them.
  *
@@ -194,9 +206,10 @@ export async function tellOwnerDocumentsArrived(applicationId: string): Promise<
       where: { applicationId },
       select: { id: true, kind: true, displayName: true, city: true, documentsVerifiedAt: true },
     });
-    if (!partner || partner.kind !== "brand" || partner.documentsVerifiedAt) return false;
+    if (!partner || partner.documentsVerifiedAt) return false;
+    const rider = partner.kind === "courier";
     const documents = await db.partnerDocument.findMany({ where: { applicationId }, select: { kind: true } });
-    const missing = missingDocumentKinds(documents);
+    const missing = missingDocumentKinds(documents, partner.kind);
     const { raised } = await raiseAlert({
       key: DOCUMENTS_ARRIVED_ALERT_KEY,
       subjectId: partner.id,
@@ -205,11 +218,15 @@ export async function tellOwnerDocumentsArrived(applicationId: string): Promise<
       body: [
         `${partner.displayName} (${partner.city}) has uploaded documents from its partner page.`,
         missing.length === 0
-          ? "All three are there: business licence, TIN certificate and shop-front photo."
+          ? rider
+            ? "Their driving licence is there."
+            : "All three are there: business licence, TIN certificate and shop-front photo."
           : `Still missing: ${missing.join(", ")}.`,
         "",
-        'Open the shop in the console, read them, and press "Documents checked" if they are in order.',
-        "Until you do, the shop does not show as verified.",
+        `Open the ${rider ? "rider" : "shop"} in the console, read ${rider ? "it" : "them"}, and press "Documents checked" if ${rider ? "it is" : "they are"} in order.`,
+        rider
+          ? "Until you do, the rider cannot be put into the delivery routing."
+          : "Until you do, the shop does not show as verified.",
       ].join("\n"),
       href: `/admin/partners/${partner.id}`,
       data: { partnerId: partner.id },
@@ -238,8 +255,10 @@ export async function isVerifiedShop(branchId: string): Promise<boolean> {
 /** What the rule stores on its alert, so verifying can undo exactly what it did. */
 export interface VerificationHold {
   partnerId: string;
-  /** Null for a shop not yet put on the map: it is asked, but has nothing to hide. */
+  /** Null for a shop not yet put on the map, and for a rider: asked, but nothing to hide. */
   branchId: string | null;
+  /** ISO. Set once the owner was told a rider is past its deadline. Riders only. */
+  escalatedAt?: string;
   /** ISO. When the shop's products come off the shop if still unverified. */
   deadline: string;
   /** ISO. Set once the products were hidden. */
@@ -256,6 +275,7 @@ export function asVerificationHold(data: Prisma.JsonValue | null): VerificationH
     branchId: typeof d.branchId === "string" ? d.branchId : null,
     deadline: d.deadline,
     ...(typeof d.hiddenAt === "string" ? { hiddenAt: d.hiddenAt } : {}),
+    ...(typeof d.escalatedAt === "string" ? { escalatedAt: d.escalatedAt } : {}),
     ...(Array.isArray(d.productIds) ? { productIds: d.productIds.filter((x): x is string => typeof x === "string") } : {}),
   };
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { markShopVerifiedAction } from "@/app/actions/admin-console";
+import { markDocumentsCheckedAction } from "@/app/actions/admin-console";
 import { viewApplicationDocument } from "@/app/actions/partner-review";
 import ActionForm from "@/components/admin/ActionForm";
 import { Card } from "@/components/admin/ui";
@@ -11,10 +11,13 @@ const LABELS: Record<string, string> = {
   licence: "Business licence",
   tin: "TIN certificate",
   shopfront: "Shop front",
+  driving: "Driving licence",
 };
 
-export interface ShopDocumentsCardProps {
+export interface PartnerDocumentsCardProps {
   partnerId: string;
+  /** "brand" (a shop) or "courier" (a rider). */
+  kind: string;
   displayName: string;
   /** ISO, or null while unverified. */
   verifiedAt: string | null;
@@ -27,14 +30,17 @@ export interface ShopDocumentsCardProps {
 }
 
 /**
- * A shop's three documents on its console page, and the one button that makes
- * it "verified" on the site. The button stays away until all three are here --
+ * A partner's documents on its console page -- a shop's three, or a rider's
+ * driving licence -- and the one button that marks them checked. For a shop
+ * that is the "Verified shop" mark; for a rider it is what lets them into the
+ * delivery routing. The button stays away until every document is here --
  * the server refuses too, but a button that cannot work should not be offered.
  *
  * Links are fetched on click, never rendered into the page: the same reasoning
  * as the review queue's paperwork panel.
  */
-export default function ShopDocumentsCard(props: ShopDocumentsCardProps) {
+export default function PartnerDocumentsCard(props: PartnerDocumentsCardProps) {
+  const rider = props.kind === "courier";
   const [opening, setOpening] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
 
@@ -59,7 +65,14 @@ export default function ShopDocumentsCard(props: ShopDocumentsCardProps) {
     <Card className="p-4">
       <h2 className="text-sm font-semibold">Documents</h2>
       {props.verifiedAt ? (
-        <p className="mt-1 text-xs text-muted">Checked {props.verifiedWhen}. Customers see this shop as verified.</p>
+        <p className="mt-1 text-xs text-muted">
+          Checked {props.verifiedWhen}. {rider ? "This rider can be given deliveries." : "Customers see this shop as verified."}
+        </p>
+      ) : rider ? (
+        <p className="mt-1 text-xs text-muted">
+          Driving licence not checked yet — this rider can&apos;t be put into the delivery routing until it is.
+          {props.deadline ? ` They were asked to send it by ${props.deadline}.` : ""}
+        </p>
       ) : (
         <p className="mt-1 text-xs text-muted">
           Not verified yet — customers don&apos;t see the &ldquo;Verified shop&rdquo; mark.
@@ -102,11 +115,15 @@ export default function ShopDocumentsCard(props: ShopDocumentsCardProps) {
       {!props.verifiedAt && props.missing.length === 0 && (
         <ActionForm
           className="mt-3"
-          action={markShopVerifiedAction}
+          action={markDocumentsCheckedAction}
           hidden={{ partnerId: props.partnerId }}
           label="Documents checked"
           tone="primary"
-          confirm={`You have opened all three and the names and TIN match ${props.displayName}?`}
+          confirm={
+            rider
+              ? `You have opened the licence: it is in date, covers their vehicle, and the name matches ${props.displayName}?`
+              : `You have opened all three and the names and TIN match ${props.displayName}?`
+          }
           confirmLabel="Yes, they're in order"
         />
       )}

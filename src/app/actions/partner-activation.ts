@@ -38,7 +38,8 @@ export type ActivationResult =
         | "missing-field"
         | "unknown-city"
         | "invalid-eta"
-        | "name-taken";
+        | "name-taken"
+        | "licence-not-checked";
     };
 
 // One shared guard: auth configured, right hostname, session, admin.

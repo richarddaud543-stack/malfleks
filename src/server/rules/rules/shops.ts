@@ -6,9 +6,15 @@ import { getPrisma } from "@/server/db/client";
 import { logServerError } from "@/server/error-log";
 import { sendPartnerEmail } from "@/server/notify/email";
 import { partnerContact } from "@/server/notify/events";
-import { listingsHiddenMessage, verificationHiddenMessage, verificationNeededMessage } from "@/server/notify/rule-messages";
+import {
+  listingsHiddenMessage,
+  riderLicenceNeededMessage,
+  riderLicenceReminderMessage,
+  verificationHiddenMessage,
+  verificationNeededMessage,
+} from "@/server/notify/rule-messages";
 import { RULES_ACTOR } from "@/server/orders/status";
-import { asVerificationHold, releaseVerificationHold, VERIFICATION_ALERT_KEY } from "@/server/partners/verification";
+import { asVerificationHold, releaseVerificationHold, RIDER_OVERDUE_ALERT_KEY, VERIFICATION_ALERT_KEY } from "@/server/partners/verification";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 import { raiseAlert } from "../alerts";
 import { HOUR_MS, SHOP_RELIABILITY, SHOP_VERIFICATION } from "../thresholds";
@@ -215,14 +221,14 @@ async function tellShop(to: string | null, message: { subject: string; body: str
 export const shopVerification: Rule = {
   key: "shop-verification",
   group: "shops",
-  title: "Ask unverified shops for their documents",
-  when: "A shop on MalFleks has not had its business licence, TIN certificate and shop-front photo checked.",
-  then: `The shop is asked for them and given ${SHOP_VERIFICATION.graceDays} days, and you are told. If it has still not sent all three by then, its products are hidden (not deleted) until you mark its documents checked.`,
+  title: "Ask unverified shops and riders for their documents",
+  when: "A shop on MalFleks has not had its business licence, TIN certificate and shop-front photo checked, or a delivery rider has not had their driving licence checked.",
+  then: `They are asked for them and given ${SHOP_VERIFICATION.graceDays} days, and you are told. A shop that has still not sent all three by then has its products hidden (not deleted) until you mark its documents checked. A rider still delivering without a checked licence by then is not removed automatically — you get an urgent alert and decide.`,
   async run(ctx) {
     const db = getPrisma();
     const shops = await db.partner.findMany({
-      where: { kind: "brand", status: "active", documentsVerifiedAt: null },
-      select: { id: true, displayName: true, city: true, branchId: true, applicationId: true },
+      where: { kind: { in: ["brand", "courier"] }, status: "active", documentsVerifiedAt: null },
+      select: { id: true, kind: true, displayName: true, contactName: true, city: true, branchId: true, agentId: true, applicationId: true },
       orderBy: { approvedAt: "asc" },
       take: 200,
     });
@@ -265,12 +271,20 @@ export const shopVerification: Rule = {
   },
 };
 
-/** Steps 1 and 2 of `shopVerification` for one shop. Returns the activity note, or null when nothing was done. */
-async function askOrHide(
-  shop: { id: string; displayName: string; city: string; branchId: string | null; applicationId: string },
-  ctx: { now: Date; env: Record<string, string | undefined> },
-  siteUrl: string,
-): Promise<string | null> {
+interface UnverifiedPartner {
+  id: string;
+  kind: string;
+  displayName: string;
+  contactName: string;
+  city: string;
+  branchId: string | null;
+  agentId: string | null;
+  applicationId: string;
+}
+
+/** Steps 1 and 2 of `shopVerification` for one shop or rider. Returns the activity note, or null when nothing was done. */
+async function askOrHide(shop: UnverifiedPartner, ctx: { now: Date; env: Record<string, string | undefined> }, siteUrl: string): Promise<string | null> {
+  if (shop.kind === "courier") return askRider(shop, ctx, siteUrl);
   const db = getPrisma();
   const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${shop.id}` }, select: { id: true, data: true, body: true } });
 
@@ -329,4 +343,86 @@ async function askOrHide(
   }
   await tellShop(await partnerEmail(shop.applicationId), verificationHiddenMessage({ shopName: shop.displayName, hidden: productIds.length, siteUrl }), shop.displayName, ctx.env);
   return `Hid ${productIds.length} product${productIds.length === 1 ? "" : "s"} of ${shop.displayName}: documents not sent in ${SHOP_VERIFICATION.graceDays} days.`;
+}
+
+/**
+ * A delivery rider without a checked driving licence.
+ *
+ * 1. **Ask**, the same way a shop is asked: one email, one routine alert with
+ *    the date.
+ * 2. **On the date**, if the rider is still in the delivery routing, tell the
+ *    owner urgently -- once -- and remind the rider if the licence has not
+ *    arrived. Nothing is taken off automatically: a rider can be the only one a
+ *    city has, and removing them would leave every shop there unorderable.
+ *    The owner decides (check the licence, or suspend the rider).
+ */
+async function askRider(rider: UnverifiedPartner, ctx: { now: Date; env: Record<string, string | undefined> }, siteUrl: string): Promise<string | null> {
+  const db = getPrisma();
+  const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${rider.id}` }, select: { id: true, data: true } });
+
+  if (!open) {
+    const deadline = new Date(ctx.now.getTime() + SHOP_VERIFICATION.graceDays * 24 * HOUR_MS);
+    const data: Prisma.InputJsonValue = { partnerId: rider.id, branchId: null, deadline: deadline.toISOString() };
+    const { raised } = await raiseAlert(
+      {
+        key: VERIFICATION_ALERT_KEY,
+        subjectId: rider.id,
+        urgency: "routine",
+        subject: `${rider.displayName}: driving licence not checked yet`,
+        body: [
+          `${rider.displayName} (${rider.city}) is a delivery rider on MalFleks, but their driving licence has not been checked.`,
+          "They have been asked to upload it from their partner page.",
+          "",
+          `When it arrives, open the rider's page in the console, read it, and press "Documents checked". If it has not arrived by ${deadlineWords(deadline)}, you will be told again.`,
+          ...(rider.agentId ? [] : ["Until it is checked, they can't be added to the delivery routing."]),
+        ].join("\n"),
+        href: `/admin/partners/${rider.id}`,
+        data,
+      },
+      ctx.env,
+    );
+    if (!raised) return null;
+    await tellShop(
+      await partnerEmail(rider.applicationId),
+      riderLicenceNeededMessage({ riderName: rider.contactName || rider.displayName, deadline: deadlineWords(deadline), siteUrl }),
+      rider.displayName,
+      ctx.env,
+    );
+    return `Asked ${rider.displayName} for their driving licence, by ${deadlineWords(deadline)}.`;
+  }
+
+  const hold = asVerificationHold(open.data);
+  if (!hold || hold.escalatedAt || ctx.now < new Date(hold.deadline)) return null;
+  // Not delivering yet: the routing already refuses them until the licence is checked.
+  if (!rider.agentId) return null;
+
+  const documents = await db.partnerDocument.findMany({ where: { applicationId: rider.applicationId }, select: { kind: true } });
+  const sent = missingDocumentKinds(documents, "courier").length === 0;
+  // Recorded first, so a failure below does not send the same warning every pass.
+  await db.ownerAlert.update({ where: { id: open.id }, data: { data: { ...hold, escalatedAt: ctx.now.toISOString() } } });
+  await raiseAlert(
+    {
+      key: RIDER_OVERDUE_ALERT_KEY,
+      subjectId: rider.id,
+      urgency: "urgent",
+      subject: `${rider.displayName} is delivering without a checked driving licence`,
+      body: [
+        `${rider.displayName} (${rider.city}) is in the delivery routing, and ${SHOP_VERIFICATION.graceDays} days after being asked their driving licence still has not been checked.`,
+        sent
+          ? "They have uploaded it — it is waiting for you to read."
+          : "They have not uploaded it.",
+        "",
+        sent
+          ? 'Open the rider\'s page, read it, and press "Documents checked".'
+          : "Call them, or suspend them from their page in the console until it arrives. MalFleks has not removed them by itself, because they may be the only rider for their city.",
+      ].join("\n"),
+      href: `/admin/partners/${rider.id}`,
+      data: { partnerId: rider.id },
+    },
+    ctx.env,
+  );
+  if (!sent) {
+    await tellShop(await partnerEmail(rider.applicationId), riderLicenceReminderMessage({ riderName: rider.contactName || rider.displayName, siteUrl }), rider.displayName, ctx.env);
+  }
+  return `Told you ${rider.displayName} is still delivering without a checked driving licence.`;
 }

@@ -8,8 +8,7 @@ import PartnerDocumentFields, { type PickedFiles } from "@/components/apply/Part
 import { uploadPartnerDocuments } from "@/lib/partner-document-upload";
 import {
   checkDocumentFile,
-  DOCUMENT_KINDS,
-  REQUIRED_DOCUMENT_KINDS,
+  requiredDocumentKinds,
   type DocumentKind,
 } from "@/lib/partner-document";
 import { DELIVERY_MODES, type DeliveryMode } from "@/lib/fees/tables";
@@ -101,6 +100,8 @@ export default function PartnerApplicationForm({
 
   const brandIds = brands.map((b) => b.id);
   const isBrand = input.kind === "brand";
+  // A shop's three documents, or a rider's driving licence.
+  const requiredDocuments = requiredDocumentKinds(input.kind);
 
   function update(patch: Partial<PartnerApplicationInput>) {
     const next = { ...input, ...patch };
@@ -139,10 +140,10 @@ export default function PartnerApplicationForm({
   /** Every required document chosen and none of them refused. */
   function documentsReady(): Partial<Record<DocumentKind, string>> | null {
     const problems: Partial<Record<DocumentKind, string>> = { ...docProblems };
-    for (const kind of REQUIRED_DOCUMENT_KINDS) {
+    for (const kind of requiredDocuments) {
       if (!files[kind]) problems[kind] = copy.documentMissing;
     }
-    return DOCUMENT_KINDS.some((kind) => problems[kind]) ? problems : null;
+    return requiredDocuments.some((kind) => problems[kind]) ? problems : null;
   }
 
   /**
@@ -153,7 +154,9 @@ export default function PartnerApplicationForm({
    * one case where the done screen says something extra and offers a retry.
    */
   async function sendDocuments(applicationId: string): Promise<boolean> {
-    const picked = REQUIRED_DOCUMENT_KINDS.flatMap((kind) => {
+    // Only what this kind of partner is asked for: a file picked for a shop
+    // before switching the form to "courier" is not sent.
+    const picked = requiredDocuments.flatMap((kind) => {
       const file = files[kind];
       return file ? [{ kind, file }] : [];
     });
@@ -226,13 +229,13 @@ export default function PartnerApplicationForm({
 
     // Checked before anything is sent: an application saved without its
     // paperwork is a worse place to be than a form that would not submit.
-    // Couriers are not asked for documents at all.
-    if (isBrand) {
+    // A shop sends three documents; a rider sends their driving licence.
+    {
       const docProblem = documentsReady();
       if (docProblem) {
         setErrors({});
         setDocProblems(docProblem);
-        const firstBroken = DOCUMENT_KINDS.find((kind) => docProblem[kind]);
+        const firstBroken = requiredDocuments.find((kind) => docProblem[kind]);
         formRef.current
           ?.querySelector<HTMLElement>(`[data-field="document-${firstBroken}"]`)
           ?.focus();
@@ -251,7 +254,7 @@ export default function PartnerApplicationForm({
       // form over an application that DID save is the worst of both.
       let sent = true;
       try {
-        if (isBrand) sent = await sendDocuments(outcome.id);
+        sent = await sendDocuments(outcome.id);
       } finally {
         setSubmitting(false);
       }
@@ -737,16 +740,16 @@ export default function PartnerApplicationForm({
         </Field>
       </div>
 
-      {isBrand && (
-        <div className="mt-6">
-          <PartnerDocumentFields
-            files={files}
-            problems={docProblems}
-            onChange={pickDocument}
-            disabled={submitting}
-          />
-        </div>
-      )}
+      <div className="mt-6">
+        <PartnerDocumentFields
+          files={files}
+          problems={docProblems}
+          onChange={pickDocument}
+          disabled={submitting}
+          kinds={requiredDocuments}
+          forCourier={!isBrand}
+        />
+      </div>
 
       {/* One announced summary rather than relying on the per-field messages,
           which are only reached through aria-describedby as focus moves. */}

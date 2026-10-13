@@ -1,6 +1,6 @@
 /**
- * The supporting documents a shop uploads when it applies, and the rules every
- * one of them must pass.
+ * The supporting documents a shop or a delivery rider uploads when it applies,
+ * and the rules every one of them must pass.
  *
  * Decided by the owner on 6 Oct 2026: a shop that will take a customer's money
  * has to prove it is a real registered business first. Three documents, no
@@ -29,10 +29,15 @@
 export const PARTNER_DOCUMENT_BUCKET = "partner-documents";
 
 /**
- * What a shop must upload. The owner chose these three on 6 Oct 2026 and
- * deliberately left the owner's national ID out.
+ * Every document MalFleks asks a partner for.
+ *
+ * A shop uploads the first three: the owner chose them on 6 Oct 2026 and
+ * deliberately left the shopkeeper's national ID out. A delivery rider uploads
+ * `driving`, their driving licence -- added by the owner on 13 Oct 2026. It
+ * carries the rider's photo, name and the vehicles they may ride, which is
+ * what MalFleks needs to know about someone it sends to a customer's door.
  */
-export const DOCUMENT_KINDS = ["licence", "tin", "shopfront"] as const;
+export const DOCUMENT_KINDS = ["licence", "tin", "shopfront", "driving"] as const;
 
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
@@ -41,11 +46,19 @@ export function isDocumentKind(value: unknown): value is DocumentKind {
 }
 
 /**
- * All three are required for a brand application. Stated as a constant rather
- * than "all of DOCUMENT_KINDS" so that making one optional later is a one-line
- * change here and not a hunt through the form.
+ * What a shop must upload: all three of its documents. Stated as a list rather
+ * than derived, so that making one optional later is a one-line change here
+ * and not a hunt through the form.
  */
-export const REQUIRED_DOCUMENT_KINDS: readonly DocumentKind[] = DOCUMENT_KINDS;
+export const REQUIRED_DOCUMENT_KINDS: readonly DocumentKind[] = ["licence", "tin", "shopfront"];
+
+/** What a delivery rider must upload: their driving licence. */
+export const COURIER_DOCUMENT_KINDS: readonly DocumentKind[] = ["driving"];
+
+/** The documents a partner of this kind must upload. Anything that is not a courier is asked for a shop's. */
+export function requiredDocumentKinds(partnerKind: string): readonly DocumentKind[] {
+  return partnerKind === "courier" ? COURIER_DOCUMENT_KINDS : REQUIRED_DOCUMENT_KINDS;
+}
 
 /**
  * Images and PDFs only.
@@ -162,7 +175,8 @@ export function checkDocumentFile(file: { type: unknown; size: unknown }): Docum
 /** Which required documents are still missing from a set that has been uploaded. */
 export function missingDocumentKinds(
   uploaded: readonly { kind: string }[],
+  partnerKind: string = "brand",
 ): DocumentKind[] {
   const have = new Set(uploaded.map((d) => d.kind));
-  return REQUIRED_DOCUMENT_KINDS.filter((kind) => !have.has(kind));
+  return requiredDocumentKinds(partnerKind).filter((kind) => !have.has(kind));
 }

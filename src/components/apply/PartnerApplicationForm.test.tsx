@@ -40,6 +40,23 @@ vi.mock("@/components/apply/partner-status", () => ({
   usePartnerStatus: () => partnerStatus(),
 }));
 
+// The document upload goes to Supabase Storage and then a server action; both
+// are stand-ins here, so these tests are about what the form asks for and when.
+const uploadPartnerDocuments = vi.fn();
+vi.mock("@/lib/partner-document-upload", () => ({
+  uploadPartnerDocuments: (...args: unknown[]) => uploadPartnerDocuments(...args),
+}));
+const attachApplicationDocuments = vi.fn();
+vi.mock("@/app/actions/partner-documents", () => ({
+  attachApplicationDocuments: (...args: unknown[]) => attachApplicationDocuments(...args),
+}));
+
+/** A rider's driving licence, picked in the form. */
+function pickDrivingLicence() {
+  const file = new File(["licence"], "licence.jpg", { type: "image/jpeg" });
+  fireEvent.change(screen.getByLabelText(/driving licence/i), { target: { files: [file] } });
+}
+
 const BRANDS = [
   { id: "toyota", name: "Toyota" },
   { id: "apple", name: "Apple" },
@@ -57,6 +74,14 @@ beforeEach(() => {
   submitPartnerApplication.mockResolvedValue({ submitted: true });
   sessionState.mockReturnValue(signedIn);
   partnerStatus.mockReturnValue({ state: "none" });
+  uploadPartnerDocuments.mockReset();
+  uploadPartnerDocuments.mockImplementation(async (_id: string, picked: { kind: string }[]) => ({
+    sent: picked.map((p) => ({ kind: p.kind, storagePath: `uid/app/${p.kind}-1.jpg`, mimeType: "image/jpeg", byteSize: 7, signedUrl: "https://x" })),
+    failed: [],
+    unavailable: false,
+  }));
+  attachApplicationDocuments.mockReset();
+  attachApplicationDocuments.mockResolvedValue({ attached: true, recorded: 1, screening: { ran: false, reason: "not-configured" } });
 });
 
 /**
@@ -186,6 +211,7 @@ describe("PartnerApplicationForm", () => {
     fireEvent.change(screen.getByLabelText(/which city do you cover/i), {
       target: { value: "Arusha" },
     });
+    pickDrivingLicence();
     fireEvent.click(screen.getByRole("button", { name: /send application/i }));
 
     await waitFor(() => expect(submitPartnerApplication).toHaveBeenCalledTimes(1));
@@ -193,6 +219,24 @@ describe("PartnerApplicationForm", () => {
       expect.objectContaining({ kind: "courier", city: "Arusha" })
     );
     expect(await screen.findByText(/application received/i)).toBeInTheDocument();
+    // The licence went up with it -- and nothing a shop is asked for.
+    expect(uploadPartnerDocuments.mock.calls[0][1].map((p: { kind: string }) => p.kind)).toEqual(["driving"]);
+    expect(attachApplicationDocuments).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not send a courier application without a driving licence", async () => {
+    renderForm();
+    fireEvent.click(screen.getByRole("radio", { name: /delivery courier/i }));
+    fireEvent.change(screen.getByLabelText(/courier business name/i), { target: { value: "Arusha Swift Couriers" } });
+    fireEvent.change(screen.getByLabelText(/who should we speak to/i), { target: { value: "Asha Mwenda" } });
+    fireEvent.change(screen.getByLabelText(/phone number/i), { target: { value: "0754123456" } });
+    fireEvent.change(screen.getByLabelText(/which city do you cover/i), { target: { value: "Arusha" } });
+    fireEvent.click(screen.getByRole("button", { name: /send application/i }));
+
+    expect(await screen.findByText(/attach this one before sending/i)).toBeInTheDocument();
+    expect(submitPartnerApplication).not.toHaveBeenCalled();
+    // A rider is asked for one document, not a shop's three.
+    expect(screen.queryByLabelText(/TIN certificate/i)).toBeNull();
   });
 
   it("keeps the answers on screen when the server cannot record it", async () => {
@@ -216,6 +260,7 @@ describe("PartnerApplicationForm", () => {
     fireEvent.change(screen.getByLabelText(/which city do you cover/i), {
       target: { value: "Arusha" },
     });
+    pickDrivingLicence();
     fireEvent.click(screen.getByRole("button", { name: /send application/i }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/couldn't record/i);

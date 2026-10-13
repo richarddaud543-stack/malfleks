@@ -63,7 +63,9 @@ export type ActivationBlocker =
   | "missing-field"
   | "unknown-city"
   | "invalid-eta"
-  | "name-taken";
+  | "name-taken"
+  /** A rider whose driving licence nobody at MalFleks has checked yet. */
+  | "licence-not-checked";
 
 export type ActivationOutcome =
   | { ok: true; value: { brandId?: string; branchId?: string; agentId?: string } }
@@ -116,6 +118,8 @@ export interface ActivatablePartner {
   /** The brand they claimed on their application, if it is already known. */
   brandId: string | null;
   approvedAt: Date;
+  /** Riders only matter here: false until their driving licence is checked, and they can't be added before. */
+  documentsChecked: boolean;
 }
 
 /**
@@ -146,6 +150,7 @@ export async function listActivatablePartners(): Promise<ActivatablePartner[]> {
       address: true,
       brandId: true,
       approvedAt: true,
+      documentsVerifiedAt: true,
     },
   });
 
@@ -160,6 +165,7 @@ export async function listActivatablePartners(): Promise<ActivatablePartner[]> {
     address: row.address,
     brandId: row.brandId,
     approvedAt: row.approvedAt,
+    documentsChecked: row.documentsVerifiedAt !== null,
   }));
 }
 
@@ -311,7 +317,7 @@ export async function activateCourierPartner(
 
   const partner = await db.partner.findUnique({
     where: { id: partnerId },
-    select: { kind: true, status: true, agentId: true },
+    select: { kind: true, status: true, agentId: true, documentsVerifiedAt: true },
   });
 
   if (!partner) return { ok: false, reason: "not-found" };
@@ -320,6 +326,9 @@ export async function activateCourierPartner(
     return { ok: false, reason: "partner-suspended" };
   }
   if (partner.agentId) return { ok: false, reason: "already-live" };
+  // Nobody is sent to a customer's door until a person at MalFleks has read
+  // their driving licence (`markDocumentsChecked`, or approval with it attached).
+  if (!partner.documentsVerifiedAt) return { ok: false, reason: "licence-not-checked" };
 
   const name = input.name.trim();
   const city = input.city.trim();

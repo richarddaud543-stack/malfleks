@@ -68,12 +68,12 @@ import { declineOrder, RULES_ACTOR } from "@/server/orders/status";
 import { readGatewayState } from "@/server/payments/gateway-state";
 import { markAlertHandling, resolveAlert } from "./alerts";
 import { clockStatus, runRulebook } from "./engine";
-import { paidOrder, PAYER, placedOrder, resetRulebookTables, SHOP, shopUser, unpaidOrder } from "./fixtures.test-helper";
+import { paidOrder, PAYER, placedOrder, resetRulebookTables, riderUser, SHOP, shopUser, unpaidOrder } from "./fixtures.test-helper";
 import { RULEBOOK } from "./rulebook";
 import { restoreHiddenListings } from "./rules/shops";
 import { setRuleOff, setRulebookPaused } from "./settings";
 import { DEFAULT_API_DAILY_BUDGET, HOUR_MS, MAX_CALLS_PER_PASS, SHOP_RELIABILITY, SHOP_VERIFICATION, UNDELIVERED, UNPAID } from "./thresholds";
-import { markShopVerified } from "@/server/partners/verification";
+import { markDocumentsChecked } from "@/server/partners/verification";
 import type { Rule } from "./types";
 
 let db: TestDatabase;
@@ -918,10 +918,10 @@ describe("a shop whose documents have not been checked", () => {
 
     // Not verifiable without all three.
     await upload(applicationId, uid, ["licence", "tin"]);
-    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: false, reason: "documents-missing" });
+    expect(await markDocumentsChecked(partnerId, "admin-1")).toEqual({ ok: false, reason: "documents-missing" });
 
     await upload(applicationId, uid, ["shopfront"]);
-    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: true, restored: before - 1 });
+    expect(await markDocumentsChecked(partnerId, "admin-1")).toEqual({ ok: true, restored: before - 1 });
     expect(await liveProducts()).toBe(before - 1);
     expect((await getPrisma().product.findUniqueOrThrow({ where: { id: other.id } })).hiddenAt).not.toBeNull();
     expect((await verificationAlerts()).map((a) => a.status)).toEqual(["resolved"]);
@@ -944,7 +944,7 @@ describe("a shop whose documents have not been checked", () => {
 
     // The products can't be written just as the owner presses the button.
     const spy = vi.spyOn(getPrisma().product, "updateMany").mockRejectedValueOnce(new Error("connection reset"));
-    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: true, restored: 0, restoreFailed: true });
+    expect(await markDocumentsChecked(partnerId, "admin-1")).toEqual({ ok: true, restored: 0, restoreFailed: true });
     spy.mockRestore();
 
     // Verified all the same, and the alert is still open for the rule to finish.
@@ -980,6 +980,94 @@ describe("a shop whose documents have not been checked", () => {
     await setRuleOff("shop-verification", true, "admin-1");
     await pass(new Date(NOW.getTime() + PASS_MS));
     expect(await verificationAlerts()).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+describe("a delivery rider whose driving licence has not been checked", () => {
+  const DAY_MS = 24 * HOUR_MS;
+  const ROUTED = "arusha-swift-couriers";
+  const keyed = async (key: string) => (await alerts()).filter((a) => a.key === key);
+  const late = new Date(NOW.getTime() + SHOP_VERIFICATION.graceDays * DAY_MS + PASS_MS);
+
+  it("is asked once, in both languages, with a date", async () => {
+    const { email } = await riderUser({ verified: false });
+
+    const run = await pass();
+
+    expect(noteOf(run, "shop-verification")?.notes.join(" ")).toMatch(/driving licence/);
+    const [alert] = await keyed("shop-verification");
+    expect(alert).toMatchObject({ urgency: "routine", status: "open" });
+    expect(alert.body).toMatch(/can't be added to the delivery routing/);
+    const asked = sendPartnerEmail.mock.calls.filter((call) => call[0] === email);
+    expect(asked).toHaveLength(1);
+    expect(String(asked[0][2])).toMatch(/picha safi ya leseni yako/);
+    expect(String(asked[0][2])).toMatch(/driving licence/);
+    expect(String(asked[0][2])).toContain("19 September 2026");
+
+    forgetMessages();
+    await pass(new Date(NOW.getTime() + PASS_MS));
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+  });
+
+  it("not yet delivering: nothing more after the date -- the routing already refuses them", async () => {
+    await riderUser({ verified: false });
+    await pass();
+    forgetMessages();
+
+    await pass(late);
+
+    expect(await keyed("rider-licence-overdue")).toEqual([]);
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+  });
+
+  it("still delivering after the date: you are told urgently, once, and the rider is reminded; checking it closes everything", async () => {
+    const { email, partnerId, applicationId, uid } = await riderUser({ verified: false, agentId: ROUTED });
+    await pass();
+    forgetMessages();
+
+    await pass(late);
+
+    const [overdue] = await keyed("rider-licence-overdue");
+    expect(overdue).toMatchObject({ urgency: "urgent", status: "open" });
+    expect(overdue.body).toMatch(/have not uploaded it/);
+    expect(sendSms).toHaveBeenCalled();
+    expect(sendPartnerEmail.mock.calls.some((call) => call[0] === email && /still haven't received your driving licence/.test(String(call[2])))).toBe(true);
+    // Not removed from the routing by the rulebook.
+    expect((await getPrisma().partner.findUniqueOrThrow({ where: { id: partnerId } })).agentId).toBe(ROUTED);
+
+    forgetMessages();
+    await pass(new Date(late.getTime() + PASS_MS));
+    expect(await keyed("rider-licence-overdue")).toHaveLength(1);
+    expect(sendPartnerEmail).not.toHaveBeenCalled();
+
+    await getPrisma().partnerDocument.create({
+      data: { applicationId, uid, kind: "driving", storagePath: `${uid}/${applicationId}/driving-1.jpg`, mimeType: "image/jpeg", byteSize: 1000 },
+    });
+    expect(await markDocumentsChecked(partnerId, "admin-1")).toEqual({ ok: true, restored: 0 });
+    expect((await keyed("rider-licence-overdue")).map((a) => a.status)).toEqual(["resolved"]);
+    expect((await keyed("shop-verification")).map((a) => a.status)).toEqual(["resolved"]);
+  });
+
+  it("sent it but you haven't read it yet: you are told it is waiting, and the rider is not nagged", async () => {
+    const { email, applicationId, uid } = await riderUser({ verified: false, agentId: ROUTED });
+    await pass();
+    await getPrisma().partnerDocument.create({
+      data: { applicationId, uid, kind: "driving", storagePath: `${uid}/${applicationId}/driving-2.jpg`, mimeType: "image/jpeg", byteSize: 1000 },
+    });
+    forgetMessages();
+
+    await pass(late);
+
+    const [overdue] = await keyed("rider-licence-overdue");
+    expect(overdue.body).toMatch(/waiting for you to read/);
+    expect(sendPartnerEmail.mock.calls.some((call) => call[0] === email)).toBe(false);
+  });
+
+  it("leaves a checked rider alone", async () => {
+    await riderUser({ agentId: ROUTED });
+    await pass();
+    expect(await keyed("shop-verification")).toEqual([]);
   });
 });
 

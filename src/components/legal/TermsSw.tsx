@@ -22,7 +22,7 @@ export default function TermsSw() {
     <div className="mx-auto max-w-2xl px-5 py-16">
       <p className="font-accent-serif text-xl italic text-accent">MalFleks</p>
       <h1 className="mt-1 font-display text-4xl font-medium tracking-tight">Masharti ya matumizi</h1>
-      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 12 Oktoba 2026.</p>
+      <p className="mt-3 text-sm text-muted">Yalisasishwa mara ya mwisho tarehe 13 Oktoba 2026.</p>
       <EnglishDecides path="/terms" />
 
       <div className="prose-malfleks mt-10 space-y-8 text-sm leading-relaxed text-muted">
@@ -149,6 +149,10 @@ export default function TermsSw() {
             biashara iliyosajiliwa; si ukaguzi wa kila bidhaa, kazi ambayo inafanywa na ukaguzi wa matangazo, kanuni ya
             kurudisha ndani ya siku 7 na kitufe cha kuripoti. Duka lisilotuma nyaraka zake likiombwa, bidhaa zake
             hufichwa mpaka litakapozituma.
+          </p>
+          <p className="mt-2">
+            Wasafirishaji huitumia MalFleks leseni yao ya udereva, na mtu wa MalFleks huikagua kabla hawajapewa mzigo
+            wowote wa kupeleka. Msafirishaji asiyeituma akiombwa anaweza kuzuiwa kupeleka mizigo.
           </p>
           <p className="mt-2">
             Bidhaa anazotuma mshirika hukaguliwa kabla hazijaonekana. Washirika wanawajibika kuhakikisha matangazo yao

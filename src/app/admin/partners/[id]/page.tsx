@@ -4,13 +4,13 @@ import { notFound } from "next/navigation";
 
 import { setPartnerStatusAction } from "@/app/actions/admin-console";
 import ActionForm from "@/components/admin/ActionForm";
-import ShopDocumentsCard from "@/components/admin/ShopDocumentsCard";
+import PartnerDocumentsCard from "@/components/admin/PartnerDocumentsCard";
 import { Badge, Card, Empty, Facts, inputClass, labelClass, Notice, PageHeader, placeLabel, plural, Section, TableFrame, Th, Tile, Tiles } from "@/components/admin/ui";
 import { ageLabel, formatTZS, formatWhen } from "@/lib/charts";
 import { formatPhone } from "@/lib/order";
 import { getPartnerDetail } from "@/server/admin/partners";
 import { requireAdmin } from "@/server/auth/dal";
-import { shopDocumentsView, shopVerificationState } from "@/server/partners/verification";
+import { partnerDocumentsView, partnerVerificationState } from "@/server/partners/verification";
 
 export const metadata: Metadata = {
   title: "Partner",
@@ -30,11 +30,10 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
   const now = new Date();
   const suspended = partner.status !== "active";
   const totalOrders = Object.values(statusCounts).reduce((s, n) => s + n, 0);
-  const isShop = partner.kind !== "courier";
-  const [verification, documentsView] = isShop
-    ? // Its own failure: the rest of the page (orders, payouts, suspend) still loads without the documents card.
-      await Promise.all([shopVerificationState(partner.id), shopDocumentsView(partner.id)]).catch(() => [null, null] as const)
-    : [null, null];
+  // Its own failure: the rest of the page (orders, payouts, suspend) still loads without the documents card.
+  const [verification, documentsView] = await Promise.all([partnerVerificationState(partner.id), partnerDocumentsView(partner.id)]).catch(
+    () => [null, null] as const,
+  );
   const dateWords = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
 
   return (
@@ -182,8 +181,9 @@ export default async function AdminPartnerPage({ params }: { params: Promise<{ i
 
         <div className="flex min-w-0 flex-col gap-4">
           {verification && (
-            <ShopDocumentsCard
+            <PartnerDocumentsCard
               partnerId={partner.id}
+              kind={partner.kind}
               displayName={partner.displayName}
               verifiedAt={verification.verifiedAt?.toISOString() ?? null}
               verifiedWhen={verification.verifiedAt ? formatWhen(verification.verifiedAt) : null}

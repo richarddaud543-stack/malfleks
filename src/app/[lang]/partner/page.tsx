@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import LiveProducts from "@/components/partner/LiveProducts";
-import ShopDocumentsPanel from "@/components/partner/ShopDocumentsPanel";
+import PartnerDocumentsPanel from "@/components/partner/PartnerDocumentsPanel";
 import SubmissionTable from "@/components/partner/SubmissionTable";
 import {
   countSubmissionsForPartner,
@@ -14,7 +14,7 @@ import {
   type PartnerSubmission,
 } from "@/server/partners/portal";
 import { listLiveProductsForBranch, type LiveProduct } from "@/server/partners/stock";
-import { shopDocumentsView, type ShopDocumentsView } from "@/server/partners/verification";
+import { partnerDocumentsView, type PartnerDocumentsView } from "@/server/partners/verification";
 
 type Props = { params: Promise<{ lang: string }> };
 
@@ -79,11 +79,11 @@ export default async function PartnerPage({ params }: Props) {
     liveProducts = await listLiveProductsForBranch(partner.branchId).catch(() => null);
   }
 
-  // The shop's documents: what MalFleks has, what it still needs, and by when.
-  // Its own read and its own failure, like the live products below.
-  let documents: ShopDocumentsView | null = null;
-  if (isBrand) documents = await shopDocumentsView(partner.partnerId).catch(() => null);
-  const docCopy = copy.documents;
+  // The partner's documents -- a shop's three, or a rider's driving licence:
+  // what MalFleks has, what it still needs, and by when. Its own read and its
+  // own failure, like the live products below.
+  const documents: PartnerDocumentsView | null = await partnerDocumentsView(partner.partnerId).catch(() => null);
+  const docCopy = isBrand ? copy.documents : { ...copy.documents, ...copy.documents.rider };
   const dateWords = (date: Date) =>
     date.toLocaleDateString(PARTNER[locale].dateLocale, { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Dar_es_Salaam" });
 
@@ -164,13 +164,13 @@ export default async function PartnerPage({ params }: Props) {
               {documents.deadline && !documents.hidden && (
                 <p className="mt-2 max-w-prose text-sm font-medium">{docCopy.deadline(dateWords(documents.deadline))}</p>
               )}
-              {documents.received.length > 0 && (
+              {isBrand && documents.received.length > 0 && (
                 <p className="mt-2 text-sm text-muted">
-                  {docCopy.have}: {documents.received.length} / 3
+                  {docCopy.have}: {documents.received.length} / {documents.received.length + documents.missing.length}
                 </p>
               )}
               {partner.role === "owner" ? (
-                <ShopDocumentsPanel applicationId={partner.applicationId} missing={documents.missing} />
+                <PartnerDocumentsPanel applicationId={partner.applicationId} missing={documents.missing} forCourier={!isBrand} />
               ) : (
                 <p className="mt-3 text-sm text-muted">{docCopy.ownerOnly}</p>
               )}
