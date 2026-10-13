@@ -25,7 +25,6 @@ import {
   markShopVerified,
   shopDocumentsView,
   tellOwnerDocumentsArrived,
-  verifiedShopBranchIds,
 } from "./verification";
 
 let db: TestDatabase;
@@ -148,7 +147,6 @@ describe("what customers and the shop are shown", () => {
 
     expect(await isVerifiedShop("toyota-dar")).toBe(true);
     expect(await isVerifiedShop("toyota-arusha")).toBe(false);
-    expect([...(await verifiedShopBranchIds())]).toEqual(["toyota-dar"]);
 
     // Suspended: no longer vouched for.
     await getPrisma().partner.update({ where: { id: verified.partner.id }, data: { status: "suspended" } });

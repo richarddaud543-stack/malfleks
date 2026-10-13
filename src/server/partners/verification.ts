@@ -221,15 +221,6 @@ export async function tellOwnerDocumentsArrived(applicationId: string): Promise<
   }
 }
 
-/** The catalogue branches whose shop has been verified. One query, for badges. */
-export async function verifiedShopBranchIds(): Promise<Set<string>> {
-  const rows = await getPrisma().partner.findMany({
-    where: { kind: "brand", status: "active", branchId: { not: null }, documentsVerifiedAt: { not: null } },
-    select: { branchId: true },
-  });
-  return new Set(rows.map((r) => r.branchId).filter((id): id is string => Boolean(id)));
-}
-
 /** Whether the shop behind this catalogue branch has been verified. False on any doubt. */
 export async function isVerifiedShop(branchId: string): Promise<boolean> {
   try {

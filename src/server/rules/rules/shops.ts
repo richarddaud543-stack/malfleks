@@ -253,65 +253,80 @@ export const shopVerification: Rule = {
     if (shops.length === 0) return { acted: notes.length, notes };
     const siteUrl = resolveSiteUrl(ctx.env);
     for (const shop of shops) {
-      const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${shop.id}` }, select: { id: true, data: true, body: true } });
-
-      // 1. Ask.
-      if (!open) {
-        const deadline = new Date(ctx.now.getTime() + SHOP_VERIFICATION.graceDays * 24 * HOUR_MS);
-        const data: Prisma.InputJsonValue = { partnerId: shop.id, branchId: shop.branchId, deadline: deadline.toISOString() };
-        const { raised } = await raiseAlert(
-          {
-            key: VERIFICATION_ALERT_KEY,
-            subjectId: shop.id,
-            urgency: "routine",
-            subject: `${shop.displayName}: documents not checked yet`,
-            body: [
-              `${shop.displayName} (${shop.city}) is on MalFleks, but its business licence, TIN certificate and shop-front photo have not been checked.`,
-              "The advert and the Terms tell customers every shop has been, so the shop has been asked to upload them from its partner page.",
-              "",
-              `If they have not all arrived by ${deadlineWords(deadline)}, its products will be hidden from the shop until you check them.`,
-              'When they arrive, open the shop\'s page in the console, read them, and press "Documents checked".',
-              "To give the shop more time, switch this rule off on the Rules page.",
-            ].join("\n"),
-            href: `/admin/partners/${shop.id}`,
-            data,
-          },
-          ctx.env,
-        );
-        if (!raised) continue;
-        await tellShop(await partnerEmail(shop.applicationId), verificationNeededMessage({ shopName: shop.displayName, deadline: deadlineWords(deadline), siteUrl }), shop.displayName, ctx.env);
-        notes.push(`Asked ${shop.displayName} for its documents, by ${deadlineWords(deadline)}.`);
-        continue;
+      // One shop's failure must not stop the others: logged, and tried again next pass.
+      try {
+        const note = await askOrHide(shop, ctx, siteUrl);
+        if (note) notes.push(note);
+      } catch (error) {
+        await logServerError("rule-shop-verification", error);
       }
-
-      // 2. Hide, once the date has passed -- and only once.
-      const hold = asVerificationHold(open.data);
-      if (!hold || hold.hiddenAt || ctx.now < new Date(hold.deadline)) continue;
-      const branchId = shop.branchId;
-      if (!branchId) continue;
-      const documents = await db.partnerDocument.findMany({ where: { applicationId: shop.applicationId }, select: { kind: true } });
-      // The shop did its part; the wait is MalFleks's, and the alert is waiting.
-      if (missingDocumentKinds(documents).length === 0) continue;
-
-      const live = await db.product.findMany({ where: { branchId, hiddenAt: null }, select: { id: true } });
-      const productIds = live.map((p) => p.id);
-      // The record first: what is hidden is put back from it, so it must exist
-      // before anything is hidden.
-      const recorded: Prisma.InputJsonValue = { ...hold, branchId, hiddenAt: ctx.now.toISOString(), productIds };
-      await db.ownerAlert.update({
-        where: { id: open.id },
-        data: {
-          data: recorded,
-          body: `${open.body}\n\n${deadlineWords(ctx.now)}: the documents had not all arrived, so its ${productIds.length} product${productIds.length === 1 ? " was" : "s were"} hidden. Pressing "Documents checked" puts them back.`.slice(0, 4000),
-        },
-      });
-      if (productIds.length > 0) {
-        await db.product.updateMany({ where: { id: { in: productIds }, hiddenAt: null }, data: { hiddenAt: ctx.now } });
-        await notifyPublicSiteOfCatalogueChange();
-      }
-      await tellShop(await partnerEmail(shop.applicationId), verificationHiddenMessage({ shopName: shop.displayName, hidden: productIds.length, siteUrl }), shop.displayName, ctx.env);
-      notes.push(`Hid ${productIds.length} product${productIds.length === 1 ? "" : "s"} of ${shop.displayName}: documents not sent in ${SHOP_VERIFICATION.graceDays} days.`);
     }
     return { acted: notes.length, notes };
   },
 };
+
+/** Steps 1 and 2 of `shopVerification` for one shop. Returns the activity note, or null when nothing was done. */
+async function askOrHide(
+  shop: { id: string; displayName: string; city: string; branchId: string | null; applicationId: string },
+  ctx: { now: Date; env: Record<string, string | undefined> },
+  siteUrl: string,
+): Promise<string | null> {
+  const db = getPrisma();
+  const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${shop.id}` }, select: { id: true, data: true, body: true } });
+
+  // 1. Ask.
+  if (!open) {
+    const deadline = new Date(ctx.now.getTime() + SHOP_VERIFICATION.graceDays * 24 * HOUR_MS);
+    const data: Prisma.InputJsonValue = { partnerId: shop.id, branchId: shop.branchId, deadline: deadline.toISOString() };
+    const { raised } = await raiseAlert(
+      {
+        key: VERIFICATION_ALERT_KEY,
+        subjectId: shop.id,
+        urgency: "routine",
+        subject: `${shop.displayName}: documents not checked yet`,
+        body: [
+          `${shop.displayName} (${shop.city}) is on MalFleks, but its business licence, TIN certificate and shop-front photo have not been checked.`,
+          "The advert and the Terms tell customers every shop has been, so the shop has been asked to upload them from its partner page.",
+          "",
+          `If they have not all arrived by ${deadlineWords(deadline)}, its products will be hidden from the shop until you check them.`,
+          'When they arrive, open the shop\'s page in the console, read them, and press "Documents checked".',
+          "To give the shop more time, switch this rule off on the Rules page.",
+        ].join("\n"),
+        href: `/admin/partners/${shop.id}`,
+        data,
+      },
+      ctx.env,
+    );
+    if (!raised) return null;
+    await tellShop(await partnerEmail(shop.applicationId), verificationNeededMessage({ shopName: shop.displayName, deadline: deadlineWords(deadline), siteUrl }), shop.displayName, ctx.env);
+    return `Asked ${shop.displayName} for its documents, by ${deadlineWords(deadline)}.`;
+  }
+
+  // 2. Hide, once the date has passed -- and only once.
+  const hold = asVerificationHold(open.data);
+  if (!hold || hold.hiddenAt || ctx.now < new Date(hold.deadline)) return null;
+  const branchId = shop.branchId;
+  if (!branchId) return null;
+  const documents = await db.partnerDocument.findMany({ where: { applicationId: shop.applicationId }, select: { kind: true } });
+  // The shop did its part; the wait is MalFleks's, and the alert is waiting.
+  if (missingDocumentKinds(documents).length === 0) return null;
+
+  const live = await db.product.findMany({ where: { branchId, hiddenAt: null }, select: { id: true } });
+  const productIds = live.map((p) => p.id);
+  // The record first: what is hidden is put back from it, so it must exist
+  // before anything is hidden.
+  const recorded: Prisma.InputJsonValue = { ...hold, branchId, hiddenAt: ctx.now.toISOString(), productIds };
+  await db.ownerAlert.update({
+    where: { id: open.id },
+    data: {
+      data: recorded,
+      body: `${open.body}\n\n${deadlineWords(ctx.now)}: the documents had not all arrived, so its ${productIds.length} product${productIds.length === 1 ? " was" : "s were"} hidden. Pressing "Documents checked" puts them back.`.slice(0, 4000),
+    },
+  });
+  if (productIds.length > 0) {
+    await db.product.updateMany({ where: { id: { in: productIds }, hiddenAt: null }, data: { hiddenAt: ctx.now } });
+    await notifyPublicSiteOfCatalogueChange();
+  }
+  await tellShop(await partnerEmail(shop.applicationId), verificationHiddenMessage({ shopName: shop.displayName, hidden: productIds.length, siteUrl }), shop.displayName, ctx.env);
+  return `Hid ${productIds.length} product${productIds.length === 1 ? "" : "s"} of ${shop.displayName}: documents not sent in ${SHOP_VERIFICATION.graceDays} days.`;
+}
