@@ -105,7 +105,11 @@ export async function shopDocumentsView(partnerId: string): Promise<ShopDocument
 }
 
 export type MarkVerifiedOutcome =
-  | { ok: true; restored: number }
+  /**
+   * `restoreFailed`: the verification is saved, but putting back what the
+   * rule hid failed. The alert stays open, and the rule's next pass finishes it.
+   */
+  | { ok: true; restored: number; restoreFailed?: true }
   | { ok: false; reason: "not-found" | "not-a-shop" | "documents-missing" | "already-verified" };
 
 /**
@@ -127,29 +131,37 @@ export async function markShopVerified(partnerId: string, adminUid: string, now:
   });
   if (count === 0) return { ok: false, reason: "already-verified" };
 
-  const restored = await releaseVerificationHold(partnerId, adminUid);
-  return { ok: true, restored };
+  // The shop IS verified from here, whatever happens next. A failure putting
+  // its products back must not read as "not verified": it is reported apart,
+  // and the rule retries it (`shopVerification`, verified shops' open alerts).
+  try {
+    return { ok: true, restored: await releaseVerificationHold(partnerId, adminUid) };
+  } catch (error) {
+    await logServerError("shop-verification-release", error, adminUid);
+    return { ok: true, restored: 0, restoreFailed: true };
+  }
 }
 
 /**
- * Close the shop's verification alert and put back the products the rule hid
- * -- only those, and only while they still carry the moment the rule hid them,
- * so a product an admin hid for another reason since stays hidden.
+ * Put back the products the rule hid -- only those, and only while they still
+ * carry the moment the rule hid them, so a product an admin hid for another
+ * reason since stays hidden -- then close the shop's alerts.
+ *
+ * Products first, alerts second: if putting the products back fails, the
+ * verification alert is still open, and the rule's next pass sees a verified
+ * shop with an open alert and calls this again. Safe to repeat.
  *
  * Every alert this rule ever raised for the shop is read, not only the open
  * one: if the owner pressed "Done" on an alert without verifying, the rule
  * starts a new one, and the products the first one hid are still owed back.
  */
-async function releaseVerificationHold(partnerId: string, by: string): Promise<number> {
+export async function releaseVerificationHold(partnerId: string, by: string): Promise<number> {
   const db = getPrisma();
   const alerts = await db.ownerAlert.findMany({
     where: { key: VERIFICATION_ALERT_KEY, data: { path: ["partnerId"], equals: partnerId } },
     select: { data: true },
     take: 50,
   });
-  await resolveAlertFor(VERIFICATION_ALERT_KEY, partnerId, by);
-  await resolveAlertFor(DOCUMENTS_ARRIVED_ALERT_KEY, partnerId, by);
-
   let restored = 0;
   for (const alert of alerts) {
     const hold = asVerificationHold(alert.data);
@@ -161,6 +173,8 @@ async function releaseVerificationHold(partnerId: string, by: string): Promise<n
     restored += count;
   }
   if (restored > 0) await notifyPublicSiteOfCatalogueChange();
+  await resolveAlertFor(VERIFICATION_ALERT_KEY, partnerId, by);
+  await resolveAlertFor(DOCUMENTS_ARRIVED_ALERT_KEY, partnerId, by);
   return restored;
 }
 

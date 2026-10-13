@@ -8,7 +8,7 @@ import { sendPartnerEmail } from "@/server/notify/email";
 import { partnerContact } from "@/server/notify/events";
 import { listingsHiddenMessage, verificationHiddenMessage, verificationNeededMessage } from "@/server/notify/rule-messages";
 import { RULES_ACTOR } from "@/server/orders/status";
-import { asVerificationHold, VERIFICATION_ALERT_KEY } from "@/server/partners/verification";
+import { asVerificationHold, releaseVerificationHold, VERIFICATION_ALERT_KEY } from "@/server/partners/verification";
 import { notifyPublicSiteOfCatalogueChange } from "@/server/revalidate-public-site";
 import { raiseAlert } from "../alerts";
 import { HOUR_MS, SHOP_RELIABILITY, SHOP_VERIFICATION } from "../thresholds";
@@ -226,10 +226,27 @@ export const shopVerification: Rule = {
       orderBy: { approvedAt: "asc" },
       take: 200,
     });
-    if (shops.length === 0) return { acted: 0, notes: [] };
 
-    const siteUrl = resolveSiteUrl(ctx.env);
     const notes: string[] = [];
+
+    // 0. Finish a verification whose products could not be put back at the
+    //    time (see `markShopVerified`): a verified shop with its alert still open.
+    const stillOpen = await db.ownerAlert.findMany({
+      where: { key: VERIFICATION_ALERT_KEY, openKey: { not: null } },
+      select: { data: true },
+      take: 200,
+    });
+    for (const alert of stillOpen) {
+      const partnerId = asVerificationHold(alert.data)?.partnerId;
+      if (!partnerId) continue;
+      const partner = await db.partner.findUnique({ where: { id: partnerId }, select: { displayName: true, documentsVerifiedAt: true, documentsVerifiedBy: true } });
+      if (!partner?.documentsVerifiedAt) continue;
+      const restored = await releaseVerificationHold(partnerId, partner.documentsVerifiedBy ?? RULES_ACTOR);
+      notes.push(`Finished verifying ${partner.displayName}: ${restored} hidden product${restored === 1 ? "" : "s"} put back.`);
+    }
+
+    if (shops.length === 0) return { acted: notes.length, notes };
+    const siteUrl = resolveSiteUrl(ctx.env);
     for (const shop of shops) {
       const open = await db.ownerAlert.findUnique({ where: { openKey: `${VERIFICATION_ALERT_KEY}:${shop.id}` }, select: { id: true, data: true, body: true } });
 

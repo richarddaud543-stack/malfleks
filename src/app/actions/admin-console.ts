@@ -408,8 +408,9 @@ export async function markShopVerifiedAction(_prev: ConsoleState, formData: Form
     await notifyPublicSiteOfCatalogueChange();
     return {
       status: "ok",
-      message:
-        outcome.restored > 0
+      message: outcome.restoreFailed
+        ? "Marked as checked. Its hidden products couldn't be put back just now — the rulebook will finish that on its next run, within 15 minutes."
+        : outcome.restored > 0
           ? `Marked as checked. ${outcome.restored} hidden product${outcome.restored === 1 ? " is" : "s are"} back on the shop.`
           : "Marked as checked. Customers now see this shop as verified.",
     };

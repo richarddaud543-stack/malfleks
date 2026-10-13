@@ -933,6 +933,32 @@ describe("a shop whose documents have not been checked", () => {
     expect(sendPartnerEmail).not.toHaveBeenCalled();
   });
 
+  it("finishes putting products back on the next pass if that failed when the shop was verified", async () => {
+    const { partnerId, applicationId, uid } = await shopUser(SHOP, { verified: false });
+    const before = await liveProducts();
+    await pass();
+    const late = new Date(NOW.getTime() + SHOP_VERIFICATION.graceDays * DAY_MS + PASS_MS);
+    await pass(late);
+    expect(await liveProducts()).toBe(0);
+    await upload(applicationId, uid, ["licence", "tin", "shopfront"]);
+
+    // The products can't be written just as the owner presses the button.
+    const spy = vi.spyOn(getPrisma().product, "updateMany").mockRejectedValueOnce(new Error("connection reset"));
+    expect(await markShopVerified(partnerId, "admin-1")).toEqual({ ok: true, restored: 0, restoreFailed: true });
+    spy.mockRestore();
+
+    // Verified all the same, and the alert is still open for the rule to finish.
+    expect((await getPrisma().partner.findUniqueOrThrow({ where: { id: partnerId } })).documentsVerifiedAt).not.toBeNull();
+    expect((await verificationAlerts()).map((a) => a.status)).toEqual(["open"]);
+    expect(await liveProducts()).toBe(0);
+
+    const run = await pass(new Date(late.getTime() + PASS_MS));
+
+    expect(await liveProducts()).toBe(before);
+    expect((await verificationAlerts()).map((a) => a.status)).toEqual(["resolved"]);
+    expect(noteOf(run, "shop-verification")?.notes.join(" ")).toMatch(/Finished verifying/);
+  });
+
   it("is not hidden for MalFleks not having read documents it already sent", async () => {
     const { applicationId, uid } = await shopUser(SHOP, { verified: false });
     const before = await liveProducts();
